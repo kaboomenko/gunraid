@@ -1,0 +1,38 @@
+{
+  "name": "@gunraid/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "migrations"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "generate": "drizzle-kit generate",
+    "migrate": "node dist/migrate.js",
+    "seed": "node dist/seed.js",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@gunraid/shared": "workspace:*",
+    "drizzle-orm": "0.45.4",
+    "pg": "8.23.1",
+    "uuid": "14.0.3"
+  },
+  "devDependencies": {
+    "@gunraid/config": "workspace:*",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "0.31.11"
+  }
+}

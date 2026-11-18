@@ -1,0 +1,50 @@
+{
+  "name": "@gunraid/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "swc src -d dist --strip-leading-paths --config-file .swcrc --ignore '**/*.test.ts'",
+    "dev": "node --env-file-if-exists=../../.env --watch --enable-source-maps --import @swc-node/register/esm-register src/main.ts",
+    "dev:worker": "node --env-file-if-exists=../../.env --watch --enable-source-maps --import @swc-node/register/esm-register src/worker.ts",
+    "start": "node --enable-source-maps dist/main.js",
+    "start:worker": "node --enable-source-maps dist/worker.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.1.5",
+    "@fastify/helmet": "^13.2.0",
+    "@gunraid/db": "workspace:*",
+    "@gunraid/shared": "workspace:*",
+    "@nestjs/common": "12.5.1",
+    "@nestjs/core": "12.5.1",
+    "@nestjs/platform-fastify": "12.5.1",
+    "@nestjs/platform-socket.io": "12.5.1",
+    "@nestjs/websockets": "12.5.1",
+    "@socket.io/redis-adapter": "^8.3.0",
+    "arctic": "^3.7.0",
+    "bullmq": "^6.7.7",
+    "drizzle-orm": "0.45.4",
+    "fastify": "5.12.8",
+    "ioredis": "^6.0.0",
+    "jose": "^6.2.17",
+    "pg": "8.23.1",
+    "rate-limiter-flexible": "^11.5.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "socket.io": "^4.8.4",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@gunraid/config": "workspace:*",
+    "@swc-node/register": "^1.12.1",
+    "@swc/cli": "^0.8.2",
+    "@swc/core": "^1.16.22",
+    "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
+    "unplugin-swc": "^2.0.0",
+    "vitest": "5.1.0"
+  }
+}

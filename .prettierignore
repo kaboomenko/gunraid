@@ -1,0 +1,7 @@
+pnpm-lock.yaml
+**/migrations/**
+**/.next/**
+**/dist/**
+GUNRAID_SPEC.md
+docs/
+assets/
