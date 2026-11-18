@@ -18,6 +18,38 @@ docker compose up --build
 
 Переменные окружения — в [.env.example](.env.example); для локального запуска их задавать не нужно.
 
+## Запуск на Mac
+
+1. Установите [Docker Desktop](https://www.docker.com/products/docker-desktop/) — для Mac с чипом Apple (M1 и новее) версию «Apple Silicon», для старых — «Intel». Запустите его и дождитесь статуса «Engine running».
+2. Скачайте код: на странице репозитория **Code → Download ZIP** и распакуйте архив. Или в «Терминале»:
+
+   ```bash
+   git clone https://github.com/kaboomenko/gunraid.git
+   ```
+
+3. В «Терминале» перейдите в папку проекта (наберите `cd `, перетащите папку в окно и нажмите Enter) и запустите:
+
+   ```bash
+   docker compose up -d --build --wait
+   ```
+
+   Первая сборка занимает 5–15 минут; когда всё поднимется, команда вернёт приглашение «Терминала».
+
+4. Откройте сайт:
+
+   ```bash
+   open http://localhost:8080
+   ```
+
+Остановить — `docker compose down` (данные сохранятся), начать с чистой базой — `docker compose down -v`.
+
+| Если видите                                                                                    | Что сделать                                                                                                                                      |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Cannot connect to the Docker daemon` или `command not found: docker`                          | Docker Desktop не установлен или не запущен                                                                                                      |
+| `port is already allocated` про порт 8080                                                      | запустить на другом порту: `HTTP_PORT=8081 PUBLIC_URL=http://localhost:8081 docker compose up -d --build --wait` и открыть http://localhost:8081 |
+| `port is already allocated` про 5432 или 6379 (на Маке уже работает свой PostgreSQL или Redis) | `POSTGRES_PORT=5433 REDIS_PORT=6380 docker compose up -d --build --wait`                                                                         |
+| сборка обрывается: `killed`, `exit code 137`                                                   | Docker Desktop → Settings → Resources → Memory: 4 ГБ или больше                                                                                  |
+
 ## Разработка с горячей перезагрузкой
 
 ```bash
