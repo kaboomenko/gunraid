@@ -1,0 +1,18 @@
+{
+	admin off
+	auto_https off
+}
+
+# Единый вход: сайт, API и WebSocket на одном домене (cookie first-party, без CORS).
+:8080 {
+	encode zstd gzip
+
+	@backend path /api/* /socket.io/*
+	handle @backend {
+		reverse_proxy api:4000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}

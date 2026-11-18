@@ -1,0 +1,292 @@
+@import 'tailwindcss';
+
+/* ---------- Дизайн-токены GunRaid ---------- */
+@theme {
+  --color-bg: #0b0b0f;
+  --color-surface-1: #15151b;
+  --color-surface-2: #1b1b22;
+  --color-surface-3: #24242e;
+  --color-line: #2c2c38;
+  --color-line-strong: #3a3a48;
+  --color-text: #ffffff;
+  --color-muted: #a3a3b2;
+  --color-dim: #6c6c7c;
+  --color-accent: #c6ff00;
+  --color-accent-hover: #d6ff4a;
+  --color-accent-ink: #0b0b0f;
+  --color-accent-soft: rgb(198 255 0 / 0.12);
+  --color-danger: #ff3d5e;
+  --color-warning: #ffb21e;
+  --color-info: #4fa8ff;
+  --color-success: #c6ff00;
+
+  --font-display: 'Tektur Variable', 'Russo One', system-ui, sans-serif;
+  --font-sans: 'Golos Text Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --breakpoint-xs: 380px;
+
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
+  --animate-feed-in: feed-in 0.45s cubic-bezier(0.2, 0.9, 0.2, 1);
+
+  @keyframes shimmer {
+    from {
+      background-position: -200% 0;
+    }
+    to {
+      background-position: 200% 0;
+    }
+  }
+  @keyframes pulse-dot {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.45;
+      transform: scale(0.8);
+    }
+  }
+  @keyframes feed-in {
+    from {
+      opacity: 0;
+      transform: translateX(-24px) scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --header-h: 56px;
+    --feed-h: 56px;
+    --tabbar-h: 60px;
+  }
+  @media (min-width: 768px) {
+    :root {
+      --header-h: 64px;
+      --feed-h: 72px;
+      --tabbar-h: 0px;
+    }
+  }
+  html {
+    background: var(--color-bg);
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+  body {
+    min-height: 100dvh;
+    background:
+      radial-gradient(900px 500px at 0% -10%, rgb(198 255 0 / 0.07), transparent 60%),
+      radial-gradient(700px 400px at 100% 0%, rgb(120 90 255 / 0.05), transparent 60%),
+      var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  ::selection {
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-surface-3) transparent;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+@layer components {
+  /*
+   * Рубленые углы: срез верхнего-левого и нижнего-правого угла.
+   * .cut — фон и обводка рисуются псевдоэлементами, поэтому сам элемент не обрезается
+   * (фокус-кольцо и тени остаются видимыми). Настройка через переменные:
+   * --cut (размер среза), --cut-bg (фон), --cut-border (цвет обводки).
+   */
+  .cut {
+    --cut: 10px;
+    --cut-bg: var(--color-surface-1);
+    --cut-border: var(--color-line);
+    position: relative;
+    isolation: isolate;
+  }
+  .cut::before,
+  .cut::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    transition:
+      background-color 0.15s ease,
+      opacity 0.15s ease;
+  }
+  .cut::before {
+    inset: 0;
+    z-index: -2;
+    background: var(--cut-border);
+    clip-path: polygon(
+      var(--cut) 0,
+      100% 0,
+      100% calc(100% - var(--cut)),
+      calc(100% - var(--cut)) 100%,
+      0 100%,
+      0 var(--cut)
+    );
+  }
+  .cut::after {
+    inset: 1px;
+    z-index: -1;
+    background: var(--cut-bg);
+    clip-path: polygon(
+      calc(var(--cut) - 0.6px) 0,
+      100% 0,
+      100% calc(100% - var(--cut) + 0.6px),
+      calc(100% - var(--cut) + 0.6px) 100%,
+      0 100%,
+      0 calc(var(--cut) - 0.6px)
+    );
+  }
+  .cut-sm {
+    --cut: 6px;
+  }
+  .cut-lg {
+    --cut: 16px;
+  }
+  .cut-xl {
+    --cut: 24px;
+  }
+
+  /* Сплошной срез без обводки (кнопки, бейджи) */
+  .clip-cut {
+    --cut: 8px;
+    clip-path: polygon(
+      var(--cut) 0,
+      100% 0,
+      100% calc(100% - var(--cut)),
+      calc(100% - var(--cut)) 100%,
+      0 100%,
+      0 var(--cut)
+    );
+  }
+
+  .font-display-oblique {
+    font-family: var(--font-display);
+    font-style: oblique 10deg;
+    font-synthesis: style;
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--color-surface-2) 25%,
+      var(--color-surface-3) 37%,
+      var(--color-surface-2) 63%
+    );
+    background-size: 400% 100%;
+    animation: var(--animate-shimmer);
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .text-gradient-accent {
+    background: linear-gradient(90deg, #ffffff 0%, var(--color-accent) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .stripes {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      rgb(255 255 255 / 0.03) 0 2px,
+      transparent 2px 12px
+    );
+  }
+}
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- Анимации модалок, поповеров, тостов ---------- */
+@keyframes gr-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes gr-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes gr-modal-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.96);
+  }
+}
+@keyframes gr-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+@keyframes gr-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+.gr-overlay[data-state='open'] {
+  animation: gr-fade-in 0.18s ease-out;
+}
+.gr-sheet[data-state='open'] {
+  animation: gr-sheet-in 0.26s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+@media (min-width: 640px) {
+  .gr-sheet[data-state='open'] {
+    animation: gr-modal-in 0.2s cubic-bezier(0.2, 0.9, 0.2, 1);
+  }
+}
+.gr-pop[data-state='open'] {
+  animation: gr-pop-in 0.14s ease-out;
+}
+.gr-toast {
+  animation: gr-toast-in 0.2s ease-out;
+}

@@ -62,7 +62,11 @@ export class TestClient {
     } catch {
       // не JSON
     }
-    return { status: res.statusCode, body: body as T, headers: res.headers };
+    return {
+      status: res.statusCode,
+      body: body as T,
+      headers: res.headers as Record<string, string | string[] | undefined>,
+    };
   }
 
   get = <T = unknown>(url: string, headers?: Record<string, string>) =>
