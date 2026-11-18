@@ -9,7 +9,10 @@ export type OutboxEventType =
   | 'battle.round'
   | 'battle.finalize'
   | 'battle.expire'
-  | 'battle.finished';
+  | 'battle.finished'
+  | 'wager.placed'
+  | 'notification.create'
+  | 'daily.claimed';
 
 /** Запись доменного события в той же транзакции, что и операция (transactional outbox). */
 @Injectable()

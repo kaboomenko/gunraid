@@ -557,9 +557,15 @@ export class BattlesService {
         .where(eq(battles.id, battleId));
       await this.outbox.add(tx, 'battle.finished', {
         battleId,
+        game: await this.gameCode(b.gameId, tx),
         participants: parts
           .filter((p) => p.userId)
-          .map((p) => ({ userId: p.userId, paid: p.paidAmount, isWinner: p.isWinner })),
+          .map((p) => ({
+            userId: p.userId,
+            paid: p.paidAmount,
+            isWinner: Boolean(p.isWinner),
+            payout: p.payoutValue,
+          })),
       });
       return { battleId, game: await this.gameCode(b.gameId, tx), recipients: [...recipients] };
     });

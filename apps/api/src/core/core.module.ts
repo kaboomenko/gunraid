@@ -14,6 +14,9 @@ import { AuditService } from '../modules/audit/audit.service.js';
 import { GamesService } from '../modules/games/games.service.js';
 import { RateLimitService } from '../modules/rate-limit/rate-limit.service.js';
 import { SettingsService } from '../modules/settings/settings.service.js';
+import { OutboxService } from '../modules/outbox/outbox.service.js';
+import { NotificationsService } from '../modules/notifications/notifications.service.js';
+import { EntitlementsService } from '../modules/bonuses/entitlements.service.js';
 import { RealtimeEmitter } from './realtime-emitter.js';
 import { createRedis } from './redis.js';
 import { DB, DB_POOL, ENV, REDIS } from './tokens.js';
@@ -55,6 +58,9 @@ export class CoreModule {
         RateLimitService,
         GamesService,
         RealtimeEmitter,
+        OutboxService,
+        NotificationsService,
+        EntitlementsService,
       ],
       exports: [
         ENV,
@@ -66,6 +72,9 @@ export class CoreModule {
         RateLimitService,
         GamesService,
         RealtimeEmitter,
+        OutboxService,
+        NotificationsService,
+        EntitlementsService,
       ],
     };
   }

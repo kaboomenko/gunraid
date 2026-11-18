@@ -70,6 +70,8 @@ export const userItems = pgTable(
       .where(sql`${t.status} = 'in_inventory'`),
     index('user_items_user_game_status_idx').on(t.userId, t.gameId, t.status, t.acquiredAt),
     index('user_items_source_idx').on(t.sourceType, t.sourceId),
+    /** Лидерборды: сумма дропов за период по игре. */
+    index('user_items_game_acquired_idx').on(t.gameId, t.acquiredAt),
   ],
 );
 

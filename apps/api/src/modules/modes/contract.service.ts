@@ -139,6 +139,12 @@ export class ContractService {
     await tx
       .insert(contractItems)
       .values(locked.map((l) => ({ contractId, userItemId: l.id, value: l.price })));
+    await this.outbox.add(tx, 'wager.placed', {
+      userId,
+      amount: inputValue,
+      sourceType: 'contract',
+      sourceId: contractId,
+    });
     const { delayMs } = await this.settings.get('feed');
     await this.outbox.add(
       tx,

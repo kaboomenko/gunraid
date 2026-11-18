@@ -126,3 +126,31 @@ export function useInvalidateWallet() {
     void qc.invalidateQueries({ queryKey: ['drops'] });
   };
 }
+
+// ---------- Бонусы ----------
+
+export const bonusKeys = {
+  wheel: (game: string) => ['wheel', game] as const,
+  daily: ['daily'] as const,
+  entitlements: ['entitlements'] as const,
+  level: ['level'] as const,
+  referrals: ['referrals'] as const,
+  achievements: ['achievements'] as const,
+  notifications: ['notifications'] as const,
+};
+
+/** После получения бонуса — обновить всё, что могло измениться. */
+export function useInvalidateBonuses() {
+  const qc = useQueryClient();
+  return () => {
+    for (const key of [
+      ['wheel'],
+      bonusKeys.daily,
+      bonusKeys.entitlements,
+      bonusKeys.level,
+      ['inventory'],
+      ['case'],
+    ])
+      void qc.invalidateQueries({ queryKey: key });
+  };
+}

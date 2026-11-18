@@ -1,6 +1,11 @@
 'use client';
 
-import type { DepositDto, DepositQuoteDto, PaymentMethodDto } from '@gunraid/shared';
+import type {
+  DepositDto,
+  DepositQuoteDto,
+  PaymentMethodDto,
+  PromoActivateResultDto,
+} from '@gunraid/shared';
 import { FlaskConical, Info } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
@@ -68,6 +73,9 @@ export function DepositModal() {
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [loadingQuote, setLoadingQuote] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [promo, setPromo] = useState('');
+  const [promoBusy, setPromoBusy] = useState(false);
+  const [quoteNonce, setQuoteNonce] = useState(0);
 
   const methodDto: PaymentMethodDto | undefined = useMemo(
     () => methods.data?.methods.find((m) => m.code === method),
@@ -123,7 +131,7 @@ export function DepositModal() {
       ctrl.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, me.data, method, currency, amount, methodDto]);
+  }, [open, me.data, method, currency, amount, methodDto, quoteNonce]);
 
   const pay = async () => {
     if (!quote) return;
@@ -149,6 +157,35 @@ export function DepositModal() {
       <GemIcon size={16} /> {t('gems.rate', { gems: config.gemsPerUsd, usd: 1 })}
     </div>
   );
+
+  const activatePromo = async () => {
+    if (promo.trim().length < 3) return;
+    setPromoBusy(true);
+    try {
+      const res = await api.post<PromoActivateResultDto>('/promo/activate', { code: promo.trim() });
+      toast.success(
+        res.type === 'balance'
+          ? t('bonuses.promo.success.balance', {
+              gems: t('gems.amount', { count: res.amount ?? 0 }),
+            })
+          : res.type === 'deposit_bonus'
+            ? t('bonuses.promo.success.deposit_bonus', {
+                percent: Math.round((res.percent ?? 0) * 100),
+              })
+            : res.type === 'free_case'
+              ? t('bonuses.promo.success.free_case', { name: res.caseName ?? '' })
+              : res.type === 'item'
+                ? t('bonuses.promo.success.item', { name: res.item?.fullName ?? '' })
+                : t('bonuses.promo.success.wheel_spin'),
+      );
+      setPromo('');
+      setQuoteNonce((x) => x + 1);
+    } catch (err) {
+      toast.error(errorText(err));
+    } finally {
+      setPromoBusy(false);
+    }
+  };
 
   return (
     <Modal
@@ -246,10 +283,28 @@ export function DepositModal() {
                 <GemAmount value={quote.bonusGems} signed size="md" className="text-accent" />
               </div>
             )}
+            {quote && quote.entitlementBonusGems > 0 && (
+              <div
+                className="flex items-center justify-between text-sm"
+                data-testid="deposit-ent-bonus"
+              >
+                <span className="text-muted">
+                  {t('deposit.entitlementBonus', {
+                    percent: Math.round((quote.entitlementPercent ?? 0) * 100),
+                  })}
+                </span>
+                <GemAmount
+                  value={quote.entitlementBonusGems}
+                  signed
+                  size="md"
+                  className="text-accent"
+                />
+              </div>
+            )}
             <div className="flex items-center justify-between border-t border-line pt-2">
               <span className="font-display text-sm font-bold uppercase">{t('deposit.total')}</span>
               <GemAmount
-                value={quote ? quote.gems + quote.bonusGems : 0}
+                value={quote ? quote.gems + quote.bonusGems + quote.entitlementBonusGems : 0}
                 size="lg"
                 className="text-accent"
               />
@@ -263,6 +318,31 @@ export function DepositModal() {
               </p>
             )}
           </div>
+
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void activatePromo();
+            }}
+          >
+            <Input
+              value={promo}
+              onChange={(e) => setPromo(e.target.value.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32))}
+              placeholder={t('deposit.promoPlaceholder')}
+              aria-label={t('deposit.promo')}
+              className="h-10 font-mono uppercase"
+              data-testid="deposit-promo"
+            />
+            <Button
+              type="submit"
+              variant="secondary"
+              loading={promoBusy}
+              disabled={promo.length < 3}
+            >
+              {t('deposit.promoApply')}
+            </Button>
+          </form>
 
           <Button
             size="lg"

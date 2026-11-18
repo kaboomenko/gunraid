@@ -119,6 +119,8 @@ export const deposits = pgTable(
     bonusGems: bigint({ mode: 'number' }).notNull().default(0),
     bonusSource: text(),
     entitlementId: uuid(),
+    /** Бонус по праву «бонус к пополнению» (колесо, промокод, уровень) — отдельно от бонуса за первое пополнение. */
+    entitlementBonusGems: bigint({ mode: 'number' }).notNull().default(0),
     promoCodeId: uuid(),
     quoteExpiresAt: timestamp({ withTimezone: true }).notNull(),
     status: depositStatusEnum().notNull().default('pending'),

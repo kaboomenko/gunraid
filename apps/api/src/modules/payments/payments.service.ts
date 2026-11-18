@@ -18,6 +18,8 @@ import { rkey } from '../../core/redis.js';
 import { DB, ENV, REDIS } from '../../core/tokens.js';
 import { AppError } from '../../common/app-error.js';
 import { LedgerService } from '../ledger/ledger.service.js';
+import { EntitlementsService } from '../bonuses/entitlements.service.js';
+import { OutboxService } from '../outbox/outbox.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import {
   FX_RATE_PROVIDER,
@@ -40,6 +42,9 @@ interface StoredQuote {
   gems: number;
   bonusGems: number;
   bonusSource: string | null;
+  entitlementId: string | null;
+  entitlementBonusGems: number;
+  entitlementPercent: number | null;
   expiresAt: string;
 }
 
@@ -59,7 +64,7 @@ function toDto(row: typeof deposits.$inferSelect): DepositDto {
     payCurrency: row.payCurrency,
     payAmount: formatDecimal(parseDecimal(row.payAmount), 8),
     gemsAmount: row.gemsAmount,
-    bonusGems: row.bonusGems,
+    bonusGems: row.bonusGems + row.entitlementBonusGems,
     createdAt: row.createdAt.toISOString(),
     completedAt: row.completedAt?.toISOString() ?? null,
     paymentUrl: (row.meta.paymentUrl as string | undefined) ?? null,
@@ -79,6 +84,8 @@ export class PaymentsService {
     private readonly settings: SettingsService,
     private readonly ledger: LedgerService,
     private readonly realtime: RealtimeEmitter,
+    private readonly entitlements: EntitlementsService,
+    private readonly outbox: OutboxService,
   ) {}
 
   private provider(code: string): PaymentProvider {
@@ -161,6 +168,8 @@ export class PaymentsService {
       bonusGems = Math.min(Math.floor(gems * firstDeposit.percent), firstDeposit.maxBonusGems);
       if (bonusGems > 0) bonusSource = 'first_deposit';
     }
+    // Бонус к пополнению по праву (колесо, промокод, уровень) — лучший из активных, тратится при зачислении.
+    const ent = await this.entitlements.bestDepositBonus(userId, gems);
     const quoteId = newId();
     const expiresAt = new Date(Date.now() + quoteTtlMinutes * 60_000).toISOString();
     const stored: StoredQuote = {
@@ -175,6 +184,9 @@ export class PaymentsService {
       gems,
       bonusGems,
       bonusSource,
+      entitlementId: ent?.id ?? null,
+      entitlementBonusGems: ent?.bonus ?? 0,
+      entitlementPercent: ent?.percent ?? null,
       expiresAt,
     };
     await this.redis.set(
@@ -193,6 +205,8 @@ export class PaymentsService {
       gems,
       bonusGems,
       bonusSource,
+      entitlementBonusGems: ent?.bonus ?? 0,
+      entitlementPercent: ent?.percent ?? null,
       expiresAt,
     };
   }
@@ -229,6 +243,8 @@ export class PaymentsService {
         gemsAmount: q.gems,
         bonusGems: q.bonusGems,
         bonusSource: q.bonusSource,
+        entitlementId: q.entitlementId ?? null,
+        entitlementBonusGems: q.entitlementBonusGems ?? 0,
         quoteExpiresAt: new Date(q.expiresAt),
         meta: { paymentUrl: payment.paymentUrl, isTest: provider.isTest },
       })
@@ -365,10 +381,39 @@ export class PaymentsService {
           meta: { source: deposit.bonusSource },
         });
       }
+      // Бонус по праву: только если право ещё активно (не потрачено другим пополнением).
+      let entBonus = 0;
+      if (deposit.entitlementId && deposit.entitlementBonusGems > 0) {
+        const ent = await this.entitlements.lockById(tx, deposit.entitlementId);
+        if (ent && ent.userId === deposit.userId && this.entitlements.isUsable(ent)) {
+          await this.entitlements.consume(tx, ent.id, deposit.id);
+          entBonus = deposit.entitlementBonusGems;
+          res = await this.ledger.post(tx, {
+            userId: deposit.userId,
+            type: 'deposit_bonus',
+            amount: entBonus,
+            refType: 'deposit',
+            refId: deposit.id,
+            idempotencyKey: `deposit_bonus_ent:${deposit.id}`,
+            meta: { source: 'entitlement', entitlementId: ent.id },
+          });
+        }
+      }
       await tx
         .update(deposits)
-        .set({ status: 'succeeded', completedAt: sql`now()`, bonusGems: bonus })
+        .set({
+          status: 'succeeded',
+          completedAt: sql`now()`,
+          bonusGems: bonus,
+          entitlementBonusGems: entBonus,
+        })
         .where(eq(deposits.id, deposit.id));
+      await this.outbox.add(tx, 'deposit.succeeded', {
+        depositId: deposit.id,
+        userId: deposit.userId,
+        gems: deposit.gemsAmount,
+        bonus: bonus + entBonus,
+      });
       await tx
         .update(users)
         .set({ firstDepositAt: sql`coalesce(${users.firstDepositAt}, now())` })

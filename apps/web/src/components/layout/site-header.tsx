@@ -14,6 +14,7 @@ import { BalancePill } from './balance';
 import { GameSwitcher } from './game-switcher';
 import { MAIN_NAV, isActive } from './nav-items';
 import { OnlineBadge } from './online';
+import { NotificationsBell } from './notifications-bell';
 import { UserMenu } from './user-menu';
 
 export function SiteHeader() {
@@ -75,6 +76,7 @@ export function SiteHeader() {
                   <Plus size={20} strokeWidth={3} />
                 </Button>
               </div>
+              <NotificationsBell />
               <UserMenu me={me.data} />
             </>
           ) : (

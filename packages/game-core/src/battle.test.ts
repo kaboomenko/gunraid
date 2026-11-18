@@ -61,3 +61,14 @@ describe('battle', () => {
     expect(t).toBeLessThan(1);
   });
 });
+
+import { pickWeighted } from './index.js';
+
+describe('wheel', () => {
+  it('maps the roll onto cumulative weights', () => {
+    expect(pickWeighted([1, 1, 2], 0)).toEqual({ index: 0, ticket: 0 });
+    expect(pickWeighted([1, 1, 2], 0.3)).toEqual({ index: 1, ticket: 1 });
+    expect(pickWeighted([1, 1, 2], 0.5)).toEqual({ index: 2, ticket: 2 });
+    expect(pickWeighted([1, 1, 2], 0.999999)).toEqual({ index: 2, ticket: 3 });
+  });
+});

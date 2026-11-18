@@ -3,7 +3,6 @@ import { CatalogService } from '../catalog/catalog.service.js';
 import { FairnessService } from '../fairness/fairness.service.js';
 import { FeedWorkerModule } from '../feed/feed-worker.module.js';
 import { InventoryService } from '../inventory/inventory.service.js';
-import { OutboxService } from '../outbox/outbox.service.js';
 import { BattlesHandlers } from './battles.handlers.js';
 import { BattlesNotifier } from './battles.notifier.js';
 import { BattlesService } from './battles.service.js';
@@ -18,7 +17,6 @@ import { BattlesService } from './battles.service.js';
     CatalogService,
     InventoryService,
     FairnessService,
-    OutboxService,
   ],
 })
 export class BattlesWorkerModule {}

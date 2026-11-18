@@ -2,7 +2,7 @@
 
 import { LINKABLE_PROVIDERS, type LinkableProvider, type MeDto } from '@gunraid/shared';
 import { useQueryClient } from '@tanstack/react-query';
-import { Copy, LogIn } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Avatar } from '@/components/ui/avatar';
@@ -12,6 +12,8 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { EntitlementsCard, LevelCard, ReferralCard } from '@/components/bonuses/bonuses-view';
+import { AchievementsPanel } from './achievements-panel';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/lib/api';
 import { useConfig } from '@/lib/config';
@@ -25,7 +27,7 @@ import { InventoryPanel } from './inventory-panel';
 import { SettingsPanel } from './settings-panel';
 import { StatsRow } from './stats-row';
 
-const TABS = ['inventory', 'history', 'settings', 'referrals'] as const;
+const TABS = ['inventory', 'history', 'achievements', 'referrals', 'settings'] as const;
 type Tab = (typeof TABS)[number];
 
 export function ProfileView() {
@@ -84,8 +86,17 @@ export function ProfileView() {
         <TabsContent value="settings">
           <SettingsPanel me={data} />
         </TabsContent>
+        <TabsContent value="achievements">
+          <AchievementsPanel />
+        </TabsContent>
         <TabsContent value="referrals">
-          <ReferralBlock code={data.referralCode} />
+          <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+            <ReferralCard />
+            <div className="space-y-5">
+              <LevelCard />
+              <EntitlementsCard />
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
@@ -198,32 +209,5 @@ function LinkedAccounts({ me }: { me: MeDto }) {
           )}
       </div>
     </div>
-  );
-}
-
-function ReferralBlock({ code }: { code: string }) {
-  const t = useTranslations();
-  const link = typeof window !== 'undefined' ? `${window.location.origin}/r/${code}` : `/r/${code}`;
-  return (
-    <Card className="space-y-3 p-5">
-      <div className="font-display text-lg font-bold uppercase">{t('profile.referralTitle')}</div>
-      <p className="text-sm text-muted">{t('profile.referralText')}</p>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <code
-          className="clip-cut flex h-11 flex-1 items-center truncate bg-surface-2 px-3.5 text-sm [--cut:7px]"
-          suppressHydrationWarning
-        >
-          {link}
-        </code>
-        <Button
-          variant="secondary"
-          onClick={() => {
-            void navigator.clipboard?.writeText(link).then(() => toast.success(t('common.copied')));
-          }}
-        >
-          <Copy size={16} /> {t('common.copy')}
-        </Button>
-      </div>
-    </Card>
   );
 }

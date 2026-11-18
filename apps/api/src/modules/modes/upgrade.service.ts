@@ -196,6 +196,12 @@ export class UpgradeService {
         .insert(upgradeStakeItems)
         .values(locked.map((l) => ({ upgradeId, userItemId: l.id, value: l.price })));
     }
+    await this.outbox.add(tx, 'wager.placed', {
+      userId,
+      amount: stakeValue,
+      sourceType: 'upgrade',
+      sourceId: upgradeId,
+    });
     if (isWin) {
       const { delayMs } = await this.settings.get('feed');
       await this.outbox.add(

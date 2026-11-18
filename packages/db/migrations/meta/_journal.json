@@ -43,6 +43,13 @@
       "when": 1794966555304,
       "tag": "0005_battles",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794968223242,
+      "tag": "0006_bonuses",
+      "breakpoints": true
     }
   ]
 }

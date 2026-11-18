@@ -32,6 +32,7 @@ import type { GameRow } from '../games/games.service.js';
 import { InventoryService } from '../inventory/inventory.service.js';
 import { LedgerService } from '../ledger/ledger.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
+import { EntitlementsService } from '../bonuses/entitlements.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 
 type CaseRow = typeof cases.$inferSelect;
@@ -52,6 +53,7 @@ export class CasesService {
     private readonly fairness: FairnessService,
     private readonly settings: SettingsService,
     private readonly outbox: OutboxService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   private toCard(row: CaseRow, categoryCode: string): CaseCardDto {
@@ -153,18 +155,22 @@ export class CasesService {
       reason,
       availableAt: null,
       levelRequired: null,
+      freeOpens: 0,
       ...extra,
     });
     if (!this.isAvailableNow(c)) return block('UNAVAILABLE');
     if (c.supplyTotal !== null && c.supplyUsed >= c.supplyTotal) return block('SOLD_OUT');
     if (!ctx) return block('LOGIN', { levelRequired: c.minLevel });
-    if (!ctx.adultConfirmed) return block('ADULT');
+    const freeOpens =
+      c.kind === 'paid' ? await this.entitlements.count(ctx.userId, 'free_case', c.id) : 0;
+    if (!ctx.adultConfirmed) return block('ADULT', { freeOpens });
     if (c.minLevel) {
       const [u] = await this.db
         .select({ level: users.level })
         .from(users)
         .where(eq(users.id, ctx.userId));
-      if ((u?.level ?? 0) < c.minLevel) return block('LEVEL', { levelRequired: c.minLevel });
+      if ((u?.level ?? 0) < c.minLevel)
+        return block('LEVEL', { levelRequired: c.minLevel, freeOpens });
     }
     if (c.cooldownSeconds) {
       const [cd] = await this.db
@@ -174,10 +180,16 @@ export class CasesService {
           and(eq(userCooldowns.userId, ctx.userId), eq(userCooldowns.key, `free_case:${c.id}`)),
         );
       if (cd && cd.availableAt.getTime() > Date.now()) {
-        return block('COOLDOWN', { availableAt: cd.availableAt.toISOString() });
+        return block('COOLDOWN', { availableAt: cd.availableAt.toISOString(), freeOpens });
       }
     }
-    return { canOpen: true, reason: null, availableAt: null, levelRequired: c.minLevel };
+    return {
+      canOpen: true,
+      reason: null,
+      availableAt: null,
+      levelRequired: c.minLevel,
+      freeOpens,
+    };
   }
 
   private async revision(revisionId: string, tx: DbOrTx = this.db) {
@@ -217,12 +229,14 @@ export class CasesService {
     game: GameRow,
     slug: string,
     count: number,
+    useBonus = false,
   ): Promise<CaseOpenResultDto> {
     const { c } = await this.findCase(game, slug, tx);
     if (!this.isAvailableNow(c)) throw new AppError('CASE_UNAVAILABLE', 409);
     const isFree = c.kind === 'free';
-    if (count < 1 || count > (isFree ? 1 : MAX_OPEN_COUNT))
+    if (count < 1 || count > (isFree || useBonus ? 1 : MAX_OPEN_COUNT))
       throw new AppError('CASE_OPEN_COUNT_INVALID', 400);
+    if (useBonus && isFree) throw new AppError('ENTITLEMENT_NOT_FOUND', 404);
     const rev = await this.revision(c.currentRevisionId as string, tx);
     const batchId = newId();
 
@@ -233,7 +247,13 @@ export class CasesService {
     }
 
     let balance: number;
-    if (!isFree) {
+    if (useBonus) {
+      // Бесплатное открытие по бонусу: тратится одно право «бесплатный кейс» (SKIP LOCKED — не дважды).
+      const ent = await this.entitlements.lockOne(tx, userId, 'free_case', c.id);
+      if (!ent) throw new AppError('ENTITLEMENT_NOT_FOUND', 404);
+      await this.entitlements.consume(tx, ent.id, batchId);
+      balance = await this.ledger.balanceOf(userId, tx);
+    } else if (!isFree) {
       const charged = await this.ledger.post(tx, {
         userId,
         type: 'case_open',
@@ -309,8 +329,9 @@ export class CasesService {
         caseId: c.id,
         revisionId: rev.id,
         batchId,
-        pricePaid: c.price,
-        isFree,
+        pricePaid: useBonus ? 0 : c.price,
+        isFree: isFree || useBonus,
+        source: useBonus ? 'entitlement' : 'direct',
         fairSeedId: rolls.seedId,
         nonce,
         ticket,
@@ -346,10 +367,21 @@ export class CasesService {
       delayMs,
     );
 
+    if (!isFree && !useBonus) {
+      await this.outbox.add(tx, 'wager.placed', {
+        userId,
+        amount: c.price * count,
+        sourceType: 'case_batch',
+        sourceId: batchId,
+      });
+    }
+
     return {
       batchId,
       caseId: c.id,
       balance,
+      freeOpens:
+        c.kind === 'paid' ? await this.entitlements.count(userId, 'free_case', c.id, tx) : 0,
       results,
       fair: { serverSeedHash: rolls.serverSeedHash, clientSeed: rolls.clientSeed },
       supplyUsed,

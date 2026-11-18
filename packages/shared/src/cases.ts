@@ -61,6 +61,8 @@ export interface CaseAvailabilityDto {
   reason: CaseBlockReason | null;
   availableAt: string | null;
   levelRequired: number | null;
+  /** Бесплатные открытия этого кейса по бонусам (колесо, промокод, награды). */
+  freeOpens: number;
 }
 
 export interface CaseDetailDto extends CaseCardDto {
@@ -71,7 +73,13 @@ export interface CaseDetailDto extends CaseCardDto {
   maxOpenCount: number;
 }
 
-export const openCaseSchema = z.object({ count: z.number().int().min(1).max(5) }).strict();
+export const openCaseSchema = z
+  .object({
+    count: z.number().int().min(1).max(5),
+    /** Открыть по бонусу «бесплатный кейс» (только x1). */
+    useBonus: z.boolean().optional(),
+  })
+  .strict();
 export type OpenCaseBody = z.infer<typeof openCaseSchema>;
 
 export interface CaseOpenResultItemDto {
@@ -91,6 +99,8 @@ export interface CaseOpenResultDto {
   supplyUsed: number | null;
   supplyTotal: number | null;
   cooldownUntil: string | null;
+  /** Сколько бесплатных открытий этого кейса по бонусам осталось. */
+  freeOpens: number;
 }
 
 export type DropSource = 'case' | 'upgrade' | 'contract' | 'battle' | 'wheel';

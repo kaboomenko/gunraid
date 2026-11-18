@@ -8,6 +8,7 @@ import {
   hexToFloat,
   hmacSha256Hex,
   pickByTicket,
+  pickWeighted,
   resolveBattle,
   rollToScaled,
   sha256Hex,
@@ -23,6 +24,7 @@ import type {
   RevealedSeedDto,
   RotateSeedResultDto,
   UpgradeProofDto,
+  WheelProofDto,
 } from '@gunraid/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, RefreshCw, XCircle } from 'lucide-react';
@@ -153,14 +155,15 @@ function SeedsPanel() {
   );
 }
 
-type ProofKind = 'case_opening' | 'upgrade' | 'contract' | 'battle';
-type SeedProof = CaseOpeningProofDto | UpgradeProofDto | ContractProofDto;
-const KINDS: ProofKind[] = ['case_opening', 'upgrade', 'contract', 'battle'];
+type ProofKind = 'case_opening' | 'upgrade' | 'contract' | 'battle' | 'wheel_spin';
+type SeedProof = CaseOpeningProofDto | UpgradeProofDto | ContractProofDto | WheelProofDto;
+const KINDS: ProofKind[] = ['case_opening', 'upgrade', 'contract', 'battle', 'wheel_spin'];
 const PARAM_TO_KIND: Record<string, ProofKind> = {
   opening: 'case_opening',
   upgrade: 'upgrade',
   contract: 'contract',
   battle: 'battle',
+  wheel: 'wheel_spin',
 };
 
 function Verifier() {
@@ -215,6 +218,21 @@ function Verifier() {
         roll,
         win,
         match: roll === proof.roll && win === proof.isWin,
+      };
+    }
+    if (proof?.type === 'wheel_spin') {
+      const pick = pickWeighted(
+        proof.prizes.map((x) => x.weight),
+        float,
+      );
+      return {
+        float,
+        hashOk,
+        kind: 'wheel_spin' as const,
+        ticket: pick.ticket,
+        total: proof.prizes.reduce((a, x) => a + x.weight, 0),
+        label: proof.prizes[pick.index]?.label ?? '',
+        match: pick.index === proof.prizeIndex && pick.ticket === proof.ticket,
       };
     }
     if (proof?.type === 'contract') {
@@ -347,6 +365,16 @@ function Verifier() {
                     </div>
                     <Mono>
                       {computed.roll} / {proof.chance}
+                    </Mono>
+                  </div>
+                )}
+                {computed.kind === 'wheel_spin' && (
+                  <div className="clip-cut bg-surface-2 p-3 [--cut:6px]">
+                    <div className="text-xs text-dim">
+                      {t('wheelTicket', { total: computed.total })}
+                    </div>
+                    <Mono>
+                      {computed.ticket} → {computed.label}
                     </Mono>
                   </div>
                 )}

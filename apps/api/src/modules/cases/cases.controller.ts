@@ -74,7 +74,7 @@ export class CasesController {
       key,
       `case:${g.code}:${slug}`,
       body,
-      (tx) => this.cases.open(tx, user.userId, g, slug, body.count),
+      (tx) => this.cases.open(tx, user.userId, g, slug, body.count, body.useBonus ?? false),
     );
     if (!replayed) {
       this.realtime.balance(user.userId, result.balance);

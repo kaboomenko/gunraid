@@ -8,3 +8,4 @@ export * from './users.js';
 export * from './cases.js';
 export * from './modes.js';
 export * from './battles.js';
+export * from './bonuses.js';

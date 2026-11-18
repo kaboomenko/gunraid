@@ -4,6 +4,7 @@ import { newId } from '../ids.js';
 import {
   adminAuditLog,
   authIdentities,
+  deposits,
   inventoryEvents,
   ledgerEntries,
   userItems,
@@ -102,6 +103,13 @@ export async function seedDevUsers(db: Db): Promise<void> {
       });
     }
 
+    // Демо-аккаунты «со стажем» (колесо требует возраст аккаунта), у DevPlayer — тестовое пополнение.
+    await db
+      .update(users)
+      .set({ createdAt: sql`least(${users.createdAt}, now() - interval '30 days')` })
+      .where(eq(users.id, userId as string));
+    if (p.key === 'player') await seedDemoDeposit(db, userId as string);
+
     if (p.items > 0) {
       const [has] = await db
         .select({ id: userItems.id })
@@ -133,4 +141,62 @@ export async function seedDevUsers(db: Db): Promise<void> {
       }
     }
   }
+}
+
+/** Тестовое пополнение $10 (1000 гемов) через ledger — чтобы у демо-игрока выполнялись условия колеса. */
+async function seedDemoDeposit(db: Db, userId: string): Promise<void> {
+  const key = `seed:demo-deposit:${userId}`;
+  await db.transaction(async (tx) => {
+    const [exists] = await tx
+      .select({ id: ledgerEntries.id })
+      .from(ledgerEntries)
+      .where(eq(ledgerEntries.idempotencyKey, key))
+      .limit(1);
+    if (exists) return;
+    const [wallet] = await tx
+      .select()
+      .from(wallets)
+      .where(eq(wallets.userId, userId))
+      .for('update');
+    const gems = 1000;
+    const depositId = newId();
+    await tx.insert(deposits).values({
+      id: depositId,
+      userId,
+      provider: 'mock',
+      providerPaymentId: `seed-${depositId}`,
+      method: 'card',
+      payCurrency: 'USD',
+      payAmount: '10',
+      usdRate: '1',
+      gemsPerUsd: 100,
+      gemsAmount: gems,
+      quoteExpiresAt: new Date(),
+      status: 'succeeded',
+      completedAt: new Date(),
+      meta: { seed: true, isTest: true },
+    });
+    const balanceAfter = (wallet?.balance ?? 0) + gems;
+    const [entry] = await tx
+      .insert(ledgerEntries)
+      .values({
+        userId,
+        type: 'deposit',
+        amount: gems,
+        balanceAfter,
+        refType: 'deposit',
+        refId: depositId,
+        idempotencyKey: key,
+        meta: { seed: true },
+      })
+      .returning({ id: ledgerEntries.id });
+    await tx
+      .update(wallets)
+      .set({ balance: balanceAfter, lastEntryId: entry?.id ?? null, updatedAt: sql`now()` })
+      .where(eq(wallets.userId, userId));
+    await tx
+      .update(users)
+      .set({ firstDepositAt: sql`coalesce(${users.firstDepositAt}, now())` })
+      .where(eq(users.id, userId));
+  });
 }

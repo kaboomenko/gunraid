@@ -9,7 +9,7 @@ import {
   type SellResultDto,
 } from '@gunraid/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Coins, Lock, RotateCcw, ShieldCheck, Volume2, VolumeX, Zap } from 'lucide-react';
+import { Coins, Gift, Lock, RotateCcw, ShieldCheck, Volume2, VolumeX, Zap } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -87,15 +87,17 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
     }
   }, [result, c.price]);
 
-  const open = async () => {
+  const open = async (useBonus = false) => {
     if (!me.data) return openLogin();
     setBusy(true);
     try {
       const res = await api.post<CaseOpenResultDto>(
         `/games/${game}/cases/${c.slug}/open`,
-        { count },
+        useBonus ? { count: 1, useBonus: true } : { count },
         { idempotencyKey: newIdempotencyKey() },
       );
+      if (useBonus) setCount(1);
+      void qc.invalidateQueries({ queryKey: ['entitlements'] });
       finished.current = 0;
       setSold(new Set());
       setShowResult(false);
@@ -179,7 +181,7 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
         size="lg"
         loading={busy}
         disabled={spinning}
-        onClick={() => void open()}
+        onClick={() => void open(false)}
         className="min-w-56"
         data-testid="case-open"
       >
@@ -248,6 +250,18 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
           </div>
         )}
         {action}
+        {me.data && a.freeOpens > 0 && c.kind !== 'free' && (
+          <Button
+            size="lg"
+            variant="outline"
+            loading={busy}
+            disabled={spinning}
+            onClick={() => void open(true)}
+            data-testid="case-open-bonus"
+          >
+            <Gift size={18} /> {t('case.openBonus')} · {a.freeOpens}
+          </Button>
+        )}
         <div className="flex gap-1.5">
           <Button
             variant={fast ? 'outline' : 'secondary'}

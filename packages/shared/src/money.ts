@@ -94,6 +94,9 @@ export interface DepositQuoteDto {
   /** Бонусные гемы (например, за первое пополнение). */
   bonusGems: number;
   bonusSource: string | null;
+  /** Бонус по активному праву «бонус к пополнению» (колесо, промокод, уровень). */
+  entitlementBonusGems: number;
+  entitlementPercent: number | null;
   expiresAt: string;
 }
 

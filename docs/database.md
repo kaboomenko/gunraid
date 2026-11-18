@@ -188,7 +188,7 @@ PK `(battle_id, round_index, slot)`, `item_id`, `item_value`, `roll`, `ticket`, 
 `id`, `game_id`, `type` (`balance`, `item`, `free_case`, `deposit_bonus`, `extra_spin`), `amount?`, `item_id?`, `case_id?`, `percent?`, `weight`, `label jsonb`, `color`, `sort_order`, `is_active`.
 
 **wheel_spins**
-`id`, `user_id`, `game_id`, `prize_id`, `prize_snapshot jsonb`, `is_extra`, `fair_seed_id`, `nonce`, `roll`, `result_ref_type`, `result_ref_id`, `created_at`.
+`id`, `user_id`, `game_id`, `prize_id`, `prizes_snapshot jsonb` (все призы с весами на момент вращения — для проверки), `prize_index`, `is_extra`, `fair_seed_id`, `nonce`, `roll`, `ticket`, `result_ref_type`, `result_ref_id`, `created_at`.
 
 **user_entitlements** — выданные «права»: бесплатный кейс, дополнительный спин, бонус к пополнению.
 `id`, `user_id`, `type` (`free_case`, `wheel_spin`, `deposit_bonus`), `case_id?`, `percent?`, `max_amount?`, `source_type` (`wheel`, `promo`, `level`, `admin`), `source_id`, `status` (`active` / `used` / `expired`), `expires_at?`, `used_at?`, `used_ref_id?`, `created_at`.
@@ -202,7 +202,9 @@ PK `(battle_id, round_index, slot)`, `item_id`, `item_value`, `roll`, `ticket`, 
 
 **daily_bonus_claims** — `id`, `user_id`, `day date` (по часовому поясу сайта), `streak`, `amount`, `ledger_entry_id`; unique `(user_id, day)`.
 
-**levels** — `level PK`, `xp_required`, `reward jsonb` (баланс / бесплатный кейс / спин), `name jsonb?`.
+**levels** — `level PK`, `xp_required`, `reward jsonb` (`balance`, `wheelSpins`, `depositBonus`).
+
+**level_rewards_granted** — PK `(user_id, level)`: награда за уровень выдаётся один раз.
 
 **xp_events** — `id bigint`, `user_id`, `amount`, `source_type`, `source_id`, `created_at`.
 
@@ -212,7 +214,7 @@ PK `(battle_id, round_index, slot)`, `item_id`, `item_value`, `roll`, `ticket`, 
 
 **leaderboard_periods** — `id`, `leaderboard_id`, `period_start`, `period_end`, `status` (`open` / `finalized`), `standings jsonb` (снимок топа), `finalized_at?`.
 
-**leaderboard_payouts** — PK `(period_id, place)`, `user_id`, `prize jsonb`, `result_ref_type`, `result_ref_id`.
+**leaderboard_payouts** — PK `(period_id, place)`, `user_id`, `amount`, `ledger_entry_id`.
 
 **achievements** — `id`, `code`, `name jsonb`, `description jsonb`, `icon_url`, `condition jsonb` (тип условия из набора, заданного в коде, + параметры: «открыть N кейсов», «выиграть апгрейд с шансом < X %» …), `reward jsonb?`, `sort_order`, `is_active`.
 
