@@ -94,7 +94,10 @@ export const idempotencyRequests = pgTable(
     response: jsonb(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.userId, t.key] }), index('idempotency_created_idx').on(t.createdAt)],
+  (t) => [
+    primaryKey({ columns: [t.userId, t.key] }),
+    index('idempotency_created_idx').on(t.createdAt),
+  ],
 );
 
 /** Пополнения. Реальная валюта живёт только здесь; пользователю — только гемы. */

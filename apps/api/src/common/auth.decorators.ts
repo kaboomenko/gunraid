@@ -31,7 +31,8 @@ export const Auth = (opts: { roles?: Role[]; adult?: boolean } = {}) =>
   SetMetadata(AUTH_OPTIONS, { required: true, ...opts } satisfies AuthOptions);
 
 /** Пользователь подставляется, если вошёл; гостям тоже можно. */
-export const OptionalAuth = () => SetMetadata(AUTH_OPTIONS, { required: false } satisfies AuthOptions);
+export const OptionalAuth = () =>
+  SetMetadata(AUTH_OPTIONS, { required: false } satisfies AuthOptions);
 
 export const RateLimit = (...buckets: RateLimitBucket[]) => SetMetadata(RATE_LIMIT, buckets);
 

@@ -18,7 +18,11 @@ export class GoogleOAuth {
   start(): { url: string; state: string; codeVerifier: string } {
     const state = generateState();
     const codeVerifier = generateCodeVerifier();
-    const url = this.client.createAuthorizationURL(state, codeVerifier, ['openid', 'profile', 'email']);
+    const url = this.client.createAuthorizationURL(state, codeVerifier, [
+      'openid',
+      'profile',
+      'email',
+    ]);
     url.searchParams.set('prompt', 'select_account');
     return { url: url.toString(), state, codeVerifier };
   }

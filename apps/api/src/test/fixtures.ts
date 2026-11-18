@@ -18,7 +18,11 @@ export async function gameId(app: NestFastifyApplication, code: string): Promise
 }
 
 /** Начислить гемы тестовому пользователю через ledger (как ручная корректировка с причиной). */
-export async function grantGems(app: NestFastifyApplication, userId: string, amount: number): Promise<number> {
+export async function grantGems(
+  app: NestFastifyApplication,
+  userId: string,
+  amount: number,
+): Promise<number> {
   const ledger = app.get(LedgerService);
   return db(app).transaction(async (tx) => {
     const res = await ledger.post(tx, {
@@ -53,14 +57,23 @@ export async function grantItems(
   const out = [];
   for (const r of rows) {
     const userItemId = await db(app).transaction((tx) =>
-      inventory.grant(tx, { userId, gameId: gid, itemId: r.id, value: r.price, sourceType: 'admin' }),
+      inventory.grant(tx, {
+        userId,
+        gameId: gid,
+        itemId: r.id,
+        value: r.price,
+        sourceType: 'admin',
+      }),
     );
     out.push({ userItemId, itemId: r.id, price: r.price });
   }
   return out;
 }
 
-export async function newPlayer(app: NestFastifyApplication, prefix = 'p'): Promise<{ client: TestClient; me: MeDto }> {
+export async function newPlayer(
+  app: NestFastifyApplication,
+  prefix = 'p',
+): Promise<{ client: TestClient; me: MeDto }> {
   const client = new TestClient(app);
   await client.loginNewPlayer(prefix);
   const me = (await client.get<MeDto>('/api/v1/me')).body;

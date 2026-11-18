@@ -75,7 +75,12 @@ export class UsersController {
 
   @Get(':shortId')
   profile(@Param('shortId') shortIdRaw: string) {
-    const shortId = z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER).parse(shortIdRaw);
+    const shortId = z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(Number.MAX_SAFE_INTEGER)
+      .parse(shortIdRaw);
     return this.users.getPublicProfile(shortId);
   }
 }

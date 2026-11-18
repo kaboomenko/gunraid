@@ -23,7 +23,13 @@ import {
 } from '../../config/env.js';
 import { ENV } from '../../core/tokens.js';
 import { AppError, unauthorized } from '../../common/app-error.js';
-import { Auth, CurrentUser, OptionalAuth, RateLimit, type AuthContext } from '../../common/auth.decorators.js';
+import {
+  Auth,
+  CurrentUser,
+  OptionalAuth,
+  RateLimit,
+  type AuthContext,
+} from '../../common/auth.decorators.js';
 import { getRequestMeta } from '../../common/http-context.js';
 import { ZBody } from '../../common/zod.js';
 import { UsersService } from '../users/users.service.js';
@@ -92,7 +98,13 @@ export class AuthController {
     const callback = this.steamCallbackUrl(state);
     this.tokens.setStateCookie(
       reply,
-      await this.tokens.signState({ p: 'steam', state, intent, returnTo, linkUserId: req.auth?.userId ?? null }),
+      await this.tokens.signState({
+        p: 'steam',
+        state,
+        intent,
+        returnTo,
+        linkUserId: req.auth?.userId ?? null,
+      }),
     );
     return reply.redirect(buildSteamLoginUrl(callback, this.env.PUBLIC_URL), 302);
   }
@@ -165,7 +177,14 @@ export class AuthController {
   ) {
     const st = await this.tokens.verifyState<OAuthState>(req.cookies[COOKIES.oauth]);
     this.tokens.clearStateCookie(reply);
-    if (!this.google || !st || st.p !== 'google' || st.state !== state || !code || !st.codeVerifier) {
+    if (
+      !this.google ||
+      !st ||
+      st.p !== 'google' ||
+      st.state !== state ||
+      !code ||
+      !st.codeVerifier
+    ) {
       return this.redirectError(reply, st?.returnTo ?? '/', 'AUTH_FAILED');
     }
     let claims;
@@ -198,9 +217,11 @@ export class AuthController {
   ) {
     if (!isTelegramEnabled(this.env)) throw new AppError('AUTH_PROVIDER_DISABLED', 404);
     const { intent, ...data } = body;
-    if (!verifyTelegramAuth(data, this.env.TELEGRAM_BOT_TOKEN as string)) throw unauthorized('AUTH_FAILED');
+    if (!verifyTelegramAuth(data, this.env.TELEGRAM_BOT_TOKEN as string))
+      throw unauthorized('AUTH_FAILED');
     if (intent === 'link' && !req.auth) throw unauthorized();
-    const displayName = [data.first_name, data.last_name].filter(Boolean).join(' ') || data.username;
+    const displayName =
+      [data.first_name, data.last_name].filter(Boolean).join(' ') || data.username;
     const result = await this.complete(req, reply, {
       provider: 'telegram',
       providerUserId: String(data.id),
@@ -227,7 +248,9 @@ export class AuthController {
     const nickname = body.nickname ?? preset.nickname;
     const result = await this.complete(req, reply, {
       provider: 'dev',
-      providerUserId: body.nickname ? `nick:${body.nickname.toLowerCase()}` : `preset:${body.preset}`,
+      providerUserId: body.nickname
+        ? `nick:${body.nickname.toLowerCase()}`
+        : `preset:${body.preset}`,
       profile: { displayName: nickname, avatarUrl: null },
       intent: 'login',
       forceRole: body.nickname ? undefined : preset.role,
@@ -257,7 +280,8 @@ export class AuthController {
       this.tokens.setAuthCookies(reply, access, session.refreshToken);
       return { ok: true };
     } catch (err) {
-      if (err instanceof AppError && err.code !== 'REFRESH_RACE') this.tokens.clearAuthCookies(reply);
+      if (err instanceof AppError && err.code !== 'REFRESH_RACE')
+        this.tokens.clearAuthCookies(reply);
       throw err;
     }
   }
@@ -283,7 +307,10 @@ export class AuthController {
   @Post('logout-all')
   @HttpCode(200)
   @Auth()
-  async logoutAll(@CurrentUser() user: AuthContext, @Res({ passthrough: true }) reply: FastifyReply) {
+  async logoutAll(
+    @CurrentUser() user: AuthContext,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
     const revoked = await this.sessions.revokeAllForUser(user.userId, 'logout_all');
     this.tokens.clearAuthCookies(reply);
     return { ok: true, revoked };
@@ -298,11 +325,7 @@ export class AuthController {
     };
   }
 
-  private async complete(
-    req: FastifyRequest,
-    reply: FastifyReply,
-    input: CompleteAuthInput,
-  ) {
+  private async complete(req: FastifyRequest, reply: FastifyReply, input: CompleteAuthInput) {
     const meta = getRequestMeta(req);
     const result = await this.auth.completeAuth({
       ...input,
@@ -335,7 +358,10 @@ export class AuthController {
         linkUserId: st.intent === 'link' ? (st.linkUserId ?? null) : null,
       });
       const url = new URL(st.returnTo, this.env.PUBLIC_URL);
-      url.searchParams.set(result.linked ? 'linked' : 'auth', result.linked ? input.provider : 'ok');
+      url.searchParams.set(
+        result.linked ? 'linked' : 'auth',
+        result.linked ? input.provider : 'ok',
+      );
       return reply.redirect(url.toString(), 302);
     } catch (err) {
       const code: ErrorCode = err instanceof AppError ? err.code : 'AUTH_FAILED';

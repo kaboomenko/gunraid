@@ -68,10 +68,24 @@ export function SettingsPanel({ me }: { me: MeDto }) {
             if (await patch('nickname', { nickname })) toast.success(t('common.saved'));
           }}
         >
-          <Field label={t('settings.nickname')} hint={t('settings.nicknameHint')} htmlFor="nickname">
+          <Field
+            label={t('settings.nickname')}
+            hint={t('settings.nicknameHint')}
+            htmlFor="nickname"
+          >
             <div className="flex gap-2">
-              <Input id="nickname" value={nickname} onChange={(e) => setNickname(e.target.value)} maxLength={24} />
-              <Button type="submit" variant="secondary" loading={busy === 'nickname'} disabled={nickname.trim() === me.nickname}>
+              <Input
+                id="nickname"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                maxLength={24}
+              />
+              <Button
+                type="submit"
+                variant="secondary"
+                loading={busy === 'nickname'}
+                disabled={nickname.trim() === me.nickname}
+              >
                 {t('common.save')}
               </Button>
             </div>
@@ -114,7 +128,13 @@ export function SettingsPanel({ me }: { me: MeDto }) {
 
       <Card className="space-y-5 p-5">
         {config.games.map((g) => (
-          <GameProfileForm key={g.code} me={me} game={g.code} gameName={g.name} target={g.features.withdrawTarget} />
+          <GameProfileForm
+            key={g.code}
+            me={me}
+            game={g.code}
+            gameName={g.name}
+            target={g.features.withdrawTarget}
+          />
         ))}
         <div className="border-t border-line pt-5">
           <div className="mb-1 text-sm font-semibold">{t('settings.security')}</div>
@@ -152,7 +172,10 @@ function GameProfileForm({
     setBusy(true);
     setError(null);
     try {
-      const body = target === 'trade_url' ? { tradeUrl: value.trim() || null } : { playerId: value.trim() || null };
+      const body =
+        target === 'trade_url'
+          ? { tradeUrl: value.trim() || null }
+          : { playerId: value.trim() || null };
       const updated = await api.put<MeDto>(`/me/games/${game}/profile`, body);
       qc.setQueryData(ME_KEY, updated);
       toast.success(t('common.saved'));
@@ -184,11 +207,20 @@ function GameProfileForm({
             value={value}
             invalid={Boolean(error)}
             inputMode={target === 'player_id' ? 'numeric' : 'url'}
-            placeholder={target === 'trade_url' ? t('settings.tradeUrlPlaceholder') : t('settings.playerIdPlaceholder')}
+            placeholder={
+              target === 'trade_url'
+                ? t('settings.tradeUrlPlaceholder')
+                : t('settings.playerIdPlaceholder')
+            }
             onChange={(e) => setValue(e.target.value)}
             aria-describedby={`${id}-game`}
           />
-          <Button type="submit" variant="secondary" loading={busy} disabled={value.trim() === initial}>
+          <Button
+            type="submit"
+            variant="secondary"
+            loading={busy}
+            disabled={value.trim() === initial}
+          >
             {t('common.save')}
           </Button>
         </div>

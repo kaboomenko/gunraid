@@ -1,4 +1,10 @@
-import { Catch, HttpException, Logger, type ArgumentsHost, type ExceptionFilter } from '@nestjs/common';
+import {
+  Catch,
+  HttpException,
+  Logger,
+  type ArgumentsHost,
+  type ExceptionFilter,
+} from '@nestjs/common';
 import type { ApiErrorBody, ErrorCode } from '@gunraid/shared';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
@@ -68,6 +74,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
   }
 }
 
-export function formatZodIssues(error: ZodError): Array<{ path: string; code: string; message: string }> {
+export function formatZodIssues(
+  error: ZodError,
+): Array<{ path: string; code: string; message: string }> {
   return error.issues.map((i) => ({ path: i.path.join('.'), code: i.code, message: i.message }));
 }

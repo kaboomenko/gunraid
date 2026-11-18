@@ -42,24 +42,37 @@ export function LiveFeedBar() {
           <span className="h-2 w-2 bg-accent animate-pulse-dot" aria-hidden="true" />
           {t('title')}
         </div>
-        <div className="no-scrollbar flex h-full flex-1 items-center gap-1.5 overflow-x-auto py-1.5" aria-label={t('title')}>
+        <div
+          className="no-scrollbar flex h-full flex-1 items-center gap-1.5 overflow-x-auto py-1.5"
+          aria-label={t('title')}
+        >
           {drops.length === 0 && <span className="truncate text-xs text-dim">{t('empty')}</span>}
           {drops.map((d) => (
             <Link
               key={d.id}
               href={`/${d.game}/u/${d.user.shortId}`}
               className={`group relative flex h-full w-[84px] shrink-0 flex-col items-center justify-center overflow-hidden bg-surface-2 sm:w-[108px] ${d.id === fresh ? 'animate-feed-in' : ''}`}
-              style={{ background: `radial-gradient(90% 80% at 50% 100%, ${d.item.rarityColor}40, var(--color-surface-2) 70%)` }}
+              style={{
+                background: `radial-gradient(90% 80% at 50% 100%, ${d.item.rarityColor}40, var(--color-surface-2) 70%)`,
+              }}
               title={`${d.user.nickname} · ${d.item.skinName} · ${formatGems(d.item.price)}`}
             >
               {d.item.imageUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={d.item.imageUrl} alt="" className="h-7 w-14 object-contain sm:h-9 sm:w-20" loading="lazy" />
+                <img
+                  src={d.item.imageUrl}
+                  alt=""
+                  className="h-7 w-14 object-contain sm:h-9 sm:w-20"
+                  loading="lazy"
+                />
               )}
               <span className="mt-0.5 hidden w-full truncate px-1.5 text-center text-[10px] text-muted sm:block">
                 {d.item.skinName}
               </span>
-              <span className="absolute inset-x-0 bottom-0 h-[2px]" style={{ background: d.item.rarityColor }} />
+              <span
+                className="absolute inset-x-0 bottom-0 h-[2px]"
+                style={{ background: d.item.rarityColor }}
+              />
               <span className="absolute inset-0 hidden items-center justify-center bg-bg/85 px-1 text-center text-[10px] font-semibold text-text group-hover:flex">
                 {d.user.nickname}
               </span>

@@ -17,7 +17,11 @@ export function contractGamma(p: ContractParams): number {
   return (p.coefMax - p.coefMin) / (target - p.coefMin) - 1;
 }
 
-export function contractMultiplier(roll: number, p: ContractParams, gamma = contractGamma(p)): number {
+export function contractMultiplier(
+  roll: number,
+  p: ContractParams,
+  gamma = contractGamma(p),
+): number {
   return p.coefMin + (p.coefMax - p.coefMin) * roll ** gamma;
 }
 
@@ -33,7 +37,10 @@ export function contractWinProbability(p: ContractParams, gamma = contractGamma(
 }
 
 /** Предмет с ценой, ближайшей к целевой; при равенстве — более дешёвый, затем по id. */
-export function pickNearestByPrice<T extends { id: string; price: number }>(pool: T[], target: number): T | null {
+export function pickNearestByPrice<T extends { id: string; price: number }>(
+  pool: T[],
+  target: number,
+): T | null {
   let best: T | null = null;
   for (const it of pool) {
     if (!best) {
@@ -42,7 +49,11 @@ export function pickNearestByPrice<T extends { id: string; price: number }>(pool
     }
     const d = Math.abs(it.price - target);
     const bd = Math.abs(best.price - target);
-    if (d < bd || (d === bd && (it.price < best.price || (it.price === best.price && it.id < best.id)))) best = it;
+    if (
+      d < bd ||
+      (d === bd && (it.price < best.price || (it.price === best.price && it.id < best.id)))
+    )
+      best = it;
   }
   return best;
 }

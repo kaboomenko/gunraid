@@ -36,7 +36,11 @@ export class DbFxRateProvider implements FxRateProvider {
       .from(fxRates)
       .where(eq(fxRates.isActive, true))
       .orderBy(asc(fxRates.sortOrder));
-    return rows.map((r) => ({ currency: r.currency, kind: r.kind as FxRate['kind'], usdRate: r.usdRate }));
+    return rows.map((r) => ({
+      currency: r.currency,
+      kind: r.kind as FxRate['kind'],
+      usdRate: r.usdRate,
+    }));
   }
 
   async get(currency: string): Promise<FxRate | null> {
@@ -76,7 +80,10 @@ export interface PaymentProvider {
   methods(): Array<{ code: string; currencies: string[] }>;
   createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult>;
   /** Проверяет подпись и разбирает вебхук; при неверной подписи — PAYMENT_SIGNATURE_INVALID. */
-  parseWebhook(rawBody: string, headers: Record<string, string | string[] | undefined>): PaymentWebhookEvent;
+  parseWebhook(
+    rawBody: string,
+    headers: Record<string, string | string[] | undefined>,
+  ): PaymentWebhookEvent;
 }
 
 export const PAYMENT_PROVIDERS = Symbol('PAYMENT_PROVIDERS');
@@ -102,7 +109,10 @@ export class MockPaymentProvider implements PaymentProvider {
   }
 
   async createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult> {
-    return { providerPaymentId: `mock_${input.depositId}`, paymentUrl: `/pay/mock/${input.depositId}` };
+    return {
+      providerPaymentId: `mock_${input.depositId}`,
+      paymentUrl: `/pay/mock/${input.depositId}`,
+    };
   }
 
   sign(rawBody: string): string {
@@ -115,7 +125,10 @@ export class MockPaymentProvider implements PaymentProvider {
     return { raw, signature: this.sign(raw) };
   }
 
-  parseWebhook(rawBody: string, headers: Record<string, string | string[] | undefined>): PaymentWebhookEvent {
+  parseWebhook(
+    rawBody: string,
+    headers: Record<string, string | string[] | undefined>,
+  ): PaymentWebhookEvent {
     const header = headers[MOCK_SIGNATURE_HEADER];
     const signature = Array.isArray(header) ? header[0] : header;
     const expected = this.sign(rawBody);

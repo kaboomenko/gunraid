@@ -18,9 +18,17 @@ afterAll(async () => {
 });
 
 async function deposit(client: TestClient, currency: string, amount: string, method = 'card') {
-  const quote = await client.post<DepositQuoteDto>('/api/v1/deposits/quote', { method, currency, amount });
+  const quote = await client.post<DepositQuoteDto>('/api/v1/deposits/quote', {
+    method,
+    currency,
+    amount,
+  });
   expect(quote.status).toBe(200);
-  const dep = await client.post<DepositDto>('/api/v1/deposits', { quoteId: quote.body.quoteId }, IK());
+  const dep = await client.post<DepositDto>(
+    '/api/v1/deposits',
+    { quoteId: quote.body.quoteId },
+    IK(),
+  );
   expect(dep.status).toBe(201);
   return { quote: quote.body, deposit: dep.body };
 }
@@ -37,16 +45,32 @@ describe('payments (integration)', () => {
 
   it('quotes gems before payment, in any currency, rounding down', async () => {
     const { client } = await newPlayer(app, 'q');
-    const usd = await client.post<DepositQuoteDto>('/api/v1/deposits/quote', { method: 'card', currency: 'USD', amount: '12.34' });
+    const usd = await client.post<DepositQuoteDto>('/api/v1/deposits/quote', {
+      method: 'card',
+      currency: 'USD',
+      amount: '12.34',
+    });
     expect(usd.body.gems).toBe(1234);
-    const rub = await client.post<DepositQuoteDto>('/api/v1/deposits/quote', { method: 'card', currency: 'RUB', amount: '1000' });
+    const rub = await client.post<DepositQuoteDto>('/api/v1/deposits/quote', {
+      method: 'card',
+      currency: 'RUB',
+      amount: '1000',
+    });
     // 1000 ₽ × 0.0125 $ × 100 = 1250 гемов
     expect(rub.body.gems).toBe(1250);
     expect(rub.body.bonusSource).toBe('first_deposit');
     expect(rub.body.bonusGems).toBe(125);
-    const low = await client.post<Err>('/api/v1/deposits/quote', { method: 'card', currency: 'USD', amount: '0.5' });
+    const low = await client.post<Err>('/api/v1/deposits/quote', {
+      method: 'card',
+      currency: 'USD',
+      amount: '0.5',
+    });
     expect(low.body.error.code).toBe('DEPOSIT_AMOUNT_TOO_LOW');
-    const wrong = await client.post<Err>('/api/v1/deposits/quote', { method: 'crypto', currency: 'RUB', amount: '1000' });
+    const wrong = await client.post<Err>('/api/v1/deposits/quote', {
+      method: 'crypto',
+      currency: 'RUB',
+      amount: '1000',
+    });
     expect(wrong.body.error.code).toBe('CURRENCY_NOT_SUPPORTED');
   });
 
@@ -55,7 +79,9 @@ describe('payments (integration)', () => {
     const { deposit: d1 } = await deposit(client, 'USD', '10');
     expect(d1.status).toBe('pending');
     expect(d1.paymentUrl).toBe(`/pay/mock/${d1.id}`);
-    const done = await client.post<DepositDto>(`/api/v1/payments/mock/${d1.id}/complete`, { result: 'success' });
+    const done = await client.post<DepositDto>(`/api/v1/payments/mock/${d1.id}/complete`, {
+      result: 'success',
+    });
     expect(done.body.status).toBe('succeeded');
     expect(await userBalance(app, me.id)).toBe(1000 + 100);
 
@@ -94,9 +120,13 @@ describe('payments (integration)', () => {
     expect(forged.statusCode).toBe(401);
     expect(await userBalance(app, me.id)).toBe(0);
 
-    const failed = await client.post<DepositDto>(`/api/v1/payments/mock/${d.id}/complete`, { result: 'fail' });
+    const failed = await client.post<DepositDto>(`/api/v1/payments/mock/${d.id}/complete`, {
+      result: 'fail',
+    });
     expect(failed.body.status).toBe('failed');
-    const again = await client.post<Err>(`/api/v1/payments/mock/${d.id}/complete`, { result: 'success' });
+    const again = await client.post<Err>(`/api/v1/payments/mock/${d.id}/complete`, {
+      result: 'success',
+    });
     expect(again.body.error.code).toBe('DEPOSIT_ALREADY_FINAL');
     expect(await userBalance(app, me.id)).toBe(0);
   });
@@ -104,12 +134,28 @@ describe('payments (integration)', () => {
   it('uses a quote only once and only by its owner', async () => {
     const a = await newPlayer(app, 'qa');
     const b = await newPlayer(app, 'qb');
-    const quote = await a.client.post<DepositQuoteDto>('/api/v1/deposits/quote', { method: 'card', currency: 'USD', amount: '3' });
-    const stolen = await b.client.post<Err>('/api/v1/deposits', { quoteId: quote.body.quoteId }, IK());
+    const quote = await a.client.post<DepositQuoteDto>('/api/v1/deposits/quote', {
+      method: 'card',
+      currency: 'USD',
+      amount: '3',
+    });
+    const stolen = await b.client.post<Err>(
+      '/api/v1/deposits',
+      { quoteId: quote.body.quoteId },
+      IK(),
+    );
     expect(stolen.body.error.code).toBe('QUOTE_NOT_FOUND');
-    const ok = await a.client.post<DepositDto>('/api/v1/deposits', { quoteId: quote.body.quoteId }, IK());
+    const ok = await a.client.post<DepositDto>(
+      '/api/v1/deposits',
+      { quoteId: quote.body.quoteId },
+      IK(),
+    );
     expect(ok.status).toBe(201);
-    const twice = await a.client.post<Err>('/api/v1/deposits', { quoteId: quote.body.quoteId }, IK());
+    const twice = await a.client.post<Err>(
+      '/api/v1/deposits',
+      { quoteId: quote.body.quoteId },
+      IK(),
+    );
     expect(twice.body.error.code).toBe('QUOTE_NOT_FOUND');
   });
 });

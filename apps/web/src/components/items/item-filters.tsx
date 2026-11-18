@@ -34,7 +34,17 @@ function toggleCsv(current: string | null, value: string): string | null {
   return next.length ? next.join(',') : null;
 }
 
-function Chip({ active, onClick, children, color }: { active: boolean; onClick: () => void; children: ReactNode; color?: string }) {
+function Chip({
+  active,
+  onClick,
+  children,
+  color,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+  color?: string;
+}) {
   return (
     <button
       type="button"
@@ -64,7 +74,9 @@ function FilterPanel({ facets }: { facets: ItemFacetsDto }) {
   return (
     <div className="space-y-5">
       <section>
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-dim">{t('rarity')}</div>
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-dim">
+          {t('rarity')}
+        </div>
         <div className="flex flex-wrap gap-1.5">
           {facets.rarities.map((r) => (
             <Chip
@@ -79,7 +91,9 @@ function FilterPanel({ facets }: { facets: ItemFacetsDto }) {
         </div>
       </section>
       <section>
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-dim">{t('type')}</div>
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-dim">
+          {t('type')}
+        </div>
         <div className="flex flex-wrap gap-1.5">
           {facets.types.map((ty) => (
             <Chip
@@ -93,7 +107,9 @@ function FilterPanel({ facets }: { facets: ItemFacetsDto }) {
         </div>
       </section>
       <section>
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-dim">{t('model')}</div>
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-dim">
+          {t('model')}
+        </div>
         <div className="flex max-h-48 flex-wrap gap-1.5 overflow-y-auto">
           {facets.models
             .filter((mo) => {
@@ -112,16 +128,33 @@ function FilterPanel({ facets }: { facets: ItemFacetsDto }) {
         </div>
       </section>
       <section>
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-dim">{t('price')}</div>
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-dim">
+          {t('price')}
+        </div>
         <form
           className="flex items-center gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            set({ priceMin: min.replace(/\D/g, '') || null, priceMax: max.replace(/\D/g, '') || null });
+            set({
+              priceMin: min.replace(/\D/g, '') || null,
+              priceMax: max.replace(/\D/g, '') || null,
+            });
           }}
         >
-          <Input className="h-9" inputMode="numeric" placeholder={`${t('priceFrom')} ${facets.priceMin}`} value={min} onChange={(e) => setMin(e.target.value)} />
-          <Input className="h-9" inputMode="numeric" placeholder={`${t('priceTo')} ${facets.priceMax}`} value={max} onChange={(e) => setMax(e.target.value)} />
+          <Input
+            className="h-9"
+            inputMode="numeric"
+            placeholder={`${t('priceFrom')} ${facets.priceMin}`}
+            value={min}
+            onChange={(e) => setMin(e.target.value)}
+          />
+          <Input
+            className="h-9"
+            inputMode="numeric"
+            placeholder={`${t('priceTo')} ${facets.priceMax}`}
+            value={max}
+            onChange={(e) => setMax(e.target.value)}
+          />
           <Button size="sm" variant="secondary" type="submit" className="h-9">
             {t('apply')}
           </Button>
@@ -146,7 +179,9 @@ export function ItemFilters({ facets }: { facets: ItemFacetsDto }) {
   const { params, set } = useQueryState();
   const [q, setQ] = useState(params.get('q') ?? '');
   const [open, setOpen] = useState(false);
-  const active = ['rarity', 'type', 'model', 'priceMin', 'priceMax', 'stattrak', 'q'].some((k) => params.get(k));
+  const active = ['rarity', 'type', 'model', 'priceMin', 'priceMax', 'stattrak', 'q'].some((k) =>
+    params.get(k),
+  );
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -187,7 +222,15 @@ export function ItemFilters({ facets }: { facets: ItemFacetsDto }) {
             variant="ghost"
             onClick={() => {
               setQ('');
-              set({ rarity: null, type: null, model: null, priceMin: null, priceMax: null, stattrak: null, q: null });
+              set({
+                rarity: null,
+                type: null,
+                model: null,
+                priceMin: null,
+                priceMax: null,
+                stattrak: null,
+                q: null,
+              });
             }}
           >
             <X size={16} /> {t('reset')}

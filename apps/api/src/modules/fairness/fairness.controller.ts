@@ -23,7 +23,10 @@ export class FairnessController {
   @Put('client-seed')
   @Auth()
   @RateLimit('profile')
-  clientSeed(@CurrentUser() user: AuthContext, @ZBody(clientSeedSchema) body: { clientSeed: string }) {
+  clientSeed(
+    @CurrentUser() user: AuthContext,
+    @ZBody(clientSeedSchema) body: { clientSeed: string },
+  ) {
     return this.fairness.rotate(user.userId, body.clientSeed);
   }
 
@@ -38,7 +41,10 @@ export class FairnessController {
   @Get('seeds')
   @Auth()
   seeds(@CurrentUser() user: AuthContext, @Query('cursor') cursor?: string) {
-    return this.fairness.revealed(user.userId, cursor ? z.string().datetime().parse(cursor) : undefined);
+    return this.fairness.revealed(
+      user.userId,
+      cursor ? z.string().datetime().parse(cursor) : undefined,
+    );
   }
 
   /** Данные для проверки результата. Server seed раскрывается только после смены пары. */

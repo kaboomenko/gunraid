@@ -30,7 +30,9 @@ export async function seedDevUsers(db: Db): Promise<void> {
     let [identity] = await db
       .select()
       .from(authIdentities)
-      .where(and(eq(authIdentities.provider, 'dev'), eq(authIdentities.providerUserId, providerUserId)))
+      .where(
+        and(eq(authIdentities.provider, 'dev'), eq(authIdentities.providerUserId, providerUserId)),
+      )
       .limit(1);
     let userId = identity?.userId;
     if (!userId) {

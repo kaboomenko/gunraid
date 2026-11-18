@@ -36,7 +36,10 @@ export class ModesController {
   }
 
   @Get('upgrade/targets')
-  async targets(@ZParam('game', gameCodeSchema) game: string, @ZQuery(upgradeTargetsQuerySchema) q: UpgradeTargetsQuery) {
+  async targets(
+    @ZParam('game', gameCodeSchema) game: string,
+    @ZQuery(upgradeTargetsQuerySchema) q: UpgradeTargetsQuery,
+  ) {
     return this.upgradeService.targets(await this.games.getActive(game), q);
   }
 
@@ -52,8 +55,12 @@ export class ModesController {
   ): Promise<UpgradeResultDto> {
     const key = requireIdempotencyKey(req);
     const g = await this.games.getActive(game);
-    const { result, replayed } = await this.idempotency.run(user.userId, key, `upgrade:${g.code}`, body, (tx) =>
-      this.upgradeService.upgrade(tx, user.userId, g, body),
+    const { result, replayed } = await this.idempotency.run(
+      user.userId,
+      key,
+      `upgrade:${g.code}`,
+      body,
+      (tx) => this.upgradeService.upgrade(tx, user.userId, g, body),
     );
     if (!replayed) this.realtime.balance(user.userId, result.balance);
     return result;
@@ -61,7 +68,10 @@ export class ModesController {
 
   @Get('upgrade/history')
   @Auth()
-  async upgradeHistory(@ZParam('game', gameCodeSchema) game: string, @CurrentUser() user: AuthContext) {
+  async upgradeHistory(
+    @ZParam('game', gameCodeSchema) game: string,
+    @CurrentUser() user: AuthContext,
+  ) {
     return this.upgradeService.history(user.userId, await this.games.getActive(game));
   }
 
@@ -82,15 +92,22 @@ export class ModesController {
   ): Promise<ContractResultDto> {
     const key = requireIdempotencyKey(req);
     const g = await this.games.getActive(game);
-    const { result } = await this.idempotency.run(user.userId, key, `contract:${g.code}`, body, (tx) =>
-      this.contractService.sign(tx, user.userId, g, body),
+    const { result } = await this.idempotency.run(
+      user.userId,
+      key,
+      `contract:${g.code}`,
+      body,
+      (tx) => this.contractService.sign(tx, user.userId, g, body),
     );
     return result;
   }
 
   @Get('contract/history')
   @Auth()
-  async contractHistory(@ZParam('game', gameCodeSchema) game: string, @CurrentUser() user: AuthContext) {
+  async contractHistory(
+    @ZParam('game', gameCodeSchema) game: string,
+    @CurrentUser() user: AuthContext,
+  ) {
     return this.contractService.history(user.userId, await this.games.getActive(game));
   }
 }

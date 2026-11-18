@@ -14,7 +14,12 @@ const uuid = z.string().uuid();
 
 export const upgradeSchema = z.union([
   z.object({ userItemIds: z.array(uuid).min(1).max(10), targetItemId: uuid }).strict(),
-  z.object({ amount: z.number().int().positive().max(Number.MAX_SAFE_INTEGER), targetItemId: uuid }).strict(),
+  z
+    .object({
+      amount: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+      targetItemId: uuid,
+    })
+    .strict(),
 ]);
 export type UpgradeBody = z.infer<typeof upgradeSchema>;
 

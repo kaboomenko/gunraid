@@ -52,7 +52,10 @@ export const upgrades = pgTable(
     resultUserItemId: uuid().references(() => userItems.id),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('upgrades_user_idx').on(t.userId, t.createdAt), index('upgrades_created_idx').on(t.createdAt)],
+  (t) => [
+    index('upgrades_user_idx').on(t.userId, t.createdAt),
+    index('upgrades_created_idx').on(t.createdAt),
+  ],
 );
 
 export const upgradeStakeItems = pgTable(
@@ -99,7 +102,10 @@ export const contracts = pgTable(
     resultUserItemId: uuid().references(() => userItems.id),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('contracts_user_idx').on(t.userId, t.createdAt), index('contracts_created_idx').on(t.createdAt)],
+  (t) => [
+    index('contracts_user_idx').on(t.userId, t.createdAt),
+    index('contracts_created_idx').on(t.createdAt),
+  ],
 );
 
 export const contractItems = pgTable(

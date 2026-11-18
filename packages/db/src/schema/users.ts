@@ -48,7 +48,10 @@ export const users = pgTable(
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     lastSeenAt: timestamp({ withTimezone: true }),
   },
-  (t) => [index('users_referred_by_idx').on(t.referredById), index('users_created_at_idx').on(t.createdAt)],
+  (t) => [
+    index('users_referred_by_idx').on(t.referredById),
+    index('users_created_at_idx').on(t.createdAt),
+  ],
 );
 
 export interface IdentityProfile {

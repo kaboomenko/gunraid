@@ -40,7 +40,9 @@ export type Env = z.infer<typeof envSchema>;
 
 const DEV_SECRET_RE = /^dev-only/;
 
-export function loadEnv(source: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env): Env {
+export function loadEnv(
+  source: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
+): Env {
   const env = envSchema.parse(source);
   if (env.APP_ENV === 'production') {
     const weak =
@@ -48,7 +50,8 @@ export function loadEnv(source: NodeJS.ProcessEnv | Record<string, string | unde
       DEV_SECRET_RE.test(env.COOKIE_SECRET) ||
       DEV_SECRET_RE.test(env.PAYMENT_MOCK_SECRET) ||
       /^0+$/.test(env.FAIR_SEED_KEY);
-    if (weak) throw new Error('Refusing to start: development secrets are used with APP_ENV=production');
+    if (weak)
+      throw new Error('Refusing to start: development secrets are used with APP_ENV=production');
   }
   return env;
 }

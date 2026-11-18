@@ -55,10 +55,17 @@ function Transactions() {
         <div key={r.id} className="flex items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold">{t(`types.${r.type}`)}</div>
-            <div className="text-xs text-dim">{format.dateTime(new Date(r.createdAt), { dateStyle: 'medium', timeStyle: 'short' })}</div>
+            <div className="text-xs text-dim">
+              {format.dateTime(new Date(r.createdAt), { dateStyle: 'medium', timeStyle: 'short' })}
+            </div>
           </div>
           <div className="text-right">
-            <GemAmount value={r.amount} signed size="sm" className={r.amount > 0 ? 'text-accent' : 'text-danger'} />
+            <GemAmount
+              value={r.amount}
+              signed
+              size="sm"
+              className={r.amount > 0 ? 'text-accent' : 'text-danger'}
+            />
             <div className="text-[11px] text-dim">
               <GemAmount value={r.balanceAfter} size="xs" className="font-normal" />
             </div>
@@ -67,7 +74,12 @@ function Transactions() {
       ))}
       {q.hasNextPage && (
         <div className="p-3 text-center">
-          <Button size="sm" variant="ghost" loading={q.isFetchingNextPage} onClick={() => void q.fetchNextPage()}>
+          <Button
+            size="sm"
+            variant="ghost"
+            loading={q.isFetchingNextPage}
+            onClick={() => void q.fetchNextPage()}
+          >
             {t('loadMore')}
           </Button>
         </div>
@@ -88,10 +100,16 @@ function Deposits() {
       {rows.map((d) => (
         <div key={d.id} className="flex items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0 space-y-1">
-            <Badge tone={d.status === 'succeeded' ? 'soft' : d.status === 'pending' ? 'warning' : 'danger'}>
+            <Badge
+              tone={
+                d.status === 'succeeded' ? 'soft' : d.status === 'pending' ? 'warning' : 'danger'
+              }
+            >
               {t(`depositStatus.${d.status}`)}
             </Badge>
-            <div className="text-xs text-dim">{format.dateTime(new Date(d.createdAt), { dateStyle: 'medium', timeStyle: 'short' })}</div>
+            <div className="text-xs text-dim">
+              {format.dateTime(new Date(d.createdAt), { dateStyle: 'medium', timeStyle: 'short' })}
+            </div>
           </div>
           <div className="text-right">
             <GemAmount value={d.gemsAmount} size="sm" />
@@ -105,7 +123,12 @@ function Deposits() {
       ))}
       {q.hasNextPage && (
         <div className="p-3 text-center">
-          <Button size="sm" variant="ghost" loading={q.isFetchingNextPage} onClick={() => void q.fetchNextPage()}>
+          <Button
+            size="sm"
+            variant="ghost"
+            loading={q.isFetchingNextPage}
+            onClick={() => void q.fetchNextPage()}
+          >
             {t('loadMore')}
           </Button>
         </div>
@@ -131,13 +154,22 @@ function Drops({ game }: { game: string }) {
             stLabel={t('items.stattrakBadge')}
             svLabel={t('items.souvenirBadge')}
             dimmed={ui.status !== 'in_inventory'}
-            footer={<span className="mt-1 block truncate text-[10px] text-dim">{t(`inventory.status.${ui.status}`)}</span>}
+            footer={
+              <span className="mt-1 block truncate text-[10px] text-dim">
+                {t(`inventory.status.${ui.status}`)}
+              </span>
+            }
           />
         ))}
       </div>
       {q.hasNextPage && (
         <div className="text-center">
-          <Button size="sm" variant="ghost" loading={q.isFetchingNextPage} onClick={() => void q.fetchNextPage()}>
+          <Button
+            size="sm"
+            variant="ghost"
+            loading={q.isFetchingNextPage}
+            onClick={() => void q.fetchNextPage()}
+          >
             {t('history.loadMore')}
           </Button>
         </div>

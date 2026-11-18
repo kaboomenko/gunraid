@@ -20,7 +20,9 @@ function assertion(overrides: Record<string, string> = {}) {
   };
 }
 
-const okFetch = vi.fn(async () => new Response('ns:http://specs.openid.net/auth/2.0\nis_valid:true\n'));
+const okFetch = vi.fn(
+  async () => new Response('ns:http://specs.openid.net/auth/2.0\nis_valid:true\n'),
+);
 
 describe('steam openid', () => {
   it('builds a login url with return_to and realm', () => {
@@ -43,7 +45,11 @@ describe('steam openid', () => {
 
   it('rejects mismatched return_to, foreign claimed_id and missing signed fields', async () => {
     await expect(
-      verifySteamAssertion(assertion({ 'openid.return_to': 'http://evil.test/cb' }), RETURN_TO, okFetch),
+      verifySteamAssertion(
+        assertion({ 'openid.return_to': 'http://evil.test/cb' }),
+        RETURN_TO,
+        okFetch,
+      ),
     ).resolves.toBeNull();
     await expect(
       verifySteamAssertion(

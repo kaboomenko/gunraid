@@ -106,7 +106,8 @@ export async function apiRequest<T>(
 
   if (!opts.retried) {
     if (res.status === 401 && (code === 'TOKEN_EXPIRED' || code === 'SESSION_REVOKED')) {
-      if (await refreshSession()) return apiRequest<T>(method, path, body, { ...opts, retried: true });
+      if (await refreshSession())
+        return apiRequest<T>(method, path, body, { ...opts, retried: true });
     }
     if (code === 'CSRF_FAILED') {
       await fetch(`${API_PREFIX}/auth/csrf`, { credentials: 'include', cache: 'no-store' });
@@ -124,7 +125,8 @@ export const api = {
     apiRequest<T>('PUT', path, body, opts),
   patch: <T>(path: string, body: unknown = {}, opts?: RequestOptions) =>
     apiRequest<T>('PATCH', path, body, opts),
-  delete: <T>(path: string, opts?: RequestOptions) => apiRequest<T>('DELETE', path, undefined, opts),
+  delete: <T>(path: string, opts?: RequestOptions) =>
+    apiRequest<T>('DELETE', path, undefined, opts),
 };
 
 /** Уникальный ключ идемпотентности на одно действие пользователя. */

@@ -9,7 +9,10 @@ import { PricesService } from './prices.js';
 
 const importSchema = z.object({
   fileName: z.string().trim().min(1).max(200),
-  csv: z.string().min(1).max(5 * 1024 * 1024),
+  csv: z
+    .string()
+    .min(1)
+    .max(5 * 1024 * 1024),
 });
 
 @Controller('admin/catalog')
@@ -29,7 +32,12 @@ export class AdminCatalogController {
     @ZBody(importSchema) body: z.infer<typeof importSchema>,
     @CurrentUser() user: AuthContext,
   ) {
-    return this.importer.import(await this.games.getActive(game), body.fileName, body.csv, user.userId);
+    return this.importer.import(
+      await this.games.getActive(game),
+      body.fileName,
+      body.csv,
+      user.userId,
+    );
   }
 
   @Post(':game/refresh-prices')

@@ -27,9 +27,18 @@ export function switchGamePath(pathname: string, to: string, known: string[]): s
   if (parts[0] && known.includes(parts[0])) {
     const section = parts[1];
     // Страницы конкретных сущностей (кейс, предмет, баттл, игрок) в другой игре не существуют.
-    const keepDeep = new Set(['upgrade', 'contract', 'battles', 'bonuses', 'leaderboard', 'profile', 'items']);
+    const keepDeep = new Set([
+      'upgrade',
+      'contract',
+      'battles',
+      'bonuses',
+      'leaderboard',
+      'profile',
+      'items',
+    ]);
     if (!section) return `/${to}`;
-    if (parts.length > 2 || !keepDeep.has(section)) return `/${to}${keepDeep.has(section) ? `/${section}` : ''}`;
+    if (parts.length > 2 || !keepDeep.has(section))
+      return `/${to}${keepDeep.has(section) ? `/${section}` : ''}`;
     return `/${to}/${section}`;
   }
   return `/${to}`;

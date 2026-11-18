@@ -30,10 +30,20 @@ async function seedGameCases(db: Db, gameCode: string, seeds: CaseSeed[]): Promi
   if (!game) return;
   await db
     .insert(caseCategories)
-    .values(CASE_CATEGORIES.map((c) => ({ gameId: game.id, code: c.code, name: { ru: c.name }, sortOrder: c.sortOrder })))
+    .values(
+      CASE_CATEGORIES.map((c) => ({
+        gameId: game.id,
+        code: c.code,
+        name: { ru: c.name },
+        sortOrder: c.sortOrder,
+      })),
+    )
     .onConflictDoNothing();
   const cats = new Map(
-    (await db.select().from(caseCategories).where(eq(caseCategories.gameId, game.id))).map((c) => [c.code, c.id]),
+    (await db.select().from(caseCategories).where(eq(caseCategories.gameId, game.id))).map((c) => [
+      c.code,
+      c.id,
+    ]),
   );
   const typeRows = await db.select().from(itemTypes);
 
@@ -64,9 +74,21 @@ async function seedGameCases(db: Db, gameCode: string, seeds: CaseSeed[]): Promi
 
     const isFree = s.kind === 'free';
     const odds = isFree
-      ? fitOddsToRtp(chosen.map((c) => c.price), 1, s.target)
-      : fitOddsToRtp(chosen.map((c) => c.price), s.price, s.target);
-    const entries = chosen.map((c, i) => ({ itemId: c.id, odds: odds[i] as number, price: c.price }));
+      ? fitOddsToRtp(
+          chosen.map((c) => c.price),
+          1,
+          s.target,
+        )
+      : fitOddsToRtp(
+          chosen.map((c) => c.price),
+          s.price,
+          s.target,
+        );
+    const entries = chosen.map((c, i) => ({
+      itemId: c.id,
+      odds: odds[i] as number,
+      price: c.price,
+    }));
     const rtp = caseRtp(entries, s.price);
 
     const caseId = newId();
@@ -89,7 +111,9 @@ async function seedGameCases(db: Db, gameCode: string, seeds: CaseSeed[]): Promi
       });
       await tx
         .insert(caseItems)
-        .values(entries.map((e, i) => ({ caseId, itemId: e.itemId, odds: e.odds, sortOrder: i + 1 })));
+        .values(
+          entries.map((e, i) => ({ caseId, itemId: e.itemId, odds: e.odds, sortOrder: i + 1 })),
+        );
       await tx.insert(caseRevisions).values({
         id: revisionId,
         caseId,
@@ -102,7 +126,11 @@ async function seedGameCases(db: Db, gameCode: string, seeds: CaseSeed[]): Promi
     });
   }
 
-  const [hasBanner] = await db.select({ id: banners.id }).from(banners).where(eq(banners.gameId, game.id)).limit(1);
+  const [hasBanner] = await db
+    .select({ id: banners.id })
+    .from(banners)
+    .where(eq(banners.gameId, game.id))
+    .limit(1);
   if (!hasBanner) {
     await db.insert(banners).values(
       BANNERS.map((b, i) => ({

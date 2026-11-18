@@ -43,7 +43,11 @@ export const SETTINGS_SCHEMAS = {
   }),
   battle: z.object({
     maxCases: z.number().int().min(1).max(100),
-    lobbyTimeoutMinutes: z.number().int().min(1).max(24 * 60),
+    lobbyTimeoutMinutes: z
+      .number()
+      .int()
+      .min(1)
+      .max(24 * 60),
     roundDurationMs: z.number().int().min(1000).max(30_000),
     allowBots: z.boolean(),
   }),
@@ -56,8 +60,14 @@ export const SETTINGS_SCHEMAS = {
     maxBonusGems: gems,
   }),
   wheel: z.object({
-    cooldownHours: z.number().min(0).max(24 * 30),
-    minAccountAgeHours: z.number().min(0).max(24 * 365),
+    cooldownHours: z
+      .number()
+      .min(0)
+      .max(24 * 30),
+    minAccountAgeHours: z
+      .number()
+      .min(0)
+      .max(24 * 365),
     requireDepositWithinDays: z.number().int().min(1).max(365).nullable(),
   }),
   daily: z.object({
@@ -71,13 +81,20 @@ export const SETTINGS_SCHEMAS = {
     xpPerGem: z.number().min(0).max(100),
   }),
   antifraud: z.object({
-    withdrawDelayAfterFirstDepositHours: z.number().min(0).max(24 * 30),
+    withdrawDelayAfterFirstDepositHours: z
+      .number()
+      .min(0)
+      .max(24 * 30),
     newAccountDays: z.number().int().min(0).max(365),
     newAccountDailyWithdrawGems: gems,
     minDepositsForWithdrawGems: gems,
   }),
   withdrawal: z.object({
-    so2ListingTimeoutMinutes: z.number().int().min(5).max(24 * 60),
+    so2ListingTimeoutMinutes: z
+      .number()
+      .int()
+      .min(5)
+      .max(24 * 60),
     /** Сколько гемов стоит 1 золото Standoff 2; null — не задан, сумму сообщает оператор. */
     so2GemsPerGold: z.number().positive().nullable(),
     cs2TradeProtectionDays: z.number().int().min(0).max(30),

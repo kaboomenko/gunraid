@@ -4,7 +4,11 @@ import { SectionTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 
 /** Заглушка раздела, который появится на следующих этапах. */
-export async function ModePlaceholder({ mode }: { mode: 'upgrade' | 'contract' | 'battles' | 'bonuses' | 'leaderboard' }) {
+export async function ModePlaceholder({
+  mode,
+}: {
+  mode: 'upgrade' | 'contract' | 'battles' | 'bonuses' | 'leaderboard';
+}) {
   const t = await getTranslations();
   return (
     <div className="space-y-4">

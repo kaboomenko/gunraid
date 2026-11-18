@@ -30,7 +30,8 @@ describe('provably fair', () => {
     expect(rollFloat(server, 'my-seed', 7)).toBe(a);
     expect(rollFloat(server, 'my-seed', 8)).not.toBe(a);
     const expected =
-      parseInt(createHmac('sha256', server).update('my-seed:7:0').digest('hex').slice(0, 13), 16) / 2 ** 52;
+      parseInt(createHmac('sha256', server).update('my-seed:7:0').digest('hex').slice(0, 13), 16) /
+      2 ** 52;
     expect(a).toBe(expected);
   });
 

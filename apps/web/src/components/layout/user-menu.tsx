@@ -7,7 +7,13 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Avatar } from '@/components/ui/avatar';
-import { Dropdown, DropdownContent, DropdownItem, DropdownSeparator, DropdownTrigger } from '@/components/ui/dropdown';
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  DropdownSeparator,
+  DropdownTrigger,
+} from '@/components/ui/dropdown';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/lib/api';
 import { useGameCode } from '@/lib/game';
@@ -31,7 +37,11 @@ export function UserMenu({ me }: { me: MeDto }) {
 
   return (
     <Dropdown>
-      <DropdownTrigger className="flex items-center gap-2" aria-label={t('header.profile')} data-testid="user-menu">
+      <DropdownTrigger
+        className="flex items-center gap-2"
+        aria-label={t('header.profile')}
+        data-testid="user-menu"
+      >
         <Avatar src={me.avatarUrl} name={me.nickname} size="md" />
       </DropdownTrigger>
       <DropdownContent align="end">
@@ -68,7 +78,10 @@ export function UserMenu({ me }: { me: MeDto }) {
           </DropdownItem>
         )}
         <DropdownSeparator />
-        <DropdownItem onSelect={() => void logout()} className="text-danger data-[highlighted]:text-danger">
+        <DropdownItem
+          onSelect={() => void logout()}
+          className="text-danger data-[highlighted]:text-danger"
+        >
           <LogOut size={16} /> {t('header.logout')}
         </DropdownItem>
       </DropdownContent>

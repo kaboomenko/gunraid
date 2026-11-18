@@ -7,7 +7,13 @@ import {
   pickNearestByPrice,
 } from './contract.js';
 import { rollFloat } from './fair.js';
-import { CHANCE_SCALE, chanceToScaled, rollToScaled, upgradeChance, upgradeWins } from './upgrade.js';
+import {
+  CHANCE_SCALE,
+  chanceToScaled,
+  rollToScaled,
+  upgradeChance,
+  upgradeWins,
+} from './upgrade.js';
 
 const UP = { commission: 0.1, maxChance: 0.75, minChance: 0.01 };
 const CT = { commission: 0.1, coefMin: 0.25, coefMax: 4 };
@@ -23,8 +29,9 @@ describe('upgrade', () => {
     const chance = chanceToScaled(upgradeChance(100, 300, UP));
     let won = 0;
     const N = 200_000;
-    for (let i = 0; i < N; i++) if (upgradeWins(rollToScaled(rollFloat('s', 'c', i)), chance)) won++;
-    const rtp = (won / N) * 300 / 100;
+    for (let i = 0; i < N; i++)
+      if (upgradeWins(rollToScaled(rollFloat('s', 'c', i)), chance)) won++;
+    const rtp = ((won / N) * 300) / 100;
     expect(rtp).toBeCloseTo(0.9, 1);
     expect(chance).toBeLessThan(CHANCE_SCALE);
   });

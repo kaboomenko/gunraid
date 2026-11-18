@@ -1,11 +1,6 @@
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { items, userItems } from '@gunraid/db';
-import {
-  CHANCE_SCALE,
-  contractMultiplier,
-  rollFloat,
-  rollToScaled,
-} from '@gunraid/game-core';
+import { CHANCE_SCALE, contractMultiplier, rollFloat, rollToScaled } from '@gunraid/game-core';
 import type {
   ContractProofDto,
   ContractResultDto,
@@ -61,8 +56,11 @@ describe('upgrade (integration)', () => {
 
     // Проверка по раскрытому сиду.
     await client.post('/api/v1/fair/rotate');
-    const proof = (await client.get<UpgradeProofDto>(`/api/v1/fair/proof/upgrade/${res.body.id}`)).body;
-    expect(rollToScaled(rollFloat(proof.serverSeed as string, proof.clientSeed, proof.nonce))).toBe(proof.roll);
+    const proof = (await client.get<UpgradeProofDto>(`/api/v1/fair/proof/upgrade/${res.body.id}`))
+      .body;
+    expect(rollToScaled(rollFloat(proof.serverSeed as string, proof.clientSeed, proof.nonce))).toBe(
+      proof.roll,
+    );
   });
 
   it('stakes items: they are consumed whatever the result', async () => {
@@ -79,7 +77,12 @@ describe('upgrade (integration)', () => {
     const rows = await db(app)
       .select({ status: userItems.status })
       .from(userItems)
-      .where(inArray(userItems.id, granted.map((g) => g.userItemId)));
+      .where(
+        inArray(
+          userItems.id,
+          granted.map((g) => g.userItemId),
+        ),
+      );
     expect(rows.every((r) => r.status === 'used_upgrade')).toBe(true);
   });
 
@@ -87,10 +90,18 @@ describe('upgrade (integration)', () => {
     const { client, me } = await newPlayer(app, 'upgx');
     await grantGems(app, me.id, 100_000);
     const cheap = await itemAbove('cs2', 0);
-    const bad = await client.post<Err>('/api/v1/games/cs2/upgrade', { amount: 5000, targetItemId: cheap.id }, IK());
+    const bad = await client.post<Err>(
+      '/api/v1/games/cs2/upgrade',
+      { amount: 5000, targetItemId: cheap.id },
+      IK(),
+    );
     expect(bad.body.error.code).toBe('UPGRADE_TARGET_INVALID');
     const knife = await itemAbove('cs2', 100_000);
-    const low = await client.post<Err>('/api/v1/games/cs2/upgrade', { amount: 1, targetItemId: knife.id }, IK());
+    const low = await client.post<Err>(
+      '/api/v1/games/cs2/upgrade',
+      { amount: 1, targetItemId: knife.id },
+      IK(),
+    );
     expect(low.body.error.code).toBe('UPGRADE_CHANCE_TOO_LOW');
     expect(await userBalance(app, me.id)).toBe(100_000);
   });
@@ -116,7 +127,11 @@ describe('contract (integration)', () => {
   it('requires 3–10 items', async () => {
     const { client, me } = await newPlayer(app, 'ctc');
     const granted = await grantItems(app, me.id, 'cs2', 2);
-    const res = await client.post<Err>('/api/v1/games/cs2/contract', { userItemIds: granted.map((g) => g.userItemId) }, IK());
+    const res = await client.post<Err>(
+      '/api/v1/games/cs2/contract',
+      { userItemIds: granted.map((g) => g.userItemId) },
+      IK(),
+    );
     expect(res.body.error.code).toBe('CONTRACT_ITEMS_COUNT');
   });
 
@@ -124,7 +139,11 @@ describe('contract (integration)', () => {
     const { client, me } = await newPlayer(app, 'ct');
     const granted = await grantItems(app, me.id, 'cs2', 4, 8);
     const input = granted.reduce((s, g) => s + g.price, 0);
-    const res = await client.post<ContractResultDto>('/api/v1/games/cs2/contract', { userItemIds: granted.map((g) => g.userItemId) }, IK());
+    const res = await client.post<ContractResultDto>(
+      '/api/v1/games/cs2/contract',
+      { userItemIds: granted.map((g) => g.userItemId) },
+      IK(),
+    );
     expect(res.status).toBe(200);
     expect(res.body.inputValue).toBe(input);
     expect(res.body.min).toBe(Math.floor(input * 0.25));
@@ -136,12 +155,16 @@ describe('contract (integration)', () => {
     expect(inv.body.items[0]?.item.id).toBe(res.body.result.id);
 
     await client.post('/api/v1/fair/rotate');
-    const proof = (await client.get<ContractProofDto>(`/api/v1/fair/proof/contract/${res.body.id}`)).body;
-    const k = contractMultiplier(rollFloat(proof.serverSeed as string, proof.clientSeed, proof.nonce), {
-      commission: 0.1,
-      coefMin: proof.coefMin,
-      coefMax: proof.coefMax,
-    });
+    const proof = (await client.get<ContractProofDto>(`/api/v1/fair/proof/contract/${res.body.id}`))
+      .body;
+    const k = contractMultiplier(
+      rollFloat(proof.serverSeed as string, proof.clientSeed, proof.nonce),
+      {
+        commission: 0.1,
+        coefMin: proof.coefMin,
+        coefMax: proof.coefMax,
+      },
+    );
     expect(k).toBeCloseTo(proof.multiplier, 10);
     expect(await userBalance(app, me.id)).toBe(0);
   });
@@ -151,7 +174,9 @@ describe('contract (integration)', () => {
     const granted = await grantItems(app, me.id, 'standoff2', 3, 5);
     const body = { userItemIds: granted.map((g) => g.userItemId) };
     const results = await Promise.all(
-      Array.from({ length: 3 }, () => client.post<ContractResultDto | Err>('/api/v1/games/standoff2/contract', body, IK())),
+      Array.from({ length: 3 }, () =>
+        client.post<ContractResultDto | Err>('/api/v1/games/standoff2/contract', body, IK()),
+      ),
     );
     expect(results.filter((r) => r.status === 200)).toHaveLength(1);
   });

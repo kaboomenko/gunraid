@@ -27,7 +27,11 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 h-[var(--header-h)] border-b border-line bg-bg/85 backdrop-blur-md">
       <div className="mx-auto flex h-full max-w-[1440px] items-center gap-2 px-3 sm:gap-3 sm:px-5">
-        <Link href={`/${game}`} className="mr-1 flex shrink-0 items-center" aria-label={t('brand.name')}>
+        <Link
+          href={`/${game}`}
+          className="mr-1 flex shrink-0 items-center"
+          aria-label={t('brand.name')}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/logo.svg" alt={t('brand.name')} className="hidden h-7 w-auto md:block" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -61,7 +65,13 @@ export function SiteHeader() {
             <>
               <div className="flex items-center">
                 <BalancePill balance={me.data.balance} />
-                <Button size="icon" className="ml-1 h-10 w-10" onClick={openDeposit} aria-label={t('gems.deposit')} data-testid="deposit-open">
+                <Button
+                  size="icon"
+                  className="ml-1 h-10 w-10"
+                  onClick={openDeposit}
+                  aria-label={t('gems.deposit')}
+                  data-testid="deposit-open"
+                >
                   <Plus size={20} strokeWidth={3} />
                 </Button>
               </div>

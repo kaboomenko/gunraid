@@ -42,7 +42,9 @@ export class FeedHandlers implements OnModuleInit {
       await this.feed.incrementCasesOpened(payload.drops.length);
       await this.publishDrops(payload);
     });
-    this.outbox.on('drop.created', async (p) => this.publishDrops(p as unknown as DropEventPayload));
+    this.outbox.on('drop.created', async (p) =>
+      this.publishDrops(p as unknown as DropEventPayload),
+    );
   }
 
   private async publishDrops(payload: DropEventPayload): Promise<void> {
@@ -59,7 +61,14 @@ export class FeedHandlers implements OnModuleInit {
         game: payload.game,
         source: payload.source,
         user,
-        item: { id: d.itemId, skinName: d.skinName, modelName: d.modelName, imageUrl: d.imageUrl, rarityColor: d.rarityColor, price: d.price },
+        item: {
+          id: d.itemId,
+          skinName: d.skinName,
+          modelName: d.modelName,
+          imageUrl: d.imageUrl,
+          rarityColor: d.rarityColor,
+          price: d.price,
+        },
         caseSlug: payload.caseSlug ?? null,
         caseName: payload.caseName ?? null,
         caseImage: payload.caseImage ?? null,

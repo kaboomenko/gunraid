@@ -182,7 +182,11 @@ export class UsersService {
   async confirmAge(userId: string, ip: string | null): Promise<void> {
     await this.db
       .update(users)
-      .set({ adultConfirmedAt: sql`coalesce(${users.adultConfirmedAt}, now())`, adultConfirmedIp: ip, updatedAt: sql`now()` })
+      .set({
+        adultConfirmedAt: sql`coalesce(${users.adultConfirmedAt}, now())`,
+        adultConfirmedIp: ip,
+        updatedAt: sql`now()`,
+      })
       .where(eq(users.id, userId));
   }
 

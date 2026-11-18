@@ -27,10 +27,14 @@ describe('catalog (integration)', () => {
     expect(knives.body.items.every((i) => i.typeCode === 'knife')).toBe(true);
     const search = await c.get<ItemsPageDto>('/api/v1/games/cs2/items?q=lime%20fury');
     expect(search.body.items.length).toBeGreaterThan(0);
-    expect(search.body.items.every((i) => i.fullName.toLowerCase().includes('lime fury'))).toBe(true);
+    expect(search.body.items.every((i) => i.fullName.toLowerCase().includes('lime fury'))).toBe(
+      true,
+    );
     const st = await c.get<ItemsPageDto>('/api/v1/games/cs2/items?stattrak=true');
     expect(st.body.items.every((i) => i.isStattrak)).toBe(true);
-    const range = await c.get<ItemsPageDto>('/api/v1/games/standoff2/items?priceMin=100&priceMax=1000');
+    const range = await c.get<ItemsPageDto>(
+      '/api/v1/games/standoff2/items?priceMin=100&priceMax=1000',
+    );
     expect(range.body.items.every((i) => i.price >= 100 && i.price <= 1000)).toBe(true);
   });
 
@@ -58,20 +62,26 @@ describe('catalog (integration)', () => {
       `Test Item B ${suffix};Test Item B ${suffix};Beta;weapon;akr;epic;;"12,34";1`,
       `Broken ${suffix};;;weapon;akr;nope;10;;0`,
     ].join('\n');
-    const res = await admin.post<{ created: number; skipped: number; errors: Array<{ line: number }> }>(
-      '/api/v1/admin/catalog/standoff2/import',
-      { fileName: 'test.csv', csv },
-    );
+    const res = await admin.post<{
+      created: number;
+      skipped: number;
+      errors: Array<{ line: number }>;
+    }>('/api/v1/admin/catalog/standoff2/import', { fileName: 'test.csv', csv });
     expect(res.status).toBe(200);
     expect(res.body.created).toBe(2);
     expect(res.body.skipped).toBe(1);
     expect(res.body.errors[0]?.line).toBe(4);
-    const found = await admin.get<ItemsPageDto>(`/api/v1/games/standoff2/items?q=${suffix}&sort=price_asc`);
+    const found = await admin.get<ItemsPageDto>(
+      `/api/v1/games/standoff2/items?q=${suffix}&sort=price_asc`,
+    );
     expect(found.body.items.map((i) => i.price)).toEqual([1234, 1500]);
 
     const player = new TestClient(app);
     await player.loginNewPlayer('csv');
-    const denied = await player.post('/api/v1/admin/catalog/standoff2/import', { fileName: 'x.csv', csv });
+    const denied = await player.post('/api/v1/admin/catalog/standoff2/import', {
+      fileName: 'x.csv',
+      csv,
+    });
     expect(denied.status).toBe(403);
   });
 

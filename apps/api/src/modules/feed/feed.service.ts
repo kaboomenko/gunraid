@@ -27,7 +27,11 @@ export class FeedService {
   }
 
   async publish(drop: FeedDropDto): Promise<void> {
-    await this.redis.multi().lpush(this.key(drop.game), JSON.stringify(drop)).ltrim(this.key(drop.game), 0, FEED_LENGTH - 1).exec();
+    await this.redis
+      .multi()
+      .lpush(this.key(drop.game), JSON.stringify(drop))
+      .ltrim(this.key(drop.game), 0, FEED_LENGTH - 1)
+      .exec();
     this.realtime.toRoom(WS_ROOMS.feed(drop.game), WS_EVENTS.feedDrop, drop);
   }
 

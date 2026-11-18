@@ -10,7 +10,12 @@ export class WorkerModule {
   static forRoot(env: Env): DynamicModule {
     return {
       module: WorkerModule,
-      imports: [CoreModule.forRoot(env, { dbPoolSize: 10 }), LedgerModule, MaintenanceModule, FeedWorkerModule],
+      imports: [
+        CoreModule.forRoot(env, { dbPoolSize: 10 }),
+        LedgerModule,
+        MaintenanceModule,
+        FeedWorkerModule,
+      ],
     };
   }
 }

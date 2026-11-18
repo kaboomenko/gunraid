@@ -4,7 +4,11 @@ import { UpgradeView } from '@/components/modes/upgrade-view';
 import { SectionTitle } from '@/components/ui/card';
 import { getPublicConfig } from '@/lib/server-api';
 
-export async function generateMetadata({ params }: { params: Promise<{ game: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ game: string }>;
+}): Promise<Metadata> {
   const { game } = await params;
   const [t, config] = await Promise.all([getTranslations('upgrade'), getPublicConfig()]);
   const name = config.games.find((g) => g.code === game)?.name ?? game;

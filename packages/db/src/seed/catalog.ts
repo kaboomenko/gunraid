@@ -1,7 +1,15 @@
 import { and, eq } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
-import { collections, fxRates, games, itemModels, itemTypes, items, rarities } from '../schema/index.js';
+import {
+  collections,
+  fxRates,
+  games,
+  itemModels,
+  itemTypes,
+  items,
+  rarities,
+} from '../schema/index.js';
 import {
   CS2_COLLECTIONS,
   CS2_ITEMS,
@@ -61,7 +69,15 @@ async function seedGameCatalog(
 
   await db
     .insert(rarities)
-    .values(rarityRows.map((r, i) => ({ gameId, code: r.code, name: { ru: r.name }, color: r.color, sortOrder: i + 1 })))
+    .values(
+      rarityRows.map((r, i) => ({
+        gameId,
+        code: r.code,
+        name: { ru: r.name },
+        color: r.color,
+        sortOrder: i + 1,
+      })),
+    )
     .onConflictDoNothing();
   const types = await db.select().from(itemTypes);
   const typeId = (code: string) => {
@@ -71,7 +87,15 @@ async function seedGameCatalog(
   };
   await db
     .insert(itemModels)
-    .values(modelRows.map((m, i) => ({ gameId, typeId: typeId(m.type), code: m.code, name: m.name, sortOrder: i + 1 })))
+    .values(
+      modelRows.map((m, i) => ({
+        gameId,
+        typeId: typeId(m.type),
+        code: m.code,
+        name: m.name,
+        sortOrder: i + 1,
+      })),
+    )
     .onConflictDoNothing();
   if (collectionRows.length) {
     await db
@@ -81,13 +105,22 @@ async function seedGameCatalog(
   }
 
   const rarityMap = new Map(
-    (await db.select().from(rarities).where(eq(rarities.gameId, gameId))).map((r) => [r.code, r.id]),
+    (await db.select().from(rarities).where(eq(rarities.gameId, gameId))).map((r) => [
+      r.code,
+      r.id,
+    ]),
   );
   const modelMap = new Map(
-    (await db.select().from(itemModels).where(eq(itemModels.gameId, gameId))).map((m) => [m.code, m]),
+    (await db.select().from(itemModels).where(eq(itemModels.gameId, gameId))).map((m) => [
+      m.code,
+      m,
+    ]),
   );
   const collectionMap = new Map(
-    (await db.select().from(collections).where(eq(collections.gameId, gameId))).map((c) => [c.code, c.id]),
+    (await db.select().from(collections).where(eq(collections.gameId, gameId))).map((c) => [
+      c.code,
+      c.id,
+    ]),
   );
 
   const rows = itemRows.map((it) => {
@@ -122,7 +155,15 @@ async function seedGameCatalog(
 export async function seedCatalog(db: Db): Promise<void> {
   await seedItemTypes(db);
   await seedGameCatalog(db, 'cs2', CS2_RARITIES, CS2_MODELS, CS2_COLLECTIONS, CS2_ITEMS, cs2Name);
-  await seedGameCatalog(db, 'standoff2', SO2_RARITIES, SO2_MODELS, SO2_COLLECTIONS, SO2_ITEMS, so2Name);
+  await seedGameCatalog(
+    db,
+    'standoff2',
+    SO2_RARITIES,
+    SO2_MODELS,
+    SO2_COLLECTIONS,
+    SO2_ITEMS,
+    so2Name,
+  );
 }
 
 /** Детерминированная выборка предметов игры (для демо-инвентаря). */
@@ -141,4 +182,3 @@ export async function pickDemoItems(db: Db, gameCode: string, count: number) {
   }
   return picked;
 }
-

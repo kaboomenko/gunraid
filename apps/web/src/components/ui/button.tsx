@@ -30,7 +30,17 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'primary', size = 'md', loading, asChild, block, className, children, disabled, ...props },
+  {
+    variant = 'primary',
+    size = 'md',
+    loading,
+    asChild,
+    block,
+    className,
+    children,
+    disabled,
+    ...props
+  },
   ref,
 ) {
   const Comp = asChild ? Slot.Root : 'button';
@@ -55,7 +65,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ) : (
         <>
           {loading && <Spinner className="absolute" />}
-          <span className={cn('inline-flex items-center gap-[inherit]', loading && 'invisible')}>{children}</span>
+          <span className={cn('inline-flex items-center gap-[inherit]', loading && 'invisible')}>
+            {children}
+          </span>
         </>
       )}
     </Comp>

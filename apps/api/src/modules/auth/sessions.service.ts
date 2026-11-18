@@ -36,7 +36,11 @@ export class SessionsService {
     return new Date(Date.now() + this.env.REFRESH_TOKEN_TTL_DAYS * 86_400_000);
   }
 
-  async create(userId: string, meta: RequestMeta, familyId: string = newId()): Promise<IssuedSession> {
+  async create(
+    userId: string,
+    meta: RequestMeta,
+    familyId: string = newId(),
+  ): Promise<IssuedSession> {
     const refreshToken = this.tokens.newRefreshToken();
     const id = newId();
     await this.db.insert(sessions).values({
@@ -94,7 +98,12 @@ export class SessionsService {
       });
       await tx
         .update(sessions)
-        .set({ revokedAt: sql`now()`, revokeReason: 'rotated', replacedById: nextId, lastUsedAt: sql`now()` })
+        .set({
+          revokedAt: sql`now()`,
+          revokeReason: 'rotated',
+          replacedById: nextId,
+          lastUsedAt: sql`now()`,
+        })
         .where(eq(sessions.id, row.id));
       return {
         kind: 'ok' as const,
@@ -134,7 +143,12 @@ export class SessionsService {
     const rows = await this.db
       .update(sessions)
       .set({ revokedAt: sql`now()`, revokeReason: reason })
-      .where(and(eq(sessions.refreshTokenHash, this.tokens.hashToken(refreshToken)), isNull(sessions.revokedAt)))
+      .where(
+        and(
+          eq(sessions.refreshTokenHash, this.tokens.hashToken(refreshToken)),
+          isNull(sessions.revokedAt),
+        ),
+      )
       .returning({ id: sessions.id });
     for (const r of rows) await this.redis.set(this.cacheKey(r.id), '0', 'EX', CACHE_TTL_SEC);
   }

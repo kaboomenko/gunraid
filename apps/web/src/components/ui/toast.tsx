@@ -12,17 +12,19 @@ interface ToastItem {
 }
 
 let seq = 0;
-const useToasts = create<{ items: ToastItem[]; push: (t: Omit<ToastItem, 'id'>) => void; remove: (id: number) => void }>()(
-  (set) => ({
-    items: [],
-    push: (t) => {
-      const id = ++seq;
-      set((s) => ({ items: [...s.items.slice(-3), { ...t, id }] }));
-      setTimeout(() => set((s) => ({ items: s.items.filter((i) => i.id !== id) })), 4200);
-    },
-    remove: (id) => set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
-  }),
-);
+const useToasts = create<{
+  items: ToastItem[];
+  push: (t: Omit<ToastItem, 'id'>) => void;
+  remove: (id: number) => void;
+}>()((set) => ({
+  items: [],
+  push: (t) => {
+    const id = ++seq;
+    set((s) => ({ items: [...s.items.slice(-3), { ...t, id }] }));
+    setTimeout(() => set((s) => ({ items: s.items.filter((i) => i.id !== id) })), 4200);
+  },
+  remove: (id) => set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
+}));
 
 export const toast = {
   success: (text: string) => useToasts.getState().push({ tone: 'success', text }),
@@ -62,7 +64,11 @@ export function Toaster() {
               )}
             />
             <span className="flex-1">{t.text}</span>
-            <button className="text-dim hover:text-text" onClick={() => remove(t.id)} aria-label="×">
+            <button
+              className="text-dim hover:text-text"
+              onClick={() => remove(t.id)}
+              aria-label="×"
+            >
               <X size={16} />
             </button>
           </div>

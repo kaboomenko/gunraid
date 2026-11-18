@@ -1,4 +1,10 @@
-import { Inject, Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  type OnApplicationShutdown,
+  type OnModuleInit,
+} from '@nestjs/common';
 import { idempotencyRequests, sessions, type Db } from '@gunraid/db';
 import { Queue, Worker } from 'bullmq';
 import { lt, sql } from 'drizzle-orm';
@@ -34,8 +40,16 @@ export class MaintenanceService implements OnModuleInit, OnApplicationShutdown {
     const prefix = `${this.env.REDIS_PREFIX}bull`;
     this.queue = new Queue(QUEUE, { connection, prefix });
     await this.queue.upsertJobScheduler('cleanup', { every: HOUR }, { name: 'cleanup' });
-    await this.queue.upsertJobScheduler('reconcile-ledger', { every: HOUR }, { name: 'reconcile-ledger' });
-    await this.queue.upsertJobScheduler('refresh-prices', { every: 6 * HOUR }, { name: 'refresh-prices' });
+    await this.queue.upsertJobScheduler(
+      'reconcile-ledger',
+      { every: HOUR },
+      { name: 'reconcile-ledger' },
+    );
+    await this.queue.upsertJobScheduler(
+      'refresh-prices',
+      { every: 6 * HOUR },
+      { name: 'refresh-prices' },
+    );
     this.worker = new Worker(
       QUEUE,
       async (job) => {
@@ -52,7 +66,9 @@ export class MaintenanceService implements OnModuleInit, OnApplicationShutdown {
       },
       { connection, prefix, concurrency: 1 },
     );
-    this.worker.on('failed', (job, err) => this.logger.error(`job ${job?.name} failed: ${err.message}`));
+    this.worker.on('failed', (job, err) =>
+      this.logger.error(`job ${job?.name} failed: ${err.message}`),
+    );
     this.logger.log('maintenance worker started');
   }
 

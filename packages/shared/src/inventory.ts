@@ -36,7 +36,13 @@ export interface UserItemDto {
   item: ItemDto;
 }
 
-export const INVENTORY_SORTS = ['date_desc', 'date_asc', 'price_desc', 'price_asc', 'rarity_desc'] as const;
+export const INVENTORY_SORTS = [
+  'date_desc',
+  'date_asc',
+  'price_desc',
+  'price_asc',
+  'rarity_desc',
+] as const;
 export type InventorySort = (typeof INVENTORY_SORTS)[number];
 
 export const inventoryQuerySchema = z.object({

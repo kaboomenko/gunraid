@@ -7,7 +7,10 @@ import { cn } from '@/lib/cn';
 export const Dropdown = DropdownMenu.Root;
 export const DropdownTrigger = DropdownMenu.Trigger;
 
-export function DropdownContent({ className, ...props }: ComponentProps<typeof DropdownMenu.Content>) {
+export function DropdownContent({
+  className,
+  ...props
+}: ComponentProps<typeof DropdownMenu.Content>) {
   return (
     <DropdownMenu.Portal>
       <DropdownMenu.Content
@@ -43,7 +46,10 @@ export function DropdownSeparator() {
 export function DropdownLabel({ className, ...props }: ComponentProps<typeof DropdownMenu.Label>) {
   return (
     <DropdownMenu.Label
-      className={cn('px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-dim', className)}
+      className={cn(
+        'px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-dim',
+        className,
+      )}
       {...props}
     />
   );

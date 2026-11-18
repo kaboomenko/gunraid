@@ -21,7 +21,10 @@ import { useUi } from '@/lib/store';
 
 function GoogleMark() {
   return (
-    <span className="grid h-5 w-5 place-items-center rounded-full bg-white text-[13px] font-black text-[#4285F4]" aria-hidden="true">
+    <span
+      className="grid h-5 w-5 place-items-center rounded-full bg-white text-[13px] font-black text-[#4285F4]"
+      aria-hidden="true"
+    >
       G
     </span>
   );
@@ -59,9 +62,13 @@ export function LoginModal() {
     }
   };
 
-
   return (
-    <Modal open={open} onOpenChange={(v) => (v ? undefined : close())} title={t('title')} description={t('subtitle')}>
+    <Modal
+      open={open}
+      onOpenChange={(v) => (v ? undefined : close())}
+      title={t('title')}
+      description={t('subtitle')}
+    >
       <div className="flex flex-col gap-3">
         {config.auth.steam && (
           <Button asChild variant="secondary" size="lg" block>
@@ -94,7 +101,9 @@ export function LoginModal() {
 
         {config.auth.dev && (
           <div className="cut mt-2 p-4 [--cut-bg:var(--color-surface-2)] [--cut-border:rgb(255_178_30/0.4)]">
-            <div className="font-display text-sm font-bold uppercase tracking-wide text-warning">{t('devTitle')}</div>
+            <div className="font-display text-sm font-bold uppercase tracking-wide text-warning">
+              {t('devTitle')}
+            </div>
             <p className="mb-3 text-xs text-dim">{t('devHint')}</p>
             <div className="grid grid-cols-3 gap-2">
               {(['player', 'support', 'admin'] as const).map((p) => (
@@ -135,12 +144,20 @@ export function LoginModal() {
         <p className="mt-1 text-center text-xs leading-relaxed text-dim">
           {t.rich('terms', {
             rules: (chunks) => (
-              <Link href="/legal/rules" className="text-muted underline underline-offset-2" onClick={close}>
+              <Link
+                href="/legal/rules"
+                className="text-muted underline underline-offset-2"
+                onClick={close}
+              >
                 {chunks}
               </Link>
             ),
             terms: (chunks) => (
-              <Link href="/legal/terms" className="text-muted underline underline-offset-2" onClick={close}>
+              <Link
+                href="/legal/terms"
+                className="text-muted underline underline-offset-2"
+                onClick={close}
+              >
                 {chunks}
               </Link>
             ),

@@ -11,7 +11,11 @@ import { StatsStrip } from '@/components/home/stats-strip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { getPublicConfig, serverGet } from '@/lib/server-api';
 
-export async function generateMetadata({ params }: { params: Promise<{ game: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ game: string }>;
+}): Promise<Metadata> {
   const { game } = await params;
   const [t, config] = await Promise.all([getTranslations('meta'), getPublicConfig()]);
   const name = config.games.find((g) => g.code === game)?.name ?? game;
@@ -42,7 +46,10 @@ export default async function GameHome({ params }: { params: Promise<{ game: str
           <EmptyState icon={<Package size={40} />} text={t('casesEmpty')} />
         )}
         <div className="flex justify-end">
-          <Link href={`/${game}/items`} className="text-sm font-semibold text-accent hover:underline">
+          <Link
+            href={`/${game}/items`}
+            className="text-sm font-semibold text-accent hover:underline"
+          >
             {t('allItems')} →
           </Link>
         </div>

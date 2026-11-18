@@ -22,7 +22,11 @@ import { users } from './users.js';
 export type LocalizedText = Record<string, string>;
 
 export const itemWearEnum = pgEnum('item_wear', ['FN', 'MW', 'FT', 'WW', 'BS']);
-export const catalogImportStatusEnum = pgEnum('catalog_import_status', ['processing', 'done', 'failed']);
+export const catalogImportStatusEnum = pgEnum('catalog_import_status', [
+  'processing',
+  'done',
+  'failed',
+]);
 
 /** Редкости — по игре, в таблице (не в коде). */
 export const rarities = pgTable(

@@ -26,7 +26,9 @@ export class RedisIoAdapter extends IoAdapter {
   }
 
   override createIOServer(port: number, options?: ServerOptions): Server {
-    const origins = this.env.CORS_ORIGINS?.split(',').map((s) => s.trim()).filter(Boolean);
+    const origins = this.env.CORS_ORIGINS?.split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
     const opts: Partial<ServerOptions> = { ...options, path: '/socket.io', serveClient: false };
     if (origins?.length) opts.cors = { origin: origins, credentials: true };
     const server = super.createIOServer(port, opts as ServerOptions) as Server;

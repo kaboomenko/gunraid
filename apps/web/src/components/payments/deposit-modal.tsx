@@ -37,7 +37,9 @@ function Segmented<T extends string>({
           onClick={() => onChange(o.value)}
           className={cn(
             'clip-cut h-9 px-3.5 text-xs font-bold uppercase tracking-wide transition [--cut:6px]',
-            value === o.value ? 'bg-accent text-accent-ink' : 'bg-surface-3 text-muted hover:text-text',
+            value === o.value
+              ? 'bg-accent text-accent-ink'
+              : 'bg-surface-3 text-muted hover:text-text',
           )}
           aria-pressed={value === o.value}
         >
@@ -96,7 +98,11 @@ export function DepositModal() {
     const ctrl = new AbortController();
     const id = setTimeout(() => {
       api
-        .post<DepositQuoteDto>('/deposits/quote', { method, currency, amount: value }, { signal: ctrl.signal })
+        .post<DepositQuoteDto>(
+          '/deposits/quote',
+          { method, currency, amount: value },
+          { signal: ctrl.signal },
+        )
         .then((q) => {
           setQuote(q);
           setQuoteError(null);
@@ -123,7 +129,11 @@ export function DepositModal() {
     if (!quote) return;
     setPaying(true);
     try {
-      const dep = await api.post<DepositDto>('/deposits', { quoteId: quote.quoteId }, { idempotencyKey: newIdempotencyKey() });
+      const dep = await api.post<DepositDto>(
+        '/deposits',
+        { quoteId: quote.quoteId },
+        { idempotencyKey: newIdempotencyKey() },
+      );
       close();
       if (dep.paymentUrl?.startsWith('/')) router.push(dep.paymentUrl);
       else if (dep.paymentUrl) window.location.href = dep.paymentUrl;
@@ -141,7 +151,13 @@ export function DepositModal() {
   );
 
   return (
-    <Modal open={open} onOpenChange={(v) => !v && close()} title={t('deposit.title')} description={rateLine} size="md">
+    <Modal
+      open={open}
+      onOpenChange={(v) => !v && close()}
+      title={t('deposit.title')}
+      description={rateLine}
+      size="md"
+    >
       {!methods.data ? (
         <div className="space-y-3">
           <Skeleton className="h-10 w-full" />
@@ -159,7 +175,9 @@ export function DepositModal() {
             </div>
           )}
           <div className="space-y-2">
-            <div className="text-xs font-semibold uppercase tracking-wider text-dim">{t('deposit.method')}</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-dim">
+              {t('deposit.method')}
+            </div>
             <Segmented
               value={method}
               onChange={setMethod}
@@ -170,7 +188,9 @@ export function DepositModal() {
             />
           </div>
           <div className="space-y-2">
-            <div className="text-xs font-semibold uppercase tracking-wider text-dim">{t('deposit.currency')}</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-dim">
+              {t('deposit.currency')}
+            </div>
             <Segmented
               value={currency}
               onChange={(c) => {
@@ -182,7 +202,10 @@ export function DepositModal() {
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="deposit-amount" className="text-xs font-semibold uppercase tracking-wider text-dim">
+            <label
+              htmlFor="deposit-amount"
+              className="text-xs font-semibold uppercase tracking-wider text-dim"
+            >
               {t('deposit.amountIn', { currency })}
             </label>
             <Input
@@ -225,17 +248,30 @@ export function DepositModal() {
             )}
             <div className="flex items-center justify-between border-t border-line pt-2">
               <span className="font-display text-sm font-bold uppercase">{t('deposit.total')}</span>
-              <GemAmount value={quote ? quote.gems + quote.bonusGems : 0} size="lg" className="text-accent" />
+              <GemAmount
+                value={quote ? quote.gems + quote.bonusGems : 0}
+                size="lg"
+                className="text-accent"
+              />
             </div>
             {quoteError && <p className="text-xs text-danger">{quoteError}</p>}
             {quote && (
               <p className="text-[11px] text-dim">
-                {t('deposit.quoteValid', { time: format.dateTime(new Date(quote.expiresAt), { timeStyle: 'short' }) })}
+                {t('deposit.quoteValid', {
+                  time: format.dateTime(new Date(quote.expiresAt), { timeStyle: 'short' }),
+                })}
               </p>
             )}
           </div>
 
-          <Button size="lg" block disabled={!quote || loadingQuote} loading={paying} onClick={() => void pay()} data-testid="deposit-pay">
+          <Button
+            size="lg"
+            block
+            disabled={!quote || loadingQuote}
+            loading={paying}
+            onClick={() => void pay()}
+            data-testid="deposit-pay"
+          >
             {t('deposit.pay')}
           </Button>
           <p className="flex items-start gap-2 text-xs text-dim">

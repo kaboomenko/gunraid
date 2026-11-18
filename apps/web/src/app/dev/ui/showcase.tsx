@@ -64,7 +64,9 @@ export function Showcase() {
       <section>
         <SectionTitle>{t('typography')}</SectionTitle>
         <div className="space-y-2">
-          <div className="font-display-oblique text-3xl font-extrabold uppercase">{t('headline')}</div>
+          <div className="font-display-oblique text-3xl font-extrabold uppercase">
+            {t('headline')}
+          </div>
           <p className="max-w-xl text-muted">{t('body')}</p>
         </div>
       </section>
@@ -116,7 +118,12 @@ export function Showcase() {
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
-            <CaseCard key={i} name={`${t('demoCase')} ${i + 1}`} price={(i + 1) * 249} accentColor={RARITIES[i + 2]} />
+            <CaseCard
+              key={i}
+              name={`${t('demoCase')} ${i + 1}`}
+              price={(i + 1) * 249}
+              accentColor={RARITIES[i + 2]}
+            />
           ))}
         </div>
       </section>
@@ -128,7 +135,12 @@ export function Showcase() {
             <Input id="demo-input" placeholder={t('inputPlaceholder')} />
           </Field>
           <div className="space-y-4">
-            <Checkbox id="demo-check" checked={checked} onCheckedChange={setChecked} label={t('checkbox')} />
+            <Checkbox
+              id="demo-check"
+              checked={checked}
+              onCheckedChange={setChecked}
+              label={t('checkbox')}
+            />
             <div className="flex items-center gap-3">
               <Switch id="demo-switch" checked={on} onCheckedChange={setOn} label={t('switch')} />
               <span className="text-sm text-muted">{t('switch')}</span>
@@ -154,7 +166,8 @@ export function Showcase() {
           <SectionTitle>{t('progress')}</SectionTitle>
           <Progress value={62} />
           <div className="mt-4 flex items-center gap-3 text-sm text-muted">
-            {t('countdown')}: <Countdown to={target} className="font-display text-lg text-text tabular" />
+            {t('countdown')}:{' '}
+            <Countdown to={target} className="font-display text-lg text-text tabular" />
           </div>
         </div>
       </section>

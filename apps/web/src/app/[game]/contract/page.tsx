@@ -4,7 +4,11 @@ import { ContractView } from '@/components/modes/contract-view';
 import { SectionTitle } from '@/components/ui/card';
 import { getPublicConfig } from '@/lib/server-api';
 
-export async function generateMetadata({ params }: { params: Promise<{ game: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ game: string }>;
+}): Promise<Metadata> {
   const { game } = await params;
   const [t, config] = await Promise.all([getTranslations('contract'), getPublicConfig()]);
   const name = config.games.find((g) => g.code === game)?.name ?? game;

@@ -1,4 +1,14 @@
-import { bigint, index, inet, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import {
+  bigint,
+  index,
+  inet,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { users } from './users.js';
 
 /** Настройки режимов и бонусов: key + scope ('global' или код игры). Схемы — в @gunraid/shared. */

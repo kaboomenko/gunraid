@@ -10,8 +10,28 @@ import {
   type Db,
   type DbOrTx,
 } from '@gunraid/db';
-import type { ItemDetailDto, ItemDto, ItemFacetsDto, ItemsPageDto, ItemsQuery, RarityDto } from '@gunraid/shared';
-import { and, asc, count, desc, eq, gte, ilike, inArray, lte, max, min, type SQL } from 'drizzle-orm';
+import type {
+  ItemDetailDto,
+  ItemDto,
+  ItemFacetsDto,
+  ItemsPageDto,
+  ItemsQuery,
+  RarityDto,
+} from '@gunraid/shared';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  lte,
+  max,
+  min,
+  type SQL,
+} from 'drizzle-orm';
 import { oddsToPercent } from '@gunraid/game-core';
 import { DB } from '../../core/tokens.js';
 import { notFound } from '../../common/app-error.js';
@@ -94,14 +114,22 @@ export class CatalogService {
         .groupBy(itemTypes.code, itemTypes.name, itemTypes.sortOrder)
         .orderBy(asc(itemTypes.sortOrder)),
       this.db
-        .select({ code: itemModels.code, name: itemModels.name, typeCode: itemTypes.code, count: count() })
+        .select({
+          code: itemModels.code,
+          name: itemModels.name,
+          typeCode: itemTypes.code,
+          count: count(),
+        })
         .from(items)
         .innerJoin(itemModels, eq(itemModels.id, items.modelId))
         .innerJoin(itemTypes, eq(itemTypes.id, itemModels.typeId))
         .where(active)
         .groupBy(itemModels.code, itemModels.name, itemTypes.code, itemModels.sortOrder)
         .orderBy(asc(itemModels.sortOrder)),
-      this.db.select({ min: min(items.price), max: max(items.price) }).from(items).where(active),
+      this.db
+        .select({ min: min(items.price), max: max(items.price) })
+        .from(items)
+        .where(active),
     ]);
     return {
       rarities: rarityRows,
@@ -135,7 +163,13 @@ export class CatalogService {
   /** В каких кейсах встречается предмет и с каким шансом. */
   protected async casesContaining(itemId: string): Promise<ItemDetailDto['cases']> {
     const rows = await this.db
-      .select({ slug: cases.slug, name: cases.name, imageUrl: cases.imageUrl, price: cases.price, odds: caseItems.odds })
+      .select({
+        slug: cases.slug,
+        name: cases.name,
+        imageUrl: cases.imageUrl,
+        price: cases.price,
+        odds: caseItems.odds,
+      })
       .from(caseItems)
       .innerJoin(cases, eq(cases.id, caseItems.caseId))
       .where(and(eq(caseItems.itemId, itemId), eq(cases.isActive, true)))

@@ -53,7 +53,10 @@ export function expectedValue(entries: Array<{ odds: number; price: number }>): 
 }
 
 /** RTP кейса = ожидаемая стоимость / цена кейса. Для бесплатного кейса — null. */
-export function caseRtp(entries: Array<{ odds: number; price: number }>, casePrice: number): number | null {
+export function caseRtp(
+  entries: Array<{ odds: number; price: number }>,
+  casePrice: number,
+): number | null {
   if (casePrice <= 0) return null;
   return expectedValue(entries) / casePrice;
 }

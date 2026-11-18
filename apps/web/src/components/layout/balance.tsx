@@ -13,7 +13,9 @@ export function BalancePill({ balance }: { balance: number }) {
     <Hint
       content={
         <div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-dim">{t('rateTitle')}</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-dim">
+            {t('rateTitle')}
+          </div>
           <div className="mt-1.5 flex items-center gap-2 font-display text-base font-bold">
             <GemIcon size={18} />
             {t('rate', { gems: config.gemsPerUsd, usd: 1 })}

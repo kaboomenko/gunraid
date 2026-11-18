@@ -49,7 +49,13 @@ describe('ledger (integration)', () => {
     const ledger = app.get(LedgerService);
     const post = () =>
       db(app).transaction((tx) =>
-        ledger.post(tx, { userId: me.id, type: 'daily_bonus', amount: 10, refType: 'test', idempotencyKey: `dup:${me.id}` }),
+        ledger.post(tx, {
+          userId: me.id,
+          type: 'daily_bonus',
+          amount: 10,
+          refType: 'test',
+          idempotencyKey: `dup:${me.id}`,
+        }),
       );
     await post();
     await expect(post()).rejects.toMatchObject({ code: 'CONFLICT' });
@@ -62,7 +68,9 @@ describe('ledger (integration)', () => {
     await expect(
       db(app).execute(sql`update ledger_entries set amount = 999999 where user_id = ${me.id}`),
     ).rejects.toThrow();
-    await expect(db(app).delete(ledgerEntries).where(eq(ledgerEntries.userId, me.id))).rejects.toThrow();
+    await expect(
+      db(app).delete(ledgerEntries).where(eq(ledgerEntries.userId, me.id)),
+    ).rejects.toThrow();
     expect(await userBalance(app, me.id)).toBe(50);
   });
 
@@ -71,7 +79,13 @@ describe('ledger (integration)', () => {
     const ledger = app.get(LedgerService);
     await expect(
       db(app).transaction((tx) =>
-        ledger.post(tx, { userId: me.id, type: 'admin_adjustment', amount: 5, refType: 'test', idempotencyKey: `rsn:${me.id}` }),
+        ledger.post(tx, {
+          userId: me.id,
+          type: 'admin_adjustment',
+          amount: 5,
+          refType: 'test',
+          idempotencyKey: `rsn:${me.id}`,
+        }),
       ),
     ).rejects.toThrow();
   });

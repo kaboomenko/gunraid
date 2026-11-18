@@ -1,7 +1,15 @@
 import { cn } from '@/lib/cn';
 
 /** Значок игры — собственный монограммный бейдж (без логотипов правообладателей). */
-export function GameIcon({ shortName, size = 'md', className }: { shortName: string; size?: 'sm' | 'md' | 'lg'; className?: string }) {
+export function GameIcon({
+  shortName,
+  size = 'md',
+  className,
+}: {
+  shortName: string;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}) {
   return (
     <span
       className={cn(

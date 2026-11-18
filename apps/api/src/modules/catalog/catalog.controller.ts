@@ -17,7 +17,10 @@ export class CatalogController {
   }
 
   @Get('items')
-  async items(@ZParam('game', gameCodeSchema) game: string, @ZQuery(itemsQuerySchema) query: ItemsQuery) {
+  async items(
+    @ZParam('game', gameCodeSchema) game: string,
+    @ZQuery(itemsQuerySchema) query: ItemsQuery,
+  ) {
     return this.catalog.list((await this.games.getActive(game)).id, query);
   }
 

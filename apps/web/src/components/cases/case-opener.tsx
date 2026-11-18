@@ -102,7 +102,8 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
       setResult(res);
       setSpinId((x) => x + 1);
       if (!fast) sound.open();
-      if (res.supplyUsed !== null && res.supplyTotal !== null) setSupply({ used: res.supplyUsed, total: res.supplyTotal });
+      if (res.supplyUsed !== null && res.supplyTotal !== null)
+        setSupply({ used: res.supplyUsed, total: res.supplyTotal });
       invalidate();
       void qc.invalidateQueries({ queryKey: ['case', game, c.slug] });
     } catch (err) {
@@ -123,7 +124,12 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
         { idempotencyKey: newIdempotencyKey() },
       );
       setSold((prev) => new Set([...prev, ...res.soldIds]));
-      toast.success(t('inventory.soldToast', { count: res.soldCount, gems: t('gems.amount', { count: res.total }) }));
+      toast.success(
+        t('inventory.soldToast', {
+          count: res.soldCount,
+          gems: t('gems.amount', { count: res.total }),
+        }),
+      );
       invalidate();
     } catch (err) {
       toast.error(errorText(err));
@@ -133,9 +139,13 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
   const a = c.availability;
   const blocked = me.data ? !a.canOpen && a.reason !== 'LOGIN' : false;
   const total = c.price * count;
-  const spinning = Boolean(result) && !showResult && finished.current < (result?.results.length ?? 0);
-  const unsoldIds = result?.results.filter((r) => !sold.has(r.userItemId)).map((r) => r.userItemId) ?? [];
-  const resultValue = result?.results.filter((r) => !sold.has(r.userItemId)).reduce((s, r) => s + r.item.price, 0) ?? 0;
+  const spinning =
+    Boolean(result) && !showResult && finished.current < (result?.results.length ?? 0);
+  const unsoldIds =
+    result?.results.filter((r) => !sold.has(r.userItemId)).map((r) => r.userItemId) ?? [];
+  const resultValue =
+    result?.results.filter((r) => !sold.has(r.userItemId)).reduce((s, r) => s + r.item.price, 0) ??
+    0;
 
   let action: React.ReactNode;
   if (!me.data) {
@@ -165,7 +175,14 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
     );
   } else {
     action = (
-      <Button size="lg" loading={busy} disabled={spinning} onClick={() => void open()} className="min-w-56" data-testid="case-open">
+      <Button
+        size="lg"
+        loading={busy}
+        disabled={spinning}
+        onClick={() => void open()}
+        className="min-w-56"
+        data-testid="case-open"
+      >
         {c.kind === 'free' ? (
           t('case.openFree')
         ) : (
@@ -198,7 +215,9 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs text-muted">
             <span>{t('case.limited')}</span>
-            <span className="tabular">{t('case.supply', { left: supply.total - supply.used, total: supply.total })}</span>
+            <span className="tabular">
+              {t('case.supply', { left: supply.total - supply.used, total: supply.total })}
+            </span>
           </div>
           <Progress value={supply.total - supply.used} max={supply.total} />
         </div>
@@ -217,7 +236,9 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
                 }}
                 className={cn(
                   'clip-cut h-12 w-12 font-display text-sm font-bold transition [--cut:7px]',
-                  count === n ? 'bg-accent text-accent-ink' : 'bg-surface-3 text-muted hover:text-text',
+                  count === n
+                    ? 'bg-accent text-accent-ink'
+                    : 'bg-surface-3 text-muted hover:text-text',
                 )}
                 aria-pressed={count === n}
               >
@@ -261,7 +282,12 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
       >
         {result && (
           <div className="space-y-5">
-            <div className={cn('grid gap-2.5', result.results.length > 2 ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2')}>
+            <div
+              className={cn(
+                'grid gap-2.5',
+                result.results.length > 2 ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2',
+              )}
+            >
               {result.results.map((r) => (
                 <ItemTile
                   key={r.userItemId}
@@ -271,7 +297,9 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
                   dimmed={sold.has(r.userItemId)}
                   footer={
                     sold.has(r.userItemId) ? (
-                      <span className="mt-2 text-[11px] font-semibold uppercase text-dim">{t('case.sold')}</span>
+                      <span className="mt-2 text-[11px] font-semibold uppercase text-dim">
+                        {t('case.sold')}
+                      </span>
                     ) : (
                       <button
                         type="button"
@@ -290,7 +318,12 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
               <GemAmount value={resultValue} size="lg" className="text-accent" />
             </div>
             <div className="grid gap-2 sm:grid-cols-3">
-              <Button variant="secondary" disabled={!unsoldIds.length} onClick={() => void sell(unsoldIds)} data-testid="result-sell-all">
+              <Button
+                variant="secondary"
+                disabled={!unsoldIds.length}
+                onClick={() => void sell(unsoldIds)}
+                data-testid="result-sell-all"
+              >
                 {t('case.sellAll')} <GemAmount value={resultValue} size="sm" />
               </Button>
               <Button variant="secondary" onClick={() => setShowResult(false)}>

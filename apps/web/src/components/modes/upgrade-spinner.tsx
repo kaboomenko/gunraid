@@ -65,7 +65,14 @@ export function UpgradeSpinner({
             </feMerge>
           </filter>
         </defs>
-        <circle cx="120" cy="120" r={R} fill="none" stroke="var(--color-surface-3)" strokeWidth="14" />
+        <circle
+          cx="120"
+          cy="120"
+          r={R}
+          fill="none"
+          stroke="var(--color-surface-3)"
+          strokeWidth="14"
+        />
         <circle
           cx="120"
           cy="120"
@@ -90,7 +97,10 @@ export function UpgradeSpinner({
             transform={`rotate(${i * 9} 120 120)`}
           />
         ))}
-        <g ref={pointer} style={{ transform: `rotate(${angle}deg)`, transformOrigin: '120px 120px' }}>
+        <g
+          ref={pointer}
+          style={{ transform: `rotate(${angle}deg)`, transformOrigin: '120px 120px' }}
+        >
           <polygon points="120,22 112,6 128,6" fill="#fff" />
           <line x1="120" y1="24" x2="120" y2="44" stroke="#fff" strokeWidth="3" />
         </g>

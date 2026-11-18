@@ -30,7 +30,9 @@ export class TestClient {
       const idx = pair.indexOf('=');
       const name = pair.slice(0, idx).trim();
       const value = pair.slice(idx + 1).trim();
-      const expired = attrs.some((a) => /max-age=0/i.test(a) || /expires=Thu, 01 Jan 1970/i.test(a));
+      const expired = attrs.some(
+        (a) => /max-age=0/i.test(a) || /expires=Thu, 01 Jan 1970/i.test(a),
+      );
       if (expired || value === '') this.cookies.delete(name);
       else this.cookies.set(name, value);
     }
@@ -75,11 +77,15 @@ export class TestClient {
   post = <T = unknown>(url: string, payload?: unknown, headers?: Record<string, string>) =>
     this.request<T>('POST', url, payload ?? {}, headers);
   put = <T = unknown>(url: string, payload?: unknown) => this.request<T>('PUT', url, payload ?? {});
-  patch = <T = unknown>(url: string, payload?: unknown) => this.request<T>('PATCH', url, payload ?? {});
+  patch = <T = unknown>(url: string, payload?: unknown) =>
+    this.request<T>('PATCH', url, payload ?? {});
   delete = <T = unknown>(url: string) => this.request<T>('DELETE', url);
 
   async devLogin(preset: 'player' | 'support' | 'admin' = 'player', nickname?: string) {
-    const res = await this.post('/api/v1/auth/dev-login', nickname ? { preset, nickname } : { preset });
+    const res = await this.post(
+      '/api/v1/auth/dev-login',
+      nickname ? { preset, nickname } : { preset },
+    );
     if (res.status !== 200) throw new Error(`dev login failed: ${JSON.stringify(res.body)}`);
     return res;
   }

@@ -45,7 +45,8 @@ export class AuthGuard implements CanActivate {
     } catch (err) {
       return fail(err as Error);
     }
-    if (!(await this.sessions.isActive(claims.sessionId))) return fail(unauthorized('SESSION_REVOKED'));
+    if (!(await this.sessions.isActive(claims.sessionId)))
+      return fail(unauthorized('SESSION_REVOKED'));
 
     const info = await this.users.getAuthInfo(claims.userId);
     if (!info) return fail(unauthorized());

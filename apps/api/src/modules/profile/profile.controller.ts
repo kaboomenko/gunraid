@@ -42,8 +42,16 @@ export class PublicProfileController {
   ) {}
 
   @Get(':shortId/stats')
-  async stats(@Param('shortId') shortIdRaw: string, @ZQuery(z.object({ game: gameCodeSchema })) q: { game: string }) {
-    const shortId = z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER).parse(shortIdRaw);
+  async stats(
+    @Param('shortId') shortIdRaw: string,
+    @ZQuery(z.object({ game: gameCodeSchema })) q: { game: string },
+  ) {
+    const shortId = z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(Number.MAX_SAFE_INTEGER)
+      .parse(shortIdRaw);
     return this.profile.publicStats(shortId, (await this.games.getActive(q.game)).id);
   }
 }

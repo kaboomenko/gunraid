@@ -27,7 +27,8 @@ function buildStrip(pool: CaseContentItemDto[], winner: ItemDto | null, seed: nu
     return (pool[pool.length - 1] as CaseContentItemDto).item;
   };
   const strip = Array.from({ length: STRIP_LENGTH }, (_, i) => {
-    if (i % 7 === 3) return (pool[Math.floor(rand() * Math.min(3, pool.length))] as CaseContentItemDto).item;
+    if (i % 7 === 3)
+      return (pool[Math.floor(rand() * Math.min(3, pool.length))] as CaseContentItemDto).item;
     return pick();
   });
   if (winner) strip[WIN_INDEX] = winner;
@@ -44,11 +45,22 @@ export interface RouletteProps {
   onDone?: () => void;
 }
 
-export function Roulette({ pool, winner, spinId, fast, compact, durationMs = 5800, onDone }: RouletteProps) {
+export function Roulette({
+  pool,
+  winner,
+  spinId,
+  fast,
+  compact,
+  durationMs = 5800,
+  onDone,
+}: RouletteProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLDivElement>(null);
   const [done, setDone] = useState(false);
-  const strip = useMemo(() => buildStrip(pool, winner, spinId * 9301 + 49297), [pool, winner, spinId]);
+  const strip = useMemo(
+    () => buildStrip(pool, winner, spinId * 9301 + 49297),
+    [pool, winner, spinId],
+  );
   const cardW = compact ? 104 : 148;
 
   useEffect(() => {
@@ -67,11 +79,14 @@ export function Roulette({ pool, winner, spinId, fast, compact, durationMs = 580
       onDone?.();
       return;
     }
-    const anim = tr.animate([{ transform: 'translateX(0px)' }, { transform: `translateX(${target}px)` }], {
-      duration: durationMs,
-      easing: 'cubic-bezier(0.06, 0.62, 0.1, 1)',
-      fill: 'forwards',
-    });
+    const anim = tr.animate(
+      [{ transform: 'translateX(0px)' }, { transform: `translateX(${target}px)` }],
+      {
+        duration: durationMs,
+        easing: 'cubic-bezier(0.06, 0.62, 0.1, 1)',
+        fill: 'forwards',
+      },
+    );
     let last = -1;
     let raf = 0;
     const loop = () => {
@@ -99,7 +114,10 @@ export function Roulette({ pool, winner, spinId, fast, compact, durationMs = 580
   return (
     <div
       ref={viewport}
-      className={cn('cut relative overflow-hidden [--cut-bg:var(--color-surface-1)]', compact ? 'h-[118px]' : 'h-[172px]')}
+      className={cn(
+        'cut relative overflow-hidden [--cut-bg:var(--color-surface-1)]',
+        compact ? 'h-[118px]' : 'h-[172px]',
+      )}
     >
       <div
         className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-0.5 -translate-x-1/2 bg-accent shadow-[0_0_14px_rgba(198,255,0,0.9)]"
@@ -107,7 +125,11 @@ export function Roulette({ pool, winner, spinId, fast, compact, durationMs = 580
       />
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-surface-1 to-transparent" />
       <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-surface-1 to-transparent" />
-      <div ref={track} className="flex h-full items-center will-change-transform" style={{ transform: 'translateX(0px)' }}>
+      <div
+        ref={track}
+        className="flex h-full items-center will-change-transform"
+        style={{ transform: 'translateX(0px)' }}
+      >
         {strip.map((it, i) => (
           <div key={`${spinId}-${i}`} className="shrink-0 px-1" style={{ width: cardW }}>
             <div
@@ -116,14 +138,28 @@ export function Roulette({ pool, winner, spinId, fast, compact, durationMs = 580
                 compact ? 'h-[96px]' : 'h-[146px]',
                 done && i === WIN_INDEX && 'ring-2 ring-accent',
               )}
-              style={{ background: `radial-gradient(90% 70% at 50% 100%, ${it.rarity.color}45, var(--color-surface-2) 70%)` }}
+              style={{
+                background: `radial-gradient(90% 70% at 50% 100%, ${it.rarity.color}45, var(--color-surface-2) 70%)`,
+              }}
             >
               {it.imageUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={it.imageUrl} alt="" className={cn('object-contain', compact ? 'h-12 w-20' : 'h-20 w-32')} draggable={false} />
+                <img
+                  src={it.imageUrl}
+                  alt=""
+                  className={cn('object-contain', compact ? 'h-12 w-20' : 'h-20 w-32')}
+                  draggable={false}
+                />
               )}
-              {!compact && <div className="mt-1 w-full truncate px-2 text-center text-[11px] font-semibold">{it.skinName}</div>}
-              <div className="absolute inset-x-0 bottom-0 h-[3px]" style={{ background: it.rarity.color }} />
+              {!compact && (
+                <div className="mt-1 w-full truncate px-2 text-center text-[11px] font-semibold">
+                  {it.skinName}
+                </div>
+              )}
+              <div
+                className="absolute inset-x-0 bottom-0 h-[3px]"
+                style={{ background: it.rarity.color }}
+              />
             </div>
           </div>
         ))}

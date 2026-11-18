@@ -4,10 +4,28 @@ import { Badge } from '@/components/ui/badge';
 import { ItemCard } from '@/components/ui/item-card';
 
 /** Бейджи предмета: StatTrak, Souvenir, износ. */
-export function ItemBadges({ item, stLabel, svLabel }: { item: ItemDto; stLabel: string; svLabel: string }) {
+export function ItemBadges({
+  item,
+  stLabel,
+  svLabel,
+}: {
+  item: ItemDto;
+  stLabel: string;
+  svLabel: string;
+}) {
   const out: ReactNode[] = [];
-  if (item.isStattrak) out.push(<Badge key="st" tone="warning">{stLabel}</Badge>);
-  if (item.isSouvenir) out.push(<Badge key="sv" tone="info">{svLabel}</Badge>);
+  if (item.isStattrak)
+    out.push(
+      <Badge key="st" tone="warning">
+        {stLabel}
+      </Badge>,
+    );
+  if (item.isSouvenir)
+    out.push(
+      <Badge key="sv" tone="info">
+        {svLabel}
+      </Badge>,
+    );
   if (item.wear) out.push(<Badge key="w">{item.wear}</Badge>);
   return out.length ? <>{out}</> : null;
 }

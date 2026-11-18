@@ -6,7 +6,12 @@ import { Dialog } from 'radix-ui';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
-const WIDTHS = { sm: 'sm:max-w-sm', md: 'sm:max-w-md', lg: 'sm:max-w-2xl', xl: 'sm:max-w-4xl' } as const;
+const WIDTHS = {
+  sm: 'sm:max-w-sm',
+  md: 'sm:max-w-md',
+  lg: 'sm:max-w-2xl',
+  xl: 'sm:max-w-4xl',
+} as const;
 
 export interface ModalProps {
   open: boolean;

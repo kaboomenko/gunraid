@@ -26,7 +26,11 @@ export function MockPay({ id }: { id: string }) {
   const errorText = useErrorMessage();
   const invalidate = useInvalidateWallet();
   const [busy, setBusy] = useState<'success' | 'fail' | null>(null);
-  const dep = useQuery({ queryKey: ['deposit', id], queryFn: () => api.get<DepositDto>(`/deposits/${id}`), retry: false });
+  const dep = useQuery({
+    queryKey: ['deposit', id],
+    queryFn: () => api.get<DepositDto>(`/deposits/${id}`),
+    retry: false,
+  });
 
   const complete = async (result: 'success' | 'fail') => {
     setBusy(result);
@@ -71,17 +75,31 @@ export function MockPay({ id }: { id: string }) {
           </div>
           <div className="flex justify-between">
             <span className="text-dim">{t('pay.status')}</span>
-            <Badge tone={d.status === 'succeeded' ? 'soft' : d.status === 'pending' ? 'warning' : 'danger'}>
+            <Badge
+              tone={
+                d.status === 'succeeded' ? 'soft' : d.status === 'pending' ? 'warning' : 'danger'
+              }
+            >
               {t(`history.depositStatus.${d.status}`)}
             </Badge>
           </div>
         </div>
         {d.status === 'pending' ? (
           <div className="grid grid-cols-2 gap-3">
-            <Button loading={busy === 'success'} disabled={Boolean(busy)} onClick={() => void complete('success')} data-testid="mock-pay-success">
+            <Button
+              loading={busy === 'success'}
+              disabled={Boolean(busy)}
+              onClick={() => void complete('success')}
+              data-testid="mock-pay-success"
+            >
               <CheckCircle2 size={18} /> {t('pay.success')}
             </Button>
-            <Button variant="danger" loading={busy === 'fail'} disabled={Boolean(busy)} onClick={() => void complete('fail')}>
+            <Button
+              variant="danger"
+              loading={busy === 'fail'}
+              disabled={Boolean(busy)}
+              onClick={() => void complete('fail')}
+            >
               <XCircle size={18} /> {t('pay.fail')}
             </Button>
           </div>

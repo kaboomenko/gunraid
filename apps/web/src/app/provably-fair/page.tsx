@@ -6,7 +6,11 @@ import { FairTools } from './fair-tools';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('fair');
-  return { title: t('title'), description: t('metaDescription'), alternates: { canonical: '/provably-fair' } };
+  return {
+    title: t('title'),
+    description: t('metaDescription'),
+    alternates: { canonical: '/provably-fair' },
+  };
 }
 
 export default async function FairPage() {
@@ -14,7 +18,9 @@ export default async function FairPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="space-y-2">
-        <h1 className="font-display-oblique text-3xl font-extrabold uppercase sm:text-4xl">{t('title')}</h1>
+        <h1 className="font-display-oblique text-3xl font-extrabold uppercase sm:text-4xl">
+          {t('title')}
+        </h1>
         <p className="text-muted">{t('lead')}</p>
       </div>
       <Card className="space-y-3 p-5 text-sm leading-relaxed text-muted">
@@ -27,7 +33,9 @@ export default async function FairPage() {
         </ol>
         <div className="text-xs uppercase tracking-wider text-dim">{t('formula')}</div>
         <pre className="clip-cut overflow-x-auto bg-surface-2 p-3 text-xs text-accent [--cut:6px]">
-          {'hmac = HMAC_SHA256(serverSeed, `${clientSeed}:${nonce}:0`)\nfloat = parseInt(hmac.slice(0, 13), 16) / 2^52\nticket = floor(float × 10 000 000)'}
+          {
+            'hmac = HMAC_SHA256(serverSeed, `${clientSeed}:${nonce}:0`)\nfloat = parseInt(hmac.slice(0, 13), 16) / 2^52\nticket = floor(float × 10 000 000)'
+          }
         </pre>
       </Card>
       <Suspense>

@@ -9,7 +9,13 @@ import {
 } from '@gunraid/shared';
 import type { FastifyRequest } from 'fastify';
 import { RealtimeEmitter } from '../../core/realtime-emitter.js';
-import { Auth, CurrentUser, OptionalAuth, RateLimit, type AuthContext } from '../../common/auth.decorators.js';
+import {
+  Auth,
+  CurrentUser,
+  OptionalAuth,
+  RateLimit,
+  type AuthContext,
+} from '../../common/auth.decorators.js';
 import { IdempotencyService, requireIdempotencyKey } from '../../common/idempotency.js';
 import { ZBody, ZParam } from '../../common/zod.js';
 import { FeedService } from '../feed/feed.service.js';
@@ -63,8 +69,12 @@ export class CasesController {
   ): Promise<CaseOpenResultDto> {
     const key = requireIdempotencyKey(req);
     const g = await this.games.getActive(game);
-    const { result, replayed } = await this.idempotency.run(user.userId, key, `case:${g.code}:${slug}`, body, (tx) =>
-      this.cases.open(tx, user.userId, g, slug, body.count),
+    const { result, replayed } = await this.idempotency.run(
+      user.userId,
+      key,
+      `case:${g.code}:${slug}`,
+      body,
+      (tx) => this.cases.open(tx, user.userId, g, slug, body.count),
     );
     if (!replayed) {
       this.realtime.balance(user.userId, result.balance);

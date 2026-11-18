@@ -50,7 +50,12 @@ export function GemAmount({ value, size = 'md', compact, signed, className }: Ge
   const sign = value < 0 ? '−' : signed && value > 0 ? '+' : '';
   return (
     <span
-      className={cn('inline-flex items-center font-semibold whitespace-nowrap tabular', s.text, s.gap, className)}
+      className={cn(
+        'inline-flex items-center font-semibold whitespace-nowrap tabular',
+        s.text,
+        s.gap,
+        className,
+      )}
       aria-label={t('amount', { count: value })}
       role="text"
     >

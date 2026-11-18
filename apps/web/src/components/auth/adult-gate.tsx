@@ -51,11 +51,27 @@ export function AdultGate() {
           </span>
           <p className="text-sm text-muted">{t('text')}</p>
         </div>
-        <Checkbox id="adult-confirm" checked={checked} onCheckedChange={setChecked} label={t('checkbox')} />
-        <Button size="lg" block disabled={!checked} loading={busy} onClick={() => void confirm()} data-testid="adult-confirm">
+        <Checkbox
+          id="adult-confirm"
+          checked={checked}
+          onCheckedChange={setChecked}
+          label={t('checkbox')}
+        />
+        <Button
+          size="lg"
+          block
+          disabled={!checked}
+          loading={busy}
+          onClick={() => void confirm()}
+          data-testid="adult-confirm"
+        >
           {t('submit')}
         </Button>
-        <button type="button" className="text-xs text-dim underline-offset-2 hover:underline" onClick={() => void logout()}>
+        <button
+          type="button"
+          className="text-xs text-dim underline-offset-2 hover:underline"
+          onClick={() => void logout()}
+        >
           {t('logout')}
         </button>
       </div>

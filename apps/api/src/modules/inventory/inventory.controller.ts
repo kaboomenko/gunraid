@@ -46,8 +46,12 @@ export class InventoryController {
   ): Promise<SellResultDto> {
     const key = requireIdempotencyKey(req);
     const g = await this.games.getActive(game);
-    const { result, replayed } = await this.idempotency.run(user.userId, key, `sell:${g.code}`, body, (tx) =>
-      this.inventory.sell(tx, user.userId, g.id, body),
+    const { result, replayed } = await this.idempotency.run(
+      user.userId,
+      key,
+      `sell:${g.code}`,
+      body,
+      (tx) => this.inventory.sell(tx, user.userId, g.id, body),
     );
     if (!replayed) this.realtime.balance(user.userId, result.balance);
     return result;

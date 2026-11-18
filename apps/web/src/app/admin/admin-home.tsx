@@ -13,7 +13,13 @@ export function AdminHome() {
   const me = useMe();
   if (me.isLoading) return <Skeleton className="h-48 w-full" />;
   if (!me.data || (me.data.role !== 'admin' && me.data.role !== 'support')) {
-    return <EmptyState icon={<ShieldAlert size={36} />} title={t('admin.denied')} text={t('admin.deniedText')} />;
+    return (
+      <EmptyState
+        icon={<ShieldAlert size={36} />}
+        title={t('admin.denied')}
+        text={t('admin.deniedText')}
+      />
+    );
   }
   return (
     <div className="space-y-4">
@@ -21,7 +27,9 @@ export function AdminHome() {
       <Card className="flex items-center gap-3 p-5">
         <ShieldCheck className="text-accent" />
         <div>
-          <div className="font-semibold">{t('admin.welcome', { role: t(`roles.${me.data.role}`) })}</div>
+          <div className="font-semibold">
+            {t('admin.welcome', { role: t(`roles.${me.data.role}`) })}
+          </div>
           <div className="text-sm text-muted">{t('admin.sections')}</div>
         </div>
       </Card>

@@ -49,7 +49,12 @@ const csv = z
   .string()
   .trim()
   .max(500)
-  .transform((s) => s.split(',').map((v) => v.trim()).filter(Boolean));
+  .transform((s) =>
+    s
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean),
+  );
 
 export const itemsQuerySchema = z.object({
   q: z.string().trim().max(80).optional(),

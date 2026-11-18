@@ -21,7 +21,9 @@ export function OnlineBadge({ className }: { className?: string }) {
       .catch(() => undefined);
   }, [setOnline]);
 
-  useSocketEvent<StatsUpdatePayload>(WS_EVENTS.statsUpdate, (p) => setOnline(Math.max(1, p.online)));
+  useSocketEvent<StatsUpdatePayload>(WS_EVENTS.statsUpdate, (p) =>
+    setOnline(Math.max(1, p.online)),
+  );
 
   return (
     <div className={cn('items-center gap-2 text-xs text-muted', className)} data-testid="online">

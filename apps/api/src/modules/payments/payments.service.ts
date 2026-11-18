@@ -136,7 +136,8 @@ export class PaymentsService {
   async quote(userId: string, body: DepositQuoteBody): Promise<DepositQuoteDto> {
     const provider = this.providerForMethod(body.method);
     const method = provider.methods().find((m) => m.code === body.method);
-    if (!method?.currencies.includes(body.currency)) throw new AppError('CURRENCY_NOT_SUPPORTED', 400);
+    if (!method?.currencies.includes(body.currency))
+      throw new AppError('CURRENCY_NOT_SUPPORTED', 400);
     const rate = await this.fx.get(body.currency);
     if (!rate) throw new AppError('CURRENCY_NOT_SUPPORTED', 400);
     const [{ gemsPerUsd, quoteTtlMinutes }, limits, firstDeposit] = await Promise.all([
@@ -145,8 +146,10 @@ export class PaymentsService {
       this.settings.get('firstDeposit'),
     ]);
     const gems = quoteGems(body.amount, rate.usdRate, gemsPerUsd);
-    if (gems < limits.minGems) throw new AppError('DEPOSIT_AMOUNT_TOO_LOW', 400, { minGems: limits.minGems });
-    if (gems > limits.maxGems) throw new AppError('DEPOSIT_AMOUNT_TOO_HIGH', 400, { maxGems: limits.maxGems });
+    if (gems < limits.minGems)
+      throw new AppError('DEPOSIT_AMOUNT_TOO_LOW', 400, { minGems: limits.minGems });
+    if (gems > limits.maxGems)
+      throw new AppError('DEPOSIT_AMOUNT_TOO_HIGH', 400, { maxGems: limits.maxGems });
 
     const [user] = await this.db
       .select({ firstDepositAt: users.firstDepositAt })
@@ -174,7 +177,12 @@ export class PaymentsService {
       bonusSource,
       expiresAt,
     };
-    await this.redis.set(this.quoteKey(quoteId), JSON.stringify(stored), 'EX', quoteTtlMinutes * 60);
+    await this.redis.set(
+      this.quoteKey(quoteId),
+      JSON.stringify(stored),
+      'EX',
+      quoteTtlMinutes * 60,
+    );
     return {
       quoteId,
       method: body.method,
@@ -241,7 +249,11 @@ export class PaymentsService {
     return toDto(row);
   }
 
-  async listDeposits(userId: string, cursor: string | undefined, limit = 20): Promise<PageDto<DepositDto>> {
+  async listDeposits(
+    userId: string,
+    cursor: string | undefined,
+    limit = 20,
+  ): Promise<PageDto<DepositDto>> {
     const where = cursor
       ? and(eq(deposits.userId, userId), lt(deposits.createdAt, new Date(cursor)))
       : eq(deposits.userId, userId);
@@ -254,7 +266,8 @@ export class PaymentsService {
     const page = rows.slice(0, limit);
     return {
       items: page.map(toDto),
-      nextCursor: rows.length > limit ? (page[page.length - 1]?.createdAt.toISOString() ?? null) : null,
+      nextCursor:
+        rows.length > limit ? (page[page.length - 1]?.createdAt.toISOString() ?? null) : null,
     };
   }
 
@@ -286,7 +299,13 @@ export class PaymentsService {
     const eventRowId = newId();
     const inserted = await this.db
       .insert(paymentEvents)
-      .values({ id: eventRowId, provider: providerCode, eventId: event.eventId, payload: JSON.parse(rawBody), signatureOk: true })
+      .values({
+        id: eventRowId,
+        provider: providerCode,
+        eventId: event.eventId,
+        payload: JSON.parse(rawBody),
+        signatureOk: true,
+      })
       .onConflictDoNothing()
       .returning({ id: paymentEvents.id });
     if (!inserted.length) return { ok: true, duplicate: true };
@@ -295,15 +314,24 @@ export class PaymentsService {
       const [deposit] = await tx
         .select()
         .from(deposits)
-        .where(and(eq(deposits.provider, providerCode), eq(deposits.providerPaymentId, event.providerPaymentId)))
+        .where(
+          and(
+            eq(deposits.provider, providerCode),
+            eq(deposits.providerPaymentId, event.providerPaymentId),
+          ),
+        )
         .for('update');
       if (!deposit) throw new AppError('DEPOSIT_NOT_FOUND', 404);
-      if (deposit.status !== 'pending') return { userId: deposit.userId, balance: null as number | null };
+      if (deposit.status !== 'pending')
+        return { userId: deposit.userId, balance: null as number | null };
 
       if (event.status !== 'succeeded') {
         await tx
           .update(deposits)
-          .set({ status: event.status === 'cancelled' ? 'cancelled' : 'failed', completedAt: sql`now()` })
+          .set({
+            status: event.status === 'cancelled' ? 'cancelled' : 'failed',
+            completedAt: sql`now()`,
+          })
           .where(eq(deposits.id, deposit.id));
         return { userId: deposit.userId, balance: null };
       }
@@ -348,13 +376,20 @@ export class PaymentsService {
       return { userId: deposit.userId, balance: res.balanceAfter };
     });
 
-    await this.db.update(paymentEvents).set({ processedAt: sql`now()` }).where(eq(paymentEvents.id, eventRowId));
+    await this.db
+      .update(paymentEvents)
+      .set({ processedAt: sql`now()` })
+      .where(eq(paymentEvents.id, eventRowId));
     if (outcome.balance !== null) this.realtime.balance(outcome.userId, outcome.balance);
     return { ok: true };
   }
 
   /** ТЕСТОВАЯ оплата: формирует подписанный вебхук тестового провайдера и проводит его. */
-  async mockComplete(userId: string, depositId: string, result: 'success' | 'fail'): Promise<DepositDto> {
+  async mockComplete(
+    userId: string,
+    depositId: string,
+    result: 'success' | 'fail',
+  ): Promise<DepositDto> {
     const dep = await this.getDeposit(userId, depositId);
     const [row] = await this.db.select().from(deposits).where(eq(deposits.id, dep.id));
     if (!row || row.provider !== 'mock') throw new AppError('DEPOSIT_NOT_FOUND', 404);

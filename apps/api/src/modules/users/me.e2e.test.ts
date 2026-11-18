@@ -44,7 +44,9 @@ describe('/me (integration)', () => {
   it('validates the CS2 trade url and the Standoff 2 player id', async () => {
     const c = new TestClient(app);
     await c.loginNewPlayer('prof');
-    const bad = await c.put<Err>('/api/v1/me/games/cs2/profile', { tradeUrl: 'https://example.com' });
+    const bad = await c.put<Err>('/api/v1/me/games/cs2/profile', {
+      tradeUrl: 'https://example.com',
+    });
     expect(bad.body.error.code).toBe('TRADE_URL_INVALID');
 
     const url = 'https://steamcommunity.com/tradeoffer/new/?partner=123456789&token=AbCd_123';
@@ -73,7 +75,9 @@ describe('/me (integration)', () => {
     const c = new TestClient(app);
     const nick = await c.loginNewPlayer('pub');
     const me = await c.get<MeDto>('/api/v1/me');
-    const pub = await new TestClient(app).get<{ nickname: string }>(`/api/v1/users/${me.body.shortId}`);
+    const pub = await new TestClient(app).get<{ nickname: string }>(
+      `/api/v1/users/${me.body.shortId}`,
+    );
     expect(pub.status).toBe(200);
     expect(pub.body.nickname).toBe(nick);
   });

@@ -32,8 +32,11 @@ export function useInventory(game: string, sort: InventorySort, enabled = true) 
     enabled,
     initialPageParam: 1,
     queryFn: ({ pageParam }) =>
-      api.get<InventoryPageDto>(`/games/${game}/inventory?sort=${sort}&page=${pageParam}&pageSize=60`),
-    getNextPageParam: (last) => (last.page * last.pageSize < last.total ? last.page + 1 : undefined),
+      api.get<InventoryPageDto>(
+        `/games/${game}/inventory?sort=${sort}&page=${pageParam}&pageSize=60`,
+      ),
+    getNextPageParam: (last) =>
+      last.page * last.pageSize < last.total ? last.page + 1 : undefined,
   });
 }
 
@@ -45,7 +48,11 @@ export function useProfileStats(game: string, enabled = true) {
   });
 }
 
-function cursorPage<T>(key: readonly unknown[], path: (cursor: string | null) => string, enabled = true) {
+function cursorPage<T>(
+  key: readonly unknown[],
+  path: (cursor: string | null) => string,
+  enabled = true,
+) {
   return {
     queryKey: key,
     enabled,
@@ -57,13 +64,21 @@ function cursorPage<T>(key: readonly unknown[], path: (cursor: string | null) =>
 
 export function useTransactions(enabled = true) {
   return useInfiniteQuery(
-    cursorPage<TransactionDto>(qk.transactions, (c) => `/me/transactions${c ? `?cursor=${c}` : ''}`, enabled),
+    cursorPage<TransactionDto>(
+      qk.transactions,
+      (c) => `/me/transactions${c ? `?cursor=${c}` : ''}`,
+      enabled,
+    ),
   );
 }
 
 export function useDeposits(enabled = true) {
   return useInfiniteQuery(
-    cursorPage<DepositDto>(qk.deposits, (c) => `/deposits${c ? `?cursor=${encodeURIComponent(c)}` : ''}`, enabled),
+    cursorPage<DepositDto>(
+      qk.deposits,
+      (c) => `/deposits${c ? `?cursor=${encodeURIComponent(c)}` : ''}`,
+      enabled,
+    ),
   );
 }
 
@@ -78,7 +93,11 @@ export function useDrops(game: string, enabled = true) {
 }
 
 export function usePaymentMethods(enabled = true) {
-  return useQuery({ queryKey: qk.methods, enabled, queryFn: () => api.get<PaymentMethodsDto>('/payments/methods') });
+  return useQuery({
+    queryKey: qk.methods,
+    enabled,
+    queryFn: () => api.get<PaymentMethodsDto>('/payments/methods'),
+  });
 }
 
 /** Обновления баланса по WebSocket → кэш профиля. */

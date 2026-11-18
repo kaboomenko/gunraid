@@ -21,7 +21,9 @@ export function stableHash(value: unknown): string {
     }
     return v;
   };
-  return createHash('sha256').update(JSON.stringify(normalize(value) ?? null)).digest('hex');
+  return createHash('sha256')
+    .update(JSON.stringify(normalize(value) ?? null))
+    .digest('hex');
 }
 
 /** Ключ из заголовка Idempotency-Key (обязателен для игровых и платёжных действий). */

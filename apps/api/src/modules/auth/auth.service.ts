@@ -1,11 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import {
-  authIdentities,
-  userAccessLog,
-  users,
-  type Db,
-  type IdentityProfile,
-} from '@gunraid/db';
+import { authIdentities, userAccessLog, users, type Db, type IdentityProfile } from '@gunraid/db';
 import type { AuthIntent, AuthProvider, Role } from '@gunraid/shared';
 import { and, eq, sql } from 'drizzle-orm';
 import { DB } from '../../core/tokens.js';
@@ -72,9 +66,12 @@ export class AuthService {
         const [sameProvider] = await tx
           .select({ id: authIdentities.id })
           .from(authIdentities)
-          .where(and(eq(authIdentities.userId, owner.id), eq(authIdentities.provider, input.provider)))
+          .where(
+            and(eq(authIdentities.userId, owner.id), eq(authIdentities.provider, input.provider)),
+          )
           .limit(1);
-        if (sameProvider) throw conflict('IDENTITY_ALREADY_LINKED', { reason: 'provider_already_linked' });
+        if (sameProvider)
+          throw conflict('IDENTITY_ALREADY_LINKED', { reason: 'provider_already_linked' });
         await tx.insert(authIdentities).values({
           id: crypto.randomUUID(),
           userId: owner.id,
@@ -98,7 +95,10 @@ export class AuthService {
           role = input.forceRole;
           await tx.update(users).set({ role }).where(eq(users.id, user.id));
         }
-        await tx.update(users).set({ lastSeenAt: sql`now()` }).where(eq(users.id, user.id));
+        await tx
+          .update(users)
+          .set({ lastSeenAt: sql`now()` })
+          .where(eq(users.id, user.id));
         return { userId: user.id, role, created: false, linked: false };
       }
 

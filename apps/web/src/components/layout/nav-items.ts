@@ -1,4 +1,13 @@
-import { Gift, LayoutGrid, Layers, Swords, Trophy, TrendingUp, User, type LucideIcon } from 'lucide-react';
+import {
+  Gift,
+  LayoutGrid,
+  Layers,
+  Swords,
+  Trophy,
+  TrendingUp,
+  User,
+  type LucideIcon,
+} from 'lucide-react';
 
 export interface NavItem {
   key: 'cases' | 'upgrade' | 'contract' | 'battles' | 'bonuses' | 'leaderboard' | 'profile';

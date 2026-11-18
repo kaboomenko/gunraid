@@ -4,7 +4,15 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { GameIcon } from '@/components/ui/game-icon';
 
-export async function Hero({ game, gameName, shortName }: { game: string; gameName: string; shortName: string }) {
+export async function Hero({
+  game,
+  gameName,
+  shortName,
+}: {
+  game: string;
+  gameName: string;
+  shortName: string;
+}) {
   const t = await getTranslations('home');
   return (
     <section className="cut cut-xl stripes relative hidden overflow-hidden [--cut-bg:var(--color-surface-1)] sm:block">
@@ -22,7 +30,9 @@ export async function Hero({ game, gameName, shortName }: { game: string; gameNa
           <h1 className="font-display-oblique text-2xl font-extrabold uppercase leading-[1.05] sm:text-5xl">
             {t('heroTitle')}
           </h1>
-          <p className="hidden max-w-xl text-sm text-muted sm:block sm:text-base">{t('heroText', { game: gameName })}</p>
+          <p className="hidden max-w-xl text-sm text-muted sm:block sm:text-base">
+            {t('heroText', { game: gameName })}
+          </p>
           <div className="flex flex-wrap gap-3">
             <Button asChild size="lg">
               <Link href={`/${game}#cases`}>

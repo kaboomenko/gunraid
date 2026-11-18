@@ -35,7 +35,13 @@ export interface PageDto<T> {
   nextCursor: string | null;
 }
 
-export const DEPOSIT_STATUSES = ['pending', 'succeeded', 'failed', 'cancelled', 'reversed'] as const;
+export const DEPOSIT_STATUSES = [
+  'pending',
+  'succeeded',
+  'failed',
+  'cancelled',
+  'reversed',
+] as const;
 export type DepositStatus = (typeof DEPOSIT_STATUSES)[number];
 
 export interface PaymentCurrencyDto {

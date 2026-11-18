@@ -46,7 +46,14 @@ export interface CaseContentItemDto {
   chance: string;
 }
 
-export const CASE_BLOCK_REASONS = ['LOGIN', 'ADULT', 'LEVEL', 'COOLDOWN', 'SOLD_OUT', 'UNAVAILABLE'] as const;
+export const CASE_BLOCK_REASONS = [
+  'LOGIN',
+  'ADULT',
+  'LEVEL',
+  'COOLDOWN',
+  'SOLD_OUT',
+  'UNAVAILABLE',
+] as const;
 export type CaseBlockReason = (typeof CASE_BLOCK_REASONS)[number];
 
 export interface CaseAvailabilityDto {
@@ -93,7 +100,14 @@ export interface FeedDropDto {
   game: string;
   source: DropSource;
   user: { shortId: number; nickname: string; avatarUrl: string | null };
-  item: { id: string; skinName: string; modelName: string | null; imageUrl: string | null; rarityColor: string; price: number };
+  item: {
+    id: string;
+    skinName: string;
+    modelName: string | null;
+    imageUrl: string | null;
+    rarityColor: string;
+    price: number;
+  };
   caseSlug: string | null;
   caseName: string | null;
   caseImage: string | null;

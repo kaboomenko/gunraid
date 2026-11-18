@@ -15,7 +15,16 @@ export interface CaseCardProps {
 }
 
 /** Карточка кейса на главной. */
-export function CaseCard({ name, imageUrl, price, accentColor = '#C6FF00', badge, meta, className, priceSlot }: CaseCardProps) {
+export function CaseCard({
+  name,
+  imageUrl,
+  price,
+  accentColor = '#C6FF00',
+  badge,
+  meta,
+  className,
+  priceSlot,
+}: CaseCardProps) {
   return (
     <div
       className={cn(
@@ -30,7 +39,9 @@ export function CaseCard({ name, imageUrl, price, accentColor = '#C6FF00', badge
       </div>
       <div
         className="relative grid aspect-square w-full place-items-center"
-        style={{ background: `radial-gradient(60% 55% at 50% 55%, ${accentColor}33, transparent 70%)` }}
+        style={{
+          background: `radial-gradient(60% 55% at 50% 55%, ${accentColor}33, transparent 70%)`,
+        }}
       >
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -44,7 +55,9 @@ export function CaseCard({ name, imageUrl, price, accentColor = '#C6FF00', badge
           <div className="h-1/2 w-1/2 bg-surface-3" />
         )}
       </div>
-      <div className="line-clamp-2 min-h-10 font-display text-sm font-bold uppercase leading-tight">{name}</div>
+      <div className="line-clamp-2 min-h-10 font-display text-sm font-bold uppercase leading-tight">
+        {name}
+      </div>
       {priceSlot ?? (
         <div className="clip-cut bg-surface-3 px-3 py-1.5 [--cut:6px]">
           <GemAmount value={price} size="sm" />

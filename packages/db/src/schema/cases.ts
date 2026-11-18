@@ -42,7 +42,9 @@ export const fairSeeds = pgTable(
     revealedAt: timestamp({ withTimezone: true }),
   },
   (t) => [
-    uniqueIndex('fair_seeds_one_active_uq').on(t.userId).where(sql`${t.status} = 'active'`),
+    uniqueIndex('fair_seeds_one_active_uq')
+      .on(t.userId)
+      .where(sql`${t.status} = 'active'`),
     index('fair_seeds_user_idx').on(t.userId, t.createdAt),
   ],
 );
@@ -112,7 +114,10 @@ export const caseItems = pgTable(
     odds: integer().notNull(),
     sortOrder: integer().notNull().default(0),
   },
-  (t) => [primaryKey({ columns: [t.caseId, t.itemId] }), check('case_items_odds_positive', sql`${t.odds} > 0`)],
+  (t) => [
+    primaryKey({ columns: [t.caseId, t.itemId] }),
+    check('case_items_odds_positive', sql`${t.odds} > 0`),
+  ],
 );
 
 export interface RevisionEntry {
@@ -218,5 +223,9 @@ export const outboxEvents = pgTable(
     lastError: text(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('outbox_pending_idx').on(t.availableAt).where(sql`${t.processedAt} IS NULL`)],
+  (t) => [
+    index('outbox_pending_idx')
+      .on(t.availableAt)
+      .where(sql`${t.processedAt} IS NULL`),
+  ],
 );

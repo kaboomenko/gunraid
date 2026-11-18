@@ -52,22 +52,43 @@ export class ContractService {
 
   /** Ближайший по цене предмет пула контрактов (сначала в пределах диапазона, иначе — среди всех). */
   private async pickResult(tx: DbOrTx, gameId: number, target: number, min: number, max: number) {
-    const base = and(eq(items.gameId, gameId), eq(items.isActive, true), eq(items.inContract, true));
+    const base = and(
+      eq(items.gameId, gameId),
+      eq(items.isActive, true),
+      eq(items.inContract, true),
+    );
     const near = async (cond: ReturnType<typeof and>) => {
       const [above, below] = await Promise.all([
-        tx.select({ id: items.id, price: items.price }).from(items).where(and(cond, gte(items.price, target))).orderBy(asc(items.price), asc(items.id)).limit(1),
-        tx.select({ id: items.id, price: items.price }).from(items).where(and(cond, lte(items.price, target))).orderBy(desc(items.price), asc(items.id)).limit(1),
+        tx
+          .select({ id: items.id, price: items.price })
+          .from(items)
+          .where(and(cond, gte(items.price, target)))
+          .orderBy(asc(items.price), asc(items.id))
+          .limit(1),
+        tx
+          .select({ id: items.id, price: items.price })
+          .from(items)
+          .where(and(cond, lte(items.price, target)))
+          .orderBy(desc(items.price), asc(items.id))
+          .limit(1),
       ]);
       return pickNearestByPrice([...above, ...below], target);
     };
-    return (await near(and(base, gte(items.price, min), lte(items.price, max)))) ?? (await near(base));
+    return (
+      (await near(and(base, gte(items.price, min), lte(items.price, max)))) ?? (await near(base))
+    );
   }
 
   /**
    * Контракт: предметы → used_contract, множитель k по броску provably fair,
    * результат — предмет с ценой, ближайшей к вложенному × k.
    */
-  async sign(tx: DbOrTx, userId: string, game: GameRow, body: ContractBody): Promise<ContractResultDto> {
+  async sign(
+    tx: DbOrTx,
+    userId: string,
+    game: GameRow,
+    body: ContractBody,
+  ): Promise<ContractResultDto> {
     const s = await this.settings.get('contract');
     if (body.userItemIds.length < s.minItems || body.userItemIds.length > s.maxItems) {
       throw new AppError('CONTRACT_ITEMS_COUNT', 400, { min: s.minItems, max: s.maxItems });
@@ -115,7 +136,9 @@ export class ContractService {
       resultValue: result.price,
       resultUserItemId,
     });
-    await tx.insert(contractItems).values(locked.map((l) => ({ contractId, userItemId: l.id, value: l.price })));
+    await tx
+      .insert(contractItems)
+      .values(locked.map((l) => ({ contractId, userItemId: l.id, value: l.price })));
     const { delayMs } = await this.settings.get('feed');
     await this.outbox.add(
       tx,

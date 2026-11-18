@@ -15,7 +15,11 @@ import {
     MockPaymentProvider,
     { provide: FX_RATE_PROVIDER, useClass: DbFxRateProvider },
     // Новые провайдеры добавляются в этот список.
-    { provide: PAYMENT_PROVIDERS, useFactory: (mock: MockPaymentProvider) => [mock], inject: [MockPaymentProvider] },
+    {
+      provide: PAYMENT_PROVIDERS,
+      useFactory: (mock: MockPaymentProvider) => [mock],
+      inject: [MockPaymentProvider],
+    },
   ],
   exports: [PaymentsService],
 })

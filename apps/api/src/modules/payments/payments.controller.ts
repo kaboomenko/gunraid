@@ -1,4 +1,13 @@
-import { Controller, Get, HttpCode, Param, Post, Query, Req, type RawBodyRequest } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+  Req,
+  type RawBodyRequest,
+} from '@nestjs/common';
 import {
   createDepositSchema,
   depositQuoteSchema,

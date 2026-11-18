@@ -8,7 +8,13 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 /** Карточка с рублеными углами и обводкой. */
-export function Card({ tone = 'default', cut = 'md', interactive, className, ...props }: CardProps) {
+export function Card({
+  tone = 'default',
+  cut = 'md',
+  interactive,
+  className,
+  ...props
+}: CardProps) {
   return (
     <div
       className={cn(
@@ -38,7 +44,10 @@ export function SectionTitle({
   return (
     <div className={cn('mb-4 flex items-end justify-between gap-3', className)}>
       <h2 className="font-display text-xl font-extrabold uppercase tracking-wide sm:text-2xl">
-        <span className="mr-2 inline-block h-4 w-1.5 -skew-x-12 bg-accent align-middle" aria-hidden="true" />
+        <span
+          className="mr-2 inline-block h-4 w-1.5 -skew-x-12 bg-accent align-middle"
+          aria-hidden="true"
+        />
         {children}
       </h2>
       {action}

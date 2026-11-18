@@ -13,10 +13,17 @@ export function Banners({ banners }: { banners: BannerDto[] }) {
             style={{ background: `linear-gradient(110deg, ${b.accentColor}2e, transparent 60%)` }}
           >
             <div className="min-w-0">
-              <div className="font-display text-lg font-extrabold uppercase leading-tight sm:text-xl">{b.title}</div>
-              {b.subtitle && <div className="mt-1 line-clamp-2 text-xs text-muted sm:text-sm">{b.subtitle}</div>}
+              <div className="font-display text-lg font-extrabold uppercase leading-tight sm:text-xl">
+                {b.title}
+              </div>
+              {b.subtitle && (
+                <div className="mt-1 line-clamp-2 text-xs text-muted sm:text-sm">{b.subtitle}</div>
+              )}
             </div>
-            <ArrowRight className="shrink-0 transition group-hover:translate-x-1" style={{ color: b.accentColor }} />
+            <ArrowRight
+              className="shrink-0 transition group-hover:translate-x-1"
+              style={{ color: b.accentColor }}
+            />
           </div>
         );
         return b.link ? (

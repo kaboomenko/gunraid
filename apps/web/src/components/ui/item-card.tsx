@@ -71,12 +71,23 @@ export function ItemCard({
         )}
         {badges && <div className="absolute left-2 top-2 flex gap-1">{badges}</div>}
       </div>
-      <div className="h-[3px] w-full" style={{ background: rarityColor, boxShadow: `0 0 12px ${rarityColor}` }} />
-      <div className={cn('flex flex-1 flex-col gap-0.5', size === 'sm' ? 'px-2 py-1.5' : 'px-3 py-2.5')}>
+      <div
+        className="h-[3px] w-full"
+        style={{ background: rarityColor, boxShadow: `0 0 12px ${rarityColor}` }}
+      />
+      <div
+        className={cn(
+          'flex flex-1 flex-col gap-0.5',
+          size === 'sm' ? 'px-2 py-1.5' : 'px-3 py-2.5',
+        )}
+      >
         <div className="truncate text-[11px] text-muted" title={name}>
           {rarityName ? <span style={{ color: rarityColor }}>{rarityName}</span> : name}
         </div>
-        <div className={cn('truncate font-semibold', size === 'sm' ? 'text-xs' : 'text-sm')} title={skin ?? name}>
+        <div
+          className={cn('truncate font-semibold', size === 'sm' ? 'text-xs' : 'text-sm')}
+          title={skin ?? name}
+        >
           {skin ?? name}
         </div>
         <GemAmount value={price} size={size === 'sm' ? 'xs' : 'sm'} className="mt-1 text-accent" />

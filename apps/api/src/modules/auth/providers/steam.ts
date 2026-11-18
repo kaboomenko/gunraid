@@ -37,7 +37,14 @@ export async function verifySteamAssertion(
   const match = CLAIMED_ID_RE.exec(claimed);
   if (!match?.[1]) return null;
   const signed = (query['openid.signed'] ?? '').split(',');
-  for (const required of ['op_endpoint', 'claimed_id', 'identity', 'return_to', 'response_nonce', 'assoc_handle']) {
+  for (const required of [
+    'op_endpoint',
+    'claimed_id',
+    'identity',
+    'return_to',
+    'response_nonce',
+    'assoc_handle',
+  ]) {
     if (!signed.includes(required)) return null;
   }
 

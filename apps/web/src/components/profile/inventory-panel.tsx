@@ -16,7 +16,8 @@ import { api, newIdempotencyKey } from '@/lib/api';
 import { useErrorMessage } from '@/lib/errors';
 import { useInventory, useInvalidateWallet } from '@/lib/queries';
 
-type SellTarget = { mode: 'ids'; ids: string[]; total: number } | { mode: 'all'; total: number; count: number };
+type SellTarget =
+  { mode: 'ids'; ids: string[]; total: number } | { mode: 'all'; total: number; count: number };
 
 export function InventoryPanel({ game }: { game: string }) {
   const t = useTranslations();
@@ -47,7 +48,12 @@ export function InventoryPanel({ game }: { game: string }) {
       const res = await api.post<SellResultDto>(`/games/${game}/inventory/sell`, body, {
         idempotencyKey: newIdempotencyKey(),
       });
-      toast.success(t('inventory.soldToast', { count: res.soldCount, gems: t('gems.amount', { count: res.total }) }));
+      toast.success(
+        t('inventory.soldToast', {
+          count: res.soldCount,
+          gems: t('gems.amount', { count: res.total }),
+        }),
+      );
       setSelected(new Set());
       setConfirm(null);
       invalidate();
@@ -97,14 +103,20 @@ export function InventoryPanel({ game }: { game: string }) {
               <XSquare size={16} /> {t('inventory.clear')}
             </Button>
           ) : (
-            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set(items.map((i) => i.id)))}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelected(new Set(items.map((i) => i.id)))}
+            >
               <CheckSquare size={16} /> {t('inventory.selectAll')}
             </Button>
           )}
           <Button
             size="sm"
             variant="secondary"
-            onClick={() => setConfirm({ mode: 'all', total: first?.totalValue ?? 0, count: first?.total ?? 0 })}
+            onClick={() =>
+              setConfirm({ mode: 'all', total: first?.totalValue ?? 0, count: first?.total ?? 0 })
+            }
           >
             {t('inventory.sellAll')}
           </Button>
@@ -145,7 +157,11 @@ export function InventoryPanel({ game }: { game: string }) {
 
       {inv.hasNextPage && (
         <div className="flex justify-center">
-          <Button variant="secondary" loading={inv.isFetchingNextPage} onClick={() => void inv.fetchNextPage()}>
+          <Button
+            variant="secondary"
+            loading={inv.isFetchingNextPage}
+            onClick={() => void inv.fetchNextPage()}
+          >
             {t('inventory.loadMore')}
           </Button>
         </div>
@@ -155,10 +171,14 @@ export function InventoryPanel({ game }: { game: string }) {
         <div className="pb-safe fixed inset-x-0 bottom-[var(--tabbar-h)] z-30 border-t border-line bg-surface-1/95 backdrop-blur md:bottom-0">
           <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-3">
             <div className="text-sm">
-              <span className="text-muted">{t('inventory.selected', { count: selected.size })}</span>{' '}
+              <span className="text-muted">
+                {t('inventory.selected', { count: selected.size })}
+              </span>{' '}
               <GemAmount value={selectedSum} size="sm" className="text-accent" />
             </div>
-            <Button onClick={() => setConfirm({ mode: 'ids', ids: [...selected], total: selectedSum })}>
+            <Button
+              onClick={() => setConfirm({ mode: 'ids', ids: [...selected], total: selectedSum })}
+            >
               {t('inventory.sellSelected')}
             </Button>
           </div>
@@ -174,14 +194,21 @@ export function InventoryPanel({ game }: { game: string }) {
         {confirm && (
           <div className="space-y-5">
             <p className="text-sm text-muted">
-              {t('inventory.sellConfirmText', { count: confirm.mode === 'all' ? confirm.count : confirm.ids.length })}
+              {t('inventory.sellConfirmText', {
+                count: confirm.mode === 'all' ? confirm.count : confirm.ids.length,
+              })}
             </p>
             <div className="flex items-center justify-between">
               <span className="text-sm text-dim">{t('inventory.sold')}</span>
               <GemAmount value={confirm.total} size="lg" className="text-accent" />
             </div>
             <div className="flex gap-3">
-              <Button block loading={busy} onClick={() => void sell(confirm)} data-testid="confirm-sell">
+              <Button
+                block
+                loading={busy}
+                onClick={() => void sell(confirm)}
+                data-testid="confirm-sell"
+              >
                 {t('inventory.sell')}
               </Button>
               <Button block variant="secondary" onClick={() => setConfirm(null)}>

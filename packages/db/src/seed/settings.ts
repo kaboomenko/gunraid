@@ -1,4 +1,9 @@
-import { DEFAULT_SETTINGS, SETTINGS_KEYS, SETTINGS_SCHEMAS, type AllSettings } from '@gunraid/shared';
+import {
+  DEFAULT_SETTINGS,
+  SETTINGS_KEYS,
+  SETTINGS_SCHEMAS,
+  type AllSettings,
+} from '@gunraid/shared';
 import type { Db } from '../client.js';
 import { settings } from '../schema/index.js';
 

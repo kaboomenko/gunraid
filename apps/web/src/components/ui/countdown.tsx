@@ -12,7 +12,15 @@ function format(ms: number): string {
 }
 
 /** Обратный отсчёт до момента (кулдауны, лобби, лидерборды). */
-export function Countdown({ to, onDone, className }: { to: string | number | Date; onDone?: () => void; className?: string }) {
+export function Countdown({
+  to,
+  onDone,
+  className,
+}: {
+  to: string | number | Date;
+  onDone?: () => void;
+  className?: string;
+}) {
   const target = new Date(to).getTime();
   const [left, setLeft] = useState(() => target - Date.now());
   useEffect(() => {

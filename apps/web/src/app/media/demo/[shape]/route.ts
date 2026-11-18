@@ -137,8 +137,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ shap
   const fills = { c1, c2, dark: DARK, metal: METAL, shine: SHINE } as const;
   const body = parts.map(([d, f]) => `<path d="${d}" fill="${fills[f]}"/>`).join('');
   const ring =
-    shape === 'charm' ? `<circle cx="128" cy="22" r="9" fill="none" stroke="${METAL}" stroke-width="4"/>` : '';
-  const size = isCase ? 'viewBox="0 0 256 256" width="256" height="256"' : 'viewBox="0 0 256 128" width="256" height="128"';
+    shape === 'charm'
+      ? `<circle cx="128" cy="22" r="9" fill="none" stroke="${METAL}" stroke-width="4"/>`
+      : '';
+  const size = isCase
+    ? 'viewBox="0 0 256 256" width="256" height="256"'
+    : 'viewBox="0 0 256 128" width="256" height="128"';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" ${size}>${ring}${body}</svg>`;
   return new Response(svg, {
     headers: {

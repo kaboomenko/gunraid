@@ -62,7 +62,9 @@ export class TokensService {
       .sign(this.stateKey);
   }
 
-  async verifyState<T extends Record<string, unknown>>(token: string | undefined): Promise<T | null> {
+  async verifyState<T extends Record<string, unknown>>(
+    token: string | undefined,
+  ): Promise<T | null> {
     if (!token) return null;
     try {
       const { payload } = await jwtVerify(token, this.stateKey, { algorithms: ['HS256'] });

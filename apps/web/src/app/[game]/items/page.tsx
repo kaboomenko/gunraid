@@ -11,7 +11,17 @@ import { SectionTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { getPublicConfig, serverGet } from '@/lib/server-api';
 
-const PASS = ['q', 'rarity', 'type', 'model', 'priceMin', 'priceMax', 'stattrak', 'sort', 'page'] as const;
+const PASS = [
+  'q',
+  'rarity',
+  'type',
+  'model',
+  'priceMin',
+  'priceMax',
+  'stattrak',
+  'sort',
+  'page',
+] as const;
 
 type Search = Record<string, string | string[] | undefined>;
 
@@ -24,7 +34,11 @@ function toQuery(sp: Search): URLSearchParams {
   return qs;
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ game: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ game: string }>;
+}): Promise<Metadata> {
   const { game } = await params;
   const [t, config] = await Promise.all([getTranslations('items'), getPublicConfig()]);
   const name = config.games.find((g) => g.code === game)?.name ?? game;
@@ -61,7 +75,9 @@ export default async function ItemsPage({
 
   return (
     <div className="space-y-5">
-      <SectionTitle action={<span className="text-sm text-dim">{t('count', { count: page.total })}</span>}>
+      <SectionTitle
+        action={<span className="text-sm text-dim">{t('count', { count: page.total })}</span>}
+      >
         {t('title')}
       </SectionTitle>
       <Suspense>
@@ -84,14 +100,27 @@ export default async function ItemsPage({
             <EmptyState icon={<PackageSearch size={36} />} text={t('empty')} />
           )}
           {pages > 1 && (
-            <nav className="flex items-center justify-center gap-3" aria-label={t('page', { page: page.page, pages })}>
-              <Button asChild variant="secondary" size="sm" className={page.page <= 1 ? 'pointer-events-none opacity-40' : ''}>
+            <nav
+              className="flex items-center justify-center gap-3"
+              aria-label={t('page', { page: page.page, pages })}
+            >
+              <Button
+                asChild
+                variant="secondary"
+                size="sm"
+                className={page.page <= 1 ? 'pointer-events-none opacity-40' : ''}
+              >
                 <Link href={link(page.page - 1)} aria-disabled={page.page <= 1}>
                   {t('prev')}
                 </Link>
               </Button>
               <span className="text-sm text-muted">{t('page', { page: page.page, pages })}</span>
-              <Button asChild variant="secondary" size="sm" className={page.page >= pages ? 'pointer-events-none opacity-40' : ''}>
+              <Button
+                asChild
+                variant="secondary"
+                size="sm"
+                className={page.page >= pages ? 'pointer-events-none opacity-40' : ''}
+              >
                 <Link href={link(page.page + 1)} aria-disabled={page.page >= pages}>
                   {t('next')}
                 </Link>

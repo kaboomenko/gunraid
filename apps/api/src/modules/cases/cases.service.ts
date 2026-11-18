@@ -81,7 +81,11 @@ export class CasesService {
 
   async home(game: GameRow): Promise<HomeDto> {
     const [cats, rows, bannerRows] = await Promise.all([
-      this.db.select().from(caseCategories).where(eq(caseCategories.gameId, game.id)).orderBy(asc(caseCategories.sortOrder)),
+      this.db
+        .select()
+        .from(caseCategories)
+        .where(eq(caseCategories.gameId, game.id))
+        .orderBy(asc(caseCategories.sortOrder)),
       this.db
         .select()
         .from(cases)
@@ -108,16 +112,14 @@ export class CasesService {
           cases: rows.filter((r) => r.categoryId === c.id).map((r) => this.toCard(r, c.code)),
         }))
         .filter((c) => c.cases.length > 0),
-      banners: bannerRows.map(
-        (b): BannerDto => ({
-          id: b.id,
-          title: localize(b.title),
-          subtitle: b.subtitle ? localize(b.subtitle) : null,
-          imageUrl: b.imageUrl,
-          link: b.link,
-          accentColor: b.accentColor,
-        }),
-      ),
+      banners: bannerRows.map((b): BannerDto => ({
+        id: b.id,
+        title: localize(b.title),
+        subtitle: b.subtitle ? localize(b.subtitle) : null,
+        imageUrl: b.imageUrl,
+        link: b.link,
+        accentColor: b.accentColor,
+      })),
     };
   }
 
@@ -143,7 +145,10 @@ export class CasesService {
   }
 
   async availability(c: CaseRow, ctx: UserCaseContext | null): Promise<CaseAvailabilityDto> {
-    const block = (reason: CaseAvailabilityDto['reason'], extra: Partial<CaseAvailabilityDto> = {}) => ({
+    const block = (
+      reason: CaseAvailabilityDto['reason'],
+      extra: Partial<CaseAvailabilityDto> = {},
+    ) => ({
       canOpen: false,
       reason,
       availableAt: null,
@@ -155,14 +160,19 @@ export class CasesService {
     if (!ctx) return block('LOGIN', { levelRequired: c.minLevel });
     if (!ctx.adultConfirmed) return block('ADULT');
     if (c.minLevel) {
-      const [u] = await this.db.select({ level: users.level }).from(users).where(eq(users.id, ctx.userId));
+      const [u] = await this.db
+        .select({ level: users.level })
+        .from(users)
+        .where(eq(users.id, ctx.userId));
       if ((u?.level ?? 0) < c.minLevel) return block('LEVEL', { levelRequired: c.minLevel });
     }
     if (c.cooldownSeconds) {
       const [cd] = await this.db
         .select({ availableAt: userCooldowns.availableAt })
         .from(userCooldowns)
-        .where(and(eq(userCooldowns.userId, ctx.userId), eq(userCooldowns.key, `free_case:${c.id}`)));
+        .where(
+          and(eq(userCooldowns.userId, ctx.userId), eq(userCooldowns.key, `free_case:${c.id}`)),
+        );
       if (cd && cd.availableAt.getTime() > Date.now()) {
         return block('COOLDOWN', { availableAt: cd.availableAt.toISOString() });
       }
@@ -201,17 +211,25 @@ export class CasesService {
    * Открытие x1–x5 в одной транзакции. Порядок блокировок: кошелёк → кулдаун → тираж кейса → пара сидов.
    * Результат каждого открытия — provably fair по (server seed, client seed, nonce).
    */
-  async open(tx: DbOrTx, userId: string, game: GameRow, slug: string, count: number): Promise<CaseOpenResultDto> {
+  async open(
+    tx: DbOrTx,
+    userId: string,
+    game: GameRow,
+    slug: string,
+    count: number,
+  ): Promise<CaseOpenResultDto> {
     const { c } = await this.findCase(game, slug, tx);
     if (!this.isAvailableNow(c)) throw new AppError('CASE_UNAVAILABLE', 409);
     const isFree = c.kind === 'free';
-    if (count < 1 || count > (isFree ? 1 : MAX_OPEN_COUNT)) throw new AppError('CASE_OPEN_COUNT_INVALID', 400);
+    if (count < 1 || count > (isFree ? 1 : MAX_OPEN_COUNT))
+      throw new AppError('CASE_OPEN_COUNT_INVALID', 400);
     const rev = await this.revision(c.currentRevisionId as string, tx);
     const batchId = newId();
 
     if (c.minLevel) {
       const [u] = await tx.select({ level: users.level }).from(users).where(eq(users.id, userId));
-      if ((u?.level ?? 0) < c.minLevel) throw new AppError('CASE_LEVEL_REQUIRED', 403, { level: c.minLevel });
+      if ((u?.level ?? 0) < c.minLevel)
+        throw new AppError('CASE_LEVEL_REQUIRED', 403, { level: c.minLevel });
     }
 
     let balance: number;
@@ -265,7 +283,10 @@ export class CasesService {
     }
 
     const rolls = await this.fairness.reserve(tx, userId, count);
-    const itemMap = await this.catalog.getItemsByIds(rev.contents.map((e) => e.itemId), tx);
+    const itemMap = await this.catalog.getItemsByIds(
+      rev.contents.map((e) => e.itemId),
+      tx,
+    );
     const results: CaseOpenResultDto['results'] = [];
     for (const nonce of rolls.nonces) {
       const ticket = ticketFromFloat(rollFloat(rolls.serverSeed, rolls.clientSeed, nonce));

@@ -26,7 +26,12 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: t('title'), template: '%s · GunRaid' },
     description: t('description'),
     applicationName: 'GunRaid',
-    openGraph: { type: 'website', siteName: 'GunRaid', title: t('title'), description: t('description') },
+    openGraph: {
+      type: 'website',
+      siteName: 'GunRaid',
+      title: t('title'),
+      description: t('description'),
+    },
     twitter: { card: 'summary_large_image', title: t('title'), description: t('description') },
     manifest: '/manifest.webmanifest',
   };
@@ -48,7 +53,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <Providers config={config}>
             <LiveFeedBar />
             <SiteHeader />
-            <main className="mx-auto min-h-[60vh] max-w-[1440px] px-3 pt-4 sm:px-5 sm:pt-6">{children}</main>
+            <main className="mx-auto min-h-[60vh] max-w-[1440px] px-3 pt-4 sm:px-5 sm:pt-6">
+              {children}
+            </main>
             <SiteFooter supportUrl={config.supportTelegramUrl} />
             <MobileTabBar />
             <LoginModal />

@@ -5,7 +5,13 @@ import { Check, ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Dropdown, DropdownContent, DropdownItem, DropdownLabel, DropdownTrigger } from '@/components/ui/dropdown';
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  DropdownLabel,
+  DropdownTrigger,
+} from '@/components/ui/dropdown';
 import { GameIcon } from '@/components/ui/game-icon';
 import { api } from '@/lib/api';
 import { useConfig } from '@/lib/config';
@@ -25,7 +31,13 @@ export function GameSwitcher() {
     if (code === current?.code) return;
     setCookie(COOKIES.game, code, 60 * 60 * 24 * 365);
     if (me.data) void api.patch('/me/settings', { selectedGame: code }).catch(() => undefined);
-    router.push(switchGamePath(pathname, code, config.games.map((g) => g.code)));
+    router.push(
+      switchGamePath(
+        pathname,
+        code,
+        config.games.map((g) => g.code),
+      ),
+    );
   };
 
   if (!current) return null;
@@ -36,7 +48,9 @@ export function GameSwitcher() {
         aria-label={t('selectGame')}
       >
         <GameIcon shortName={current.shortName} />
-        <span className="hidden max-w-[140px] truncate text-sm font-semibold sm:inline">{current.name}</span>
+        <span className="hidden max-w-[140px] truncate text-sm font-semibold sm:inline">
+          {current.name}
+        </span>
         <ChevronDown size={16} className="text-dim" />
       </DropdownTrigger>
       <DropdownContent align="start">

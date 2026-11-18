@@ -37,7 +37,9 @@ export function ProfileView() {
   const pathname = usePathname();
   const game = useGameCode();
   const tabParam = params.get('tab');
-  const tab: Tab = (TABS as readonly string[]).includes(tabParam ?? '') ? (tabParam as Tab) : 'inventory';
+  const tab: Tab = (TABS as readonly string[]).includes(tabParam ?? '')
+    ? (tabParam as Tab)
+    : 'inventory';
 
   if (me.isLoading) {
     return (
@@ -105,7 +107,11 @@ function ProfileHeader({ me }: { me: MeDto }) {
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-dim">
               <span>{t('profile.id', { id: me.shortId })}</span>
-              <span>{t('profile.since', { date: format.dateTime(new Date(me.createdAt), { dateStyle: 'long' }) })}</span>
+              <span>
+                {t('profile.since', {
+                  date: format.dateTime(new Date(me.createdAt), { dateStyle: 'long' }),
+                })}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <Badge tone="accent">{t('profile.level', { level: me.level })}</Badge>
@@ -128,7 +134,10 @@ function LinkedAccounts({ me }: { me: MeDto }) {
   const errorText = useErrorMessage();
   const pathname = usePathname();
   const available: LinkableProvider[] = LINKABLE_PROVIDERS.filter(
-    (p) => (p === 'steam' && config.auth.steam) || (p === 'google' && config.auth.google) || (p === 'telegram' && config.auth.telegram),
+    (p) =>
+      (p === 'steam' && config.auth.steam) ||
+      (p === 'google' && config.auth.google) ||
+      (p === 'telegram' && config.auth.telegram),
   );
 
   const unlink = async (provider: string) => {
@@ -142,10 +151,15 @@ function LinkedAccounts({ me }: { me: MeDto }) {
 
   return (
     <div className="space-y-2">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-dim">{t('profile.accounts')}</div>
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-dim">
+        {t('profile.accounts')}
+      </div>
       <div className="flex flex-wrap gap-2">
         {me.identities.map((i) => (
-          <div key={i.provider} className="clip-cut flex items-center gap-2 bg-surface-3 py-1.5 pl-3 pr-1.5 text-xs [--cut:6px]">
+          <div
+            key={i.provider}
+            className="clip-cut flex items-center gap-2 bg-surface-3 py-1.5 pl-3 pr-1.5 text-xs [--cut:6px]"
+          >
             <span className="font-semibold">{t(`providers.${i.provider}`)}</span>
             <span className="max-w-[140px] truncate text-dim">{i.displayName}</span>
             {me.identities.length > 1 && (
@@ -195,7 +209,10 @@ function ReferralBlock({ code }: { code: string }) {
       <div className="font-display text-lg font-bold uppercase">{t('profile.referralTitle')}</div>
       <p className="text-sm text-muted">{t('profile.referralText')}</p>
       <div className="flex flex-col gap-2 sm:flex-row">
-        <code className="clip-cut flex h-11 flex-1 items-center truncate bg-surface-2 px-3.5 text-sm [--cut:7px]" suppressHydrationWarning>
+        <code
+          className="clip-cut flex h-11 flex-1 items-center truncate bg-surface-2 px-3.5 text-sm [--cut:7px]"
+          suppressHydrationWarning
+        >
           {link}
         </code>
         <Button

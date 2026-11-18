@@ -32,7 +32,12 @@ export function AuthEffects() {
     const authError = params.get('authError');
     if (!auth && !linked && !authError) return;
     if (auth === 'ok') toast.success(t('auth.success'));
-    if (linked) toast.success(t('auth.linked', { provider: t.has(`providers.${linked}`) ? t(`providers.${linked}`) : linked }));
+    if (linked)
+      toast.success(
+        t('auth.linked', {
+          provider: t.has(`providers.${linked}`) ? t(`providers.${linked}`) : linked,
+        }),
+      );
     if (authError) toast.error(errorText(new ApiError(authError as ErrorCode, 400)));
     const next = new URLSearchParams(params.toString());
     next.delete('auth');

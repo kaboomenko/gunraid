@@ -162,11 +162,22 @@ export class InventoryService {
    * Блокирует предметы пользователя в инвентаре (FOR UPDATE, по возрастанию id).
    * Если хоть один недоступен (продан, на выводе, чужой, другая игра) — ITEM_NOT_AVAILABLE.
    */
-  async lockAvailable(tx: DbOrTx, userId: string, gameId: number, ids: string[]): Promise<LockedUserItem[]> {
+  async lockAvailable(
+    tx: DbOrTx,
+    userId: string,
+    gameId: number,
+    ids: string[],
+  ): Promise<LockedUserItem[]> {
     const unique = [...new Set(ids)].sort();
-    if (unique.length !== ids.length) throw new AppError('ITEM_NOT_AVAILABLE', 409, { reason: 'duplicates' });
+    if (unique.length !== ids.length)
+      throw new AppError('ITEM_NOT_AVAILABLE', 409, { reason: 'duplicates' });
     const rows = await tx
-      .select({ id: userItems.id, itemId: userItems.itemId, price: items.price, isWithdrawable: items.isWithdrawable })
+      .select({
+        id: userItems.id,
+        itemId: userItems.itemId,
+        price: items.price,
+        isWithdrawable: items.isWithdrawable,
+      })
       .from(userItems)
       .innerJoin(items, eq(items.id, userItems.itemId))
       .where(
@@ -181,7 +192,9 @@ export class InventoryService {
       .for('update', { of: userItems });
     if (rows.length !== unique.length) {
       const found = new Set(rows.map((r) => r.id));
-      throw new AppError('ITEM_NOT_AVAILABLE', 409, { missing: unique.filter((id) => !found.has(id)) });
+      throw new AppError('ITEM_NOT_AVAILABLE', 409, {
+        missing: unique.filter((id) => !found.has(id)),
+      });
     }
     return rows;
   }
@@ -209,7 +222,9 @@ export class InventoryService {
           soldValue: status === 'sold' ? value : null,
         })
         .where(eq(userItems.id, it.id));
-      await tx.insert(inventoryEvents).values({ userItemId: it.id, userId, type: status, value, refType, refId });
+      await tx
+        .insert(inventoryEvents)
+        .values({ userItemId: it.id, userId, type: status, value, refType, refId });
     }
   }
 
@@ -221,7 +236,13 @@ export class InventoryService {
       const rows = await tx
         .select({ id: userItems.id })
         .from(userItems)
-        .where(and(eq(userItems.userId, userId), eq(userItems.gameId, gameId), eq(userItems.status, 'in_inventory')));
+        .where(
+          and(
+            eq(userItems.userId, userId),
+            eq(userItems.gameId, gameId),
+            eq(userItems.status, 'in_inventory'),
+          ),
+        );
       ids = rows.map((r) => r.id);
       if (!ids.length) throw new AppError('NOTHING_TO_SELL', 400);
     } else {

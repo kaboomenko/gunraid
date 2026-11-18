@@ -125,7 +125,11 @@ export class FairnessService {
       if (!revealed) throw new Error('rotate failed');
       return {
         revealed: this.toRevealed(revealed),
-        current: { serverSeedHash: next.serverSeedHash, clientSeed: next.clientSeed, nonce: next.nonce },
+        current: {
+          serverSeedHash: next.serverSeedHash,
+          clientSeed: next.clientSeed,
+          nonce: next.nonce,
+        },
       };
     });
   }
@@ -151,7 +155,10 @@ export class FairnessService {
       .orderBy(desc(fairSeeds.revealedAt))
       .limit(limit + 1);
     const page = rows.slice(0, limit).map((r) => this.toRevealed(r));
-    return { items: page, nextCursor: rows.length > limit ? (page[page.length - 1]?.revealedAt ?? null) : null };
+    return {
+      items: page,
+      nextCursor: rows.length > limit ? (page[page.length - 1]?.revealedAt ?? null) : null,
+    };
   }
 
   async getSeed(seedId: string): Promise<SeedRow | null> {

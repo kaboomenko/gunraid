@@ -34,7 +34,9 @@ async function CaseLink({ game, c }: { game: string; c: CaseCardDto }) {
         priceSlot={
           <div className="clip-cut bg-surface-3 px-3 py-1.5 [--cut:6px]">
             {c.kind === 'free' ? (
-              <span className="font-display text-sm font-bold uppercase text-accent">{t('free')}</span>
+              <span className="font-display text-sm font-bold uppercase text-accent">
+                {t('free')}
+              </span>
             ) : (
               <GemAmount value={c.price} size="sm" />
             )}
@@ -45,7 +47,13 @@ async function CaseLink({ game, c }: { game: string; c: CaseCardDto }) {
   );
 }
 
-export async function CaseGrid({ game, categories }: { game: string; categories: CaseCategoryDto[] }) {
+export async function CaseGrid({
+  game,
+  categories,
+}: {
+  game: string;
+  categories: CaseCategoryDto[];
+}) {
   return (
     <div className="space-y-8">
       {categories.map((cat) => (

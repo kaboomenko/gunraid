@@ -48,7 +48,9 @@ export interface CsvImportResult {
 }
 
 const truthy = (v: string | undefined, fallback: boolean) =>
-  v === undefined || v.trim() === '' ? fallback : ['1', 'true', 'yes', 'да', 'y'].includes(v.trim().toLowerCase());
+  v === undefined || v.trim() === ''
+    ? fallback
+    : ['1', 'true', 'yes', 'да', 'y'].includes(v.trim().toLowerCase());
 
 /** CSV-импорт каталога и цен (админка). Строки сопоставляются по (игра, market_name). */
 @Injectable()
@@ -59,23 +61,34 @@ export class CsvImportService {
     private readonly audit: AuditService,
   ) {}
 
-  async import(game: GameRow, fileName: string, csvText: string, actorId: string): Promise<CsvImportResult> {
+  async import(
+    game: GameRow,
+    fileName: string,
+    csvText: string,
+    actorId: string,
+  ): Promise<CsvImportResult> {
     const rows = parseCsv(csvText);
     if (rows.length < 2) throw new AppError('CSV_INVALID', 400, { reason: 'empty' });
     const header = (rows[0] ?? []).map((h) => h.trim().toLowerCase());
     const col = (name: string) => header.indexOf(name);
     for (const required of ['market_name', 'rarity']) {
-      if (col(required) < 0) throw new AppError('CSV_INVALID', 400, { reason: `missing column ${required}` });
+      if (col(required) < 0)
+        throw new AppError('CSV_INVALID', 400, { reason: `missing column ${required}` });
     }
     if (col('price_gems') < 0 && col('price_usd') < 0) {
       throw new AppError('CSV_INVALID', 400, { reason: 'missing column price_gems or price_usd' });
     }
 
     const importId = newId();
-    await this.db.insert(catalogImports).values({ id: importId, gameId: game.id, actorId, fileName });
+    await this.db
+      .insert(catalogImports)
+      .values({ id: importId, gameId: game.id, actorId, fileName });
     const { gemsPerUsd } = await this.settings.get('currency');
     const rarityMap = new Map(
-      (await this.db.select().from(rarities).where(eq(rarities.gameId, game.id))).map((r) => [r.code, r.id]),
+      (await this.db.select().from(rarities).where(eq(rarities.gameId, game.id))).map((r) => [
+        r.code,
+        r.id,
+      ]),
     );
     const typeMap = new Map((await this.db.select().from(itemTypes)).map((t) => [t.code, t.id]));
     const result: CsvImportResult = { importId, created: 0, updated: 0, skipped: 0, errors: [] };
@@ -100,7 +113,8 @@ export class CsvImportService {
         const usdRaw = get('price_usd');
         if (gemsRaw) {
           price = Number(gemsRaw.replace(/\s/g, ''));
-          if (!Number.isSafeInteger(price) || price < 0) throw new Error('price_gems must be a non-negative integer');
+          if (!Number.isSafeInteger(price) || price < 0)
+            throw new Error('price_gems must be a non-negative integer');
         } else if (usdRaw) {
           price = usdToGemsRounded(usdRaw.replace(',', '.'), gemsPerUsd);
         } else {
@@ -121,14 +135,19 @@ export class CsvImportService {
           const [m] = await this.db
             .select({ id: itemModels.id })
             .from(itemModels)
-            .where(and(eq(itemModels.gameId, game.id), eq(itemModels.code, modelCode.toLowerCase())));
+            .where(
+              and(eq(itemModels.gameId, game.id), eq(itemModels.code, modelCode.toLowerCase())),
+            );
           modelId = m?.id ?? null;
         }
         const collectionCode = get('collection');
         let collectionId: number | null = null;
         if (collectionCode) {
           const code = collectionCode.toLowerCase().replace(/\s+/g, '_');
-          await this.db.insert(collections).values({ gameId: game.id, code, name: collectionCode }).onConflictDoNothing();
+          await this.db
+            .insert(collections)
+            .values({ gameId: game.id, code, name: collectionCode })
+            .onConflictDoNothing();
           const [c] = await this.db
             .select({ id: collections.id })
             .from(collections)
@@ -160,7 +179,14 @@ export class CsvImportService {
             .where(and(eq(items.gameId, game.id), eq(items.marketName, marketName)))
             .for('update');
           if (existing) {
-            await tx.update(items).set({ ...values, updatedAt: sql`now()`, priceUpdatedAt: existing.price !== price ? sql`now()` : undefined }).where(eq(items.id, existing.id));
+            await tx
+              .update(items)
+              .set({
+                ...values,
+                updatedAt: sql`now()`,
+                priceUpdatedAt: existing.price !== price ? sql`now()` : undefined,
+              })
+              .where(eq(items.id, existing.id));
             if (existing.price !== price) {
               await tx.insert(itemPriceHistory).values({
                 itemId: existing.id,
@@ -181,7 +207,8 @@ export class CsvImportService {
         });
       } catch (err) {
         result.skipped++;
-        if (result.errors.length < 200) result.errors.push({ line, message: (err as Error).message });
+        if (result.errors.length < 200)
+          result.errors.push({ line, message: (err as Error).message });
       }
     }
 
@@ -199,7 +226,13 @@ export class CsvImportService {
       action: 'catalog.import',
       entityType: 'catalog_import',
       entityId: importId,
-      after: { game: game.code, fileName, created: result.created, updated: result.updated, skipped: result.skipped },
+      after: {
+        game: game.code,
+        fileName,
+        created: result.created,
+        updated: result.updated,
+        skipped: result.skipped,
+      },
     });
     return result;
   }

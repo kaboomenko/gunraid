@@ -54,7 +54,12 @@ export interface ItemRow {
   raritySort: number;
 }
 
-export function toRarityDto(row: { code: string; name: LocalizedText; color: string; sortOrder: number }): RarityDto {
+export function toRarityDto(row: {
+  code: string;
+  name: LocalizedText;
+  color: string;
+  sortOrder: number;
+}): RarityDto {
   return { code: row.code, name: localize(row.name), color: row.color, sortOrder: row.sortOrder };
 }
 
@@ -65,7 +70,12 @@ export function toItemDto(row: ItemRow): ItemDto {
     skinName: row.skinName,
     modelName: row.modelName,
     typeCode: row.typeCode,
-    rarity: { code: row.rarityCode, name: localize(row.rarityName), color: row.rarityColor, sortOrder: row.raritySort },
+    rarity: {
+      code: row.rarityCode,
+      name: localize(row.rarityName),
+      color: row.rarityColor,
+      sortOrder: row.raritySort,
+    },
     imageUrl: row.imageUrl,
     price: row.price,
     isStattrak: row.isStattrak,

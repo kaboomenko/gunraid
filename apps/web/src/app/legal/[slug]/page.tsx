@@ -7,7 +7,11 @@ const SLUGS = ['terms', 'privacy', 'rules', 'age', 'responsible'] as const;
 type Slug = (typeof SLUGS)[number];
 const isSlug = (s: string): s is Slug => (SLUGS as readonly string[]).includes(s);
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
   const { slug } = await params;
   if (!isSlug(slug)) return {};
   const t = await getTranslations('legal');

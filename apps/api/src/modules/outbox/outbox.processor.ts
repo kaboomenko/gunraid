@@ -1,4 +1,10 @@
-import { Inject, Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  type OnApplicationShutdown,
+  type OnModuleInit,
+} from '@nestjs/common';
 import { outboxEvents, type Db } from '@gunraid/db';
 import { eq, sql } from 'drizzle-orm';
 import { DB } from '../../core/tokens.js';
@@ -49,15 +55,25 @@ export class OutboxProcessor implements OnModuleInit, OnApplicationShutdown {
           limit ${BATCH}
           for update skip locked
         `);
-        const rows = res.rows as Array<{ id: number; type: string; payload: Record<string, unknown>; attempts: number }>;
+        const rows = res.rows as Array<{
+          id: number;
+          type: string;
+          payload: Record<string, unknown>;
+          attempts: number;
+        }>;
         for (const row of rows) {
           try {
             for (const handler of this.handlers.get(row.type) ?? []) await handler(row.payload);
-            await tx.update(outboxEvents).set({ processedAt: sql`now()` }).where(eq(outboxEvents.id, Number(row.id)));
+            await tx
+              .update(outboxEvents)
+              .set({ processedAt: sql`now()` })
+              .where(eq(outboxEvents.id, Number(row.id)));
           } catch (err) {
             const attempts = row.attempts + 1;
             const backoffSec = Math.min(3600, 2 ** attempts);
-            this.logger.warn(`outbox ${row.type}#${row.id} failed (attempt ${attempts}): ${(err as Error).message}`);
+            this.logger.warn(
+              `outbox ${row.type}#${row.id} failed (attempt ${attempts}): ${(err as Error).message}`,
+            );
             await tx
               .update(outboxEvents)
               .set({

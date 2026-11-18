@@ -35,7 +35,10 @@ export class DbPriceProvider implements PriceProvider {
       .select({ marketName: items.marketName, price: items.price })
       .from(items)
       .where(eq(items.gameId, game.id));
-    return rows.map((r) => ({ marketName: r.marketName, price: { amount: String(r.price), currency: 'GEMS' } }));
+    return rows.map((r) => ({
+      marketName: r.marketName,
+      price: { amount: String(r.price), currency: 'GEMS' },
+    }));
   }
 }
 
@@ -50,7 +53,12 @@ export class PricesService {
   ) {}
 
   /** Применяет котировки: обновляет изменившиеся цены и пишет историю. */
-  async apply(game: GameRow, quotes: PriceQuote[], source: string, actorId: string | null = null): Promise<number> {
+  async apply(
+    game: GameRow,
+    quotes: PriceQuote[],
+    source: string,
+    actorId: string | null = null,
+  ): Promise<number> {
     if (!quotes.length) return 0;
     const { gemsPerUsd } = await this.settings.get('currency');
     const byName = new Map(quotes.map((q) => [q.marketName, q]));
@@ -63,10 +71,15 @@ export class PricesService {
       const q = byName.get(row.marketName);
       if (!q) continue;
       const gems =
-        q.price.currency === 'USD' ? usdToGemsRounded(q.price.amount, gemsPerUsd) : Number(q.price.amount);
+        q.price.currency === 'USD'
+          ? usdToGemsRounded(q.price.amount, gemsPerUsd)
+          : Number(q.price.amount);
       if (!Number.isSafeInteger(gems) || gems < 0 || gems === row.price) continue;
       await this.db.transaction(async (tx) => {
-        await tx.update(items).set({ price: gems, priceUpdatedAt: sql`now()`, updatedAt: sql`now()` }).where(eq(items.id, row.id));
+        await tx
+          .update(items)
+          .set({ price: gems, priceUpdatedAt: sql`now()`, updatedAt: sql`now()` })
+          .where(eq(items.id, row.id));
         await tx.insert(itemPriceHistory).values({
           itemId: row.id,
           price: gems,
@@ -85,7 +98,8 @@ export class PricesService {
   async refresh(game: GameRow): Promise<number> {
     const quotes = await this.provider.fetchPrices(game);
     const changed = await this.apply(game, quotes, `provider:${this.provider.code}`);
-    if (changed) this.logger.log(`${game.code}: ${changed} prices updated by ${this.provider.code}`);
+    if (changed)
+      this.logger.log(`${game.code}: ${changed} prices updated by ${this.provider.code}`);
     return changed;
   }
 }

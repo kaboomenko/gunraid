@@ -81,7 +81,8 @@ export class LedgerService {
       if (!entry) throw new Error('ledger insert failed');
       entryId = entry.id;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new AppError('CONFLICT', 409, { reason: 'duplicate_ledger_entry' });
+      if (isUniqueViolation(err))
+        throw new AppError('CONFLICT', 409, { reason: 'duplicate_ledger_entry' });
       throw err;
     }
     await tx
@@ -92,7 +93,10 @@ export class LedgerService {
   }
 
   async balanceOf(userId: string, tx: DbOrTx = this.db): Promise<number> {
-    const [row] = await tx.select({ balance: wallets.balance }).from(wallets).where(eq(wallets.userId, userId));
+    const [row] = await tx
+      .select({ balance: wallets.balance })
+      .from(wallets)
+      .where(eq(wallets.userId, userId));
     return row?.balance ?? 0;
   }
 

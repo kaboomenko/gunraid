@@ -37,16 +37,28 @@ describe('inventory (integration)', () => {
     const [a, b] = await grantItems(app, me.id, 'cs2', 2, 5);
     const headers = IK();
     const body = { userItemIds: [a!.userItemId, b!.userItemId] };
-    const first = await client.post<SellResultDto>('/api/v1/games/cs2/inventory/sell', body, headers);
+    const first = await client.post<SellResultDto>(
+      '/api/v1/games/cs2/inventory/sell',
+      body,
+      headers,
+    );
     expect(first.status).toBe(200);
     expect(first.body.soldCount).toBe(2);
     expect(first.body.total).toBe(a!.price + b!.price);
     // Повтор с тем же ключом — тот же ответ, деньги второй раз не начисляются.
-    const replay = await client.post<SellResultDto>('/api/v1/games/cs2/inventory/sell', body, headers);
+    const replay = await client.post<SellResultDto>(
+      '/api/v1/games/cs2/inventory/sell',
+      body,
+      headers,
+    );
     expect(replay.body).toEqual(first.body);
     expect(await userBalance(app, me.id)).toBe(a!.price + b!.price);
     // Тот же ключ с другим телом — ошибка.
-    const reused = await client.post<Err>('/api/v1/games/cs2/inventory/sell', { all: true }, headers);
+    const reused = await client.post<Err>(
+      '/api/v1/games/cs2/inventory/sell',
+      { all: true },
+      headers,
+    );
     expect(reused.body.error.code).toBe('IDEMPOTENCY_KEY_REUSED');
     // Повторная продажа проданного — недоступно.
     const again = await client.post<Err>('/api/v1/games/cs2/inventory/sell', body, IK());
@@ -56,10 +68,18 @@ describe('inventory (integration)', () => {
   it('sells everything with { all: true }', async () => {
     const { client, me } = await newPlayer(app, 'all');
     const granted = await grantItems(app, me.id, 'standoff2', 4, 2);
-    const res = await client.post<SellResultDto>('/api/v1/games/standoff2/inventory/sell', { all: true }, IK());
+    const res = await client.post<SellResultDto>(
+      '/api/v1/games/standoff2/inventory/sell',
+      { all: true },
+      IK(),
+    );
     expect(res.body.soldCount).toBe(4);
     expect(res.body.balance).toBe(granted.reduce((s, g) => s + g.price, 0));
-    const none = await client.post<Err>('/api/v1/games/standoff2/inventory/sell', { all: true }, IK());
+    const none = await client.post<Err>(
+      '/api/v1/games/standoff2/inventory/sell',
+      { all: true },
+      IK(),
+    );
     expect(none.body.error.code).toBe('NOTHING_TO_SELL');
   });
 
@@ -68,7 +88,9 @@ describe('inventory (integration)', () => {
     const [item] = await grantItems(app, me.id, 'cs2', 1, 10);
     const body = { userItemIds: [item!.userItemId] };
     const results = await Promise.all(
-      Array.from({ length: 8 }, () => client.post<SellResultDto | Err>('/api/v1/games/cs2/inventory/sell', body, IK())),
+      Array.from({ length: 8 }, () =>
+        client.post<SellResultDto | Err>('/api/v1/games/cs2/inventory/sell', body, IK()),
+      ),
     );
     expect(results.filter((r) => r.status === 200)).toHaveLength(1);
     expect(await userBalance(app, me.id)).toBe(item!.price);
@@ -85,7 +107,9 @@ describe('inventory (integration)', () => {
       IK(),
     );
     expect(res.body.error.code).toBe('ITEM_NOT_AVAILABLE');
-    const noKey = await owner.client.post<Err>('/api/v1/games/cs2/inventory/sell', { userItemIds: [item!.userItemId] });
+    const noKey = await owner.client.post<Err>('/api/v1/games/cs2/inventory/sell', {
+      userItemIds: [item!.userItemId],
+    });
     expect(noKey.body.error.code).toBe('IDEMPOTENCY_KEY_REQUIRED');
   });
 });

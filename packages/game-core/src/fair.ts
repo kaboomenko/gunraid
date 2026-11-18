@@ -26,7 +26,12 @@ export function fairMessage(clientSeed: string, nonce: number, cursor = 0): stri
   return `${clientSeed}:${nonce}:${cursor}`;
 }
 
-export function rollFloat(serverSeed: string, clientSeed: string, nonce: number, cursor = 0): number {
+export function rollFloat(
+  serverSeed: string,
+  clientSeed: string,
+  nonce: number,
+  cursor = 0,
+): number {
   return hexToFloat(hmacSha256Hex(serverSeed, fairMessage(clientSeed, nonce, cursor)));
 }
 
@@ -36,7 +41,12 @@ export function battleClientSeed(slotSeeds: string[]): string {
 }
 
 /** Бросок для раунда r и слота s баттла. */
-export function battleRoll(serverSeed: string, battleClientSeedHex: string, round: number, slot: number): number {
+export function battleRoll(
+  serverSeed: string,
+  battleClientSeedHex: string,
+  round: number,
+  slot: number,
+): number {
   return hexToFloat(hmacSha256Hex(serverSeed, `${battleClientSeedHex}:${round}:${slot}`));
 }
 

@@ -1,8 +1,20 @@
-import { Gift, LayoutGrid, Layers, Swords, Ticket, TrendingUp, type LucideIcon } from 'lucide-react';
+import {
+  Gift,
+  LayoutGrid,
+  Layers,
+  Swords,
+  Ticket,
+  TrendingUp,
+  type LucideIcon,
+} from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 
-const MODES: Array<{ key: 'cases' | 'upgrade' | 'contract' | 'battles' | 'wheel' | 'promo'; path: string; icon: LucideIcon }> = [
+const MODES: Array<{
+  key: 'cases' | 'upgrade' | 'contract' | 'battles' | 'wheel' | 'promo';
+  path: string;
+  icon: LucideIcon;
+}> = [
   { key: 'cases', path: '#cases', icon: LayoutGrid },
   { key: 'upgrade', path: '/upgrade', icon: TrendingUp },
   { key: 'contract', path: '/contract', icon: Layers },
@@ -25,8 +37,12 @@ export async function ModeGrid({ game }: { game: string }) {
             <m.icon size={20} />
           </span>
           <span className="min-w-0">
-            <span className="block font-display text-sm font-bold uppercase tracking-wide">{t(`${m.key}.title`)}</span>
-            <span className="line-clamp-2 block text-xs leading-snug text-dim">{t(`${m.key}.text`)}</span>
+            <span className="block font-display text-sm font-bold uppercase tracking-wide">
+              {t(`${m.key}.title`)}
+            </span>
+            <span className="line-clamp-2 block text-xs leading-snug text-dim">
+              {t(`${m.key}.text`)}
+            </span>
           </span>
         </Link>
       ))}

@@ -27,7 +27,9 @@ export async function SiteFooter({ supportUrl }: { supportUrl: string | null }) 
           </div>
         </div>
         <div>
-          <div className="mb-3 font-display text-xs font-bold uppercase tracking-widest text-dim">{t('sections.site')}</div>
+          <div className="mb-3 font-display text-xs font-bold uppercase tracking-widest text-dim">
+            {t('sections.site')}
+          </div>
           <ul className="space-y-2 text-sm">
             <li>
               <Link className="text-muted hover:text-text" href="/items">
@@ -47,7 +49,9 @@ export async function SiteFooter({ supportUrl }: { supportUrl: string | null }) 
           </ul>
         </div>
         <div>
-          <div className="mb-3 font-display text-xs font-bold uppercase tracking-widest text-dim">{t('sections.docs')}</div>
+          <div className="mb-3 font-display text-xs font-bold uppercase tracking-widest text-dim">
+            {t('sections.docs')}
+          </div>
           <ul className="space-y-2 text-sm">
             {docs.map((d) => (
               <li key={d.href}>
@@ -59,7 +63,9 @@ export async function SiteFooter({ supportUrl }: { supportUrl: string | null }) 
           </ul>
         </div>
         <div>
-          <div className="mb-3 font-display text-xs font-bold uppercase tracking-widest text-dim">{t('sections.help')}</div>
+          <div className="mb-3 font-display text-xs font-bold uppercase tracking-widest text-dim">
+            {t('sections.help')}
+          </div>
           {supportUrl ? (
             <a
               href={supportUrl}
@@ -76,7 +82,9 @@ export async function SiteFooter({ supportUrl }: { supportUrl: string | null }) 
           )}
         </div>
       </div>
-      <div className="border-t border-line py-4 text-center text-xs text-dim">{t('rights', { year })}</div>
+      <div className="border-t border-line py-4 text-center text-xs text-dim">
+        {t('rights', { year })}
+      </div>
     </footer>
   );
 }

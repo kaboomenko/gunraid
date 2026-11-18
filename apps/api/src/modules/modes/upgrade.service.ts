@@ -10,7 +10,13 @@ import {
   type Db,
   type DbOrTx,
 } from '@gunraid/db';
-import { chanceToScaled, rollFloat, rollToScaled, upgradeChance, upgradeWins } from '@gunraid/game-core';
+import {
+  chanceToScaled,
+  rollFloat,
+  rollToScaled,
+  upgradeChance,
+  upgradeWins,
+} from '@gunraid/game-core';
 import type {
   ItemsPageDto,
   UpgradeBody,
@@ -46,12 +52,21 @@ export class UpgradeService {
 
   async config(): Promise<UpgradeConfigDto> {
     const s = await this.settings.get('upgrade');
-    return { commission: s.commission, maxChance: s.maxChance, minChance: s.minChance, multipliers: s.multipliers };
+    return {
+      commission: s.commission,
+      maxChance: s.maxChance,
+      minChance: s.minChance,
+      multipliers: s.multipliers,
+    };
   }
 
   /** Цели апгрейда: активные предметы игры с флагом in_upgrade. */
   async targets(game: GameRow, q: UpgradeTargetsQuery): Promise<ItemsPageDto> {
-    const where: SQL[] = [eq(items.gameId, game.id), eq(items.isActive, true), eq(items.inUpgrade, true)];
+    const where: SQL[] = [
+      eq(items.gameId, game.id),
+      eq(items.isActive, true),
+      eq(items.inUpgrade, true),
+    ];
     if (q.minPrice !== undefined) where.push(gte(items.price, q.minPrice));
     if (q.maxPrice !== undefined) where.push(lte(items.price, q.maxPrice));
     if (q.q) where.push(ilike(items.fullName, `%${q.q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`));
@@ -64,24 +79,44 @@ export class UpgradeService {
         .innerJoin(itemTypes, eq(itemTypes.id, items.typeId))
         .leftJoin(itemModels, eq(itemModels.id, items.modelId))
         .where(cond)
-        .orderBy(q.sort === 'price_desc' ? desc(items.price) : asc(items.price), asc(items.fullName))
+        .orderBy(
+          q.sort === 'price_desc' ? desc(items.price) : asc(items.price),
+          asc(items.fullName),
+        )
         .limit(q.pageSize)
         .offset((q.page - 1) * q.pageSize),
       this.db.select({ total: count() }).from(items).where(cond),
     ]);
-    return { items: (rows as ItemRow[]).map(toItemDto), total: agg?.total ?? 0, page: q.page, pageSize: q.pageSize };
+    return {
+      items: (rows as ItemRow[]).map(toItemDto),
+      total: agg?.total ?? 0,
+      page: q.page,
+      pageSize: q.pageSize,
+    };
   }
 
   /**
    * Апгрейд в одной транзакции: ставка (гемы через ledger или предметы → used_upgrade),
    * шанс = ставка / цена × (1 − комиссия) с потолком, бросок provably fair, выдача цели при победе.
    */
-  async upgrade(tx: DbOrTx, userId: string, game: GameRow, body: UpgradeBody): Promise<UpgradeResultDto> {
+  async upgrade(
+    tx: DbOrTx,
+    userId: string,
+    game: GameRow,
+    body: UpgradeBody,
+  ): Promise<UpgradeResultDto> {
     const s = await this.settings.get('upgrade');
     const [target] = await tx
       .select({ id: items.id, price: items.price })
       .from(items)
-      .where(and(eq(items.id, body.targetItemId), eq(items.gameId, game.id), eq(items.isActive, true), eq(items.inUpgrade, true)));
+      .where(
+        and(
+          eq(items.id, body.targetItemId),
+          eq(items.gameId, game.id),
+          eq(items.isActive, true),
+          eq(items.inUpgrade, true),
+        ),
+      );
     if (!target) throw new AppError('UPGRADE_TARGET_INVALID', 400);
     const upgradeId = newId();
 
@@ -89,7 +124,8 @@ export class UpgradeService {
     let stakeAmount = 0;
     let locked: LockedUserItem[] = [];
     if ('amount' in body) {
-      if (body.amount >= target.price) throw new AppError('UPGRADE_TARGET_INVALID', 400, { reason: 'target_not_more_expensive' });
+      if (body.amount >= target.price)
+        throw new AppError('UPGRADE_TARGET_INVALID', 400, { reason: 'target_not_more_expensive' });
       stakeAmount = body.amount;
       stakeValue = body.amount;
     } else {
@@ -102,7 +138,8 @@ export class UpgradeService {
     }
     if (stakeValue <= 0) throw new AppError('UPGRADE_STAKE_INVALID', 400);
     const chance = upgradeChance(stakeValue, target.price, s);
-    if (chance < s.minChance) throw new AppError('UPGRADE_CHANCE_TOO_LOW', 400, { minChance: s.minChance });
+    if (chance < s.minChance)
+      throw new AppError('UPGRADE_CHANCE_TOO_LOW', 400, { minChance: s.minChance });
     const chanceScaled = chanceToScaled(chance);
 
     if (stakeAmount > 0) {
@@ -155,7 +192,9 @@ export class UpgradeService {
       resultUserItemId,
     });
     if (locked.length) {
-      await tx.insert(upgradeStakeItems).values(locked.map((l) => ({ upgradeId, userItemId: l.id, value: l.price })));
+      await tx
+        .insert(upgradeStakeItems)
+        .values(locked.map((l) => ({ upgradeId, userItemId: l.id, value: l.price })));
     }
     if (isWin) {
       const { delayMs } = await this.settings.get('feed');
@@ -240,8 +279,9 @@ export class UpgradeService {
     const [row] = await this.db
       .select({ value: count() })
       .from(upgrades)
-      .where(and(eq(upgrades.userId, userId), eq(upgrades.gameId, gameId), eq(upgrades.isWin, true)));
+      .where(
+        and(eq(upgrades.userId, userId), eq(upgrades.gameId, gameId), eq(upgrades.isWin, true)),
+      );
     return row?.value ?? 0;
   }
 }
-
