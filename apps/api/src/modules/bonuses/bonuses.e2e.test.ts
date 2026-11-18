@@ -137,11 +137,15 @@ describe('wheel of fortune (integration)', () => {
       ),
     );
     const ok = spins.filter((r) => r.status === 200);
-    expect(ok).toHaveLength(1);
+    // Бесплатное вращение — ровно одно. Если оно (или следующее) выиграло «доп. вращение»,
+    // параллельный запрос законно тратит это право — поэтому успешных может быть больше.
+    expect(ok.filter((r) => !r.body.isExtra)).toHaveLength(1);
+    const wonExtra = ok.filter((r) => r.body.prize.type === 'extra_spin').length;
+    expect(ok).toHaveLength(Math.min(spins.length, 1 + wonExtra));
     for (const r of spins.filter((x) => x.status !== 200)) {
       expect((r.body as unknown as Err).error.code).toBe('WHEEL_COOLDOWN');
     }
-    const first = ok[0]!.body;
+    const first = ok.find((r) => !r.body.isExtra)!.body;
     expect(first.isExtra).toBe(false);
     expect(first.nextAt).not.toBeNull();
 
@@ -154,8 +158,15 @@ describe('wheel of fortune (integration)', () => {
     const extra = await client.post<WheelSpinResultDto>('/api/v1/games/cs2/wheel/spin', {}, IK());
     expect(extra.status).toBe(200);
     expect(extra.body.isExtra).toBe(true);
+    // Если в одном из вращений выпал приз «доп. вращение», право появилось снова —
+    // тогда следующее вращение законно; иначе — кулдаун.
     const none = await client.post<Err>('/api/v1/games/cs2/wheel/spin', {}, IK());
-    expect(none.status).toBe(409);
+    if (extra.body.extraSpins > 0) {
+      expect(none.status).toBe(200);
+    } else {
+      expect(none.status).toBe(409);
+      expect(none.body.error.code).toBe('WHEEL_COOLDOWN');
+    }
 
     // Provably fair
     await client.post('/api/v1/fair/rotate');
