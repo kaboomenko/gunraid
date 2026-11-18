@@ -140,24 +140,28 @@
 
 | Метод | Путь | Доступ | Что делает |
 |---|---|---|---|
-| POST | `/games/{game}/withdrawals` | U, IK | `{userItemId}` — заявка на вывод |
-| GET | `/withdrawals?cursor=`, `/withdrawals/{id}` | U | мои выводы и статус |
-| POST | `/withdrawals/{id}/listing` | U | Standoff 2: данные выставленного на рынок лота |
-| POST | `/withdrawals/{id}/cancel` | U | отмена, пока заявку не взяли в работу |
+| GET | `/games/{game}/withdrawals/requirements` | U | условия: trade-ссылка / ID игрока, Steam, сумма пополнений, задержка после первого пополнения, лимит нового аккаунта |
+| POST | `/games/{game}/withdrawals` | U, IK | `{userItemId}` — заявка; предмет переходит в статус «на выводе» |
+| GET | `/withdrawals?game=`, `/withdrawals/{id}` | U | мои выводы, статус и история событий |
+| POST | `/withdrawals/{id}/listing` | U | Standoff 2: `{reference, note?}` — лот выставлен на рынок |
+| POST | `/withdrawals/{id}/cancel` | U | отмена, пока заявку не одобрили (или пока не выставлен лот) |
 
 ## Админка — `/api/v1/admin/…`
 
 | Раздел | Эндпоинты | Доступ |
 |---|---|---|
-| Дашборд | `GET dashboard?from&to&game` — пользователи, пополнения, выводы, GGR, фактический и целевой RTP по режимам; `GET ledger/reconciliation` | A |
-| Каталог | CRUD `items`, `rarities`, `item-types`, `item-models`, `collections`; `POST items/import` (CSV), `GET imports/{id}`; `POST items/bulk-price` (по фильтру: % или сумма) | A |
-| Кейсы | CRUD `cases`, `case-categories`, `banners`; `PUT cases/{id}/contents` (проверка суммы 100 %, новая ревизия); `POST cases/rtp-preview` | A |
-| Настройки | `GET/PUT settings/{key}` — currency (курс гемов), deposit, upgrade, contract, battle, sell, wheel, daily, first_deposit, referral, xp, antifraud, withdrawal, feed, site | A |
-| Бонусы | CRUD `wheel-prizes`, `promo-codes` (+ статистика), `partners` (+ статистика), `levels`, `achievements`, `leaderboards` (+ результаты периодов) | A |
-| Пользователи | `GET users?q=`; `GET users/{id}` — профиль, ledger, инвентарь, история, IP и устройства, связанные аккаунты; `POST users/{id}/ban`, `unban`; `POST users/{id}/balance-adjustments` (± гемы, причина обязательна, IK); `PATCH users/{id}` (флаг подозрительного; роль — только A); заметки | S — чтение, A — всё |
-| Выводы | `GET withdrawals?status=`; `POST withdrawals/{id}/approve`, `reject`, `confirm-purchase` (Standoff 2), `simulate/{event}` (заглушка CS2) | S / A (по согласованию) |
-| Пополнения | `GET deposits` (с реальной суммой и валютой оплаты); CRUD `fx-rates` — курсы валют оплаты к доллару | A |
-| Аудит | `GET audit-log` | A |
+| Дашборд | `GET dashboard?days&game` — пользователи, пополнения, выводы, бонусы, GGR, фактический и целевой RTP по режимам, результат сверки ledger; `GET ledger/reconciliation` | A |
+| Пользователи | `GET users?q&status&suspicious&role`; `GET users/{id}` — профиль, способы входа, профили игр, статистика, входы (IP и устройства), связанные аккаунты; `GET users/{id}/ledger` | S, A |
+| | `POST users/{id}/balance` (± гемы, причина обязательна, IK); `POST users/{id}/ban` / `unban`; `PATCH users/{id}` (подозрительный, заметка, роль) | A |
+| Выводы | `GET withdrawals?status`; `GET withdrawals/{id}`; `POST withdrawals/{id}/approve` (`{priceGold}` для Standoff 2), `reject` (`{reason}`), `confirm-purchase` (Standoff 2), `simulate` (`{event}` — **заглушка** CS2) | S, A |
+| Пополнения | `GET deposits?status` | A |
+| Настройки | `GET settings` (значения и значения по умолчанию); `PUT settings/{key}` — валидация схемой ключа; `GET fx-rates`, `PUT fx-rates/{currency}` | A |
+| Кейсы | `GET games/{game}/case-categories`; `GET games/{game}/cases`; `POST games/{game}/cases`; `PUT games/{game}/cases/{id}`; `GET cases/{id}`; `PUT cases/{id}/contents` — сумма шансов ровно 100 %, новая неизменяемая ревизия | A |
+| Каталог | `GET games/{game}/items?q&rarity&active`; `PATCH items/{id}` (цена, флаги); `POST games/{game}/items/bulk-price` (процент или цена по фильтру); `GET games/{game}/rarities`, `PATCH rarities/{id}`; `POST catalog/{game}/import` (CSV), `POST catalog/{game}/refresh-prices` | A |
+| Бонусы | `GET/POST games/{game}/wheel-prizes`, `PUT …/{id}`; `GET/POST promo-codes`, `PUT promo-codes/{id}`; `GET/POST partners`, `PUT partners/{id}` (со статистикой); `PUT levels`; `GET leaderboards`, `PUT leaderboards/{id}`; `GET achievements`, `PATCH achievements/{id}`; `GET games/{game}/refs?q` (кейсы и предметы для форм) | A |
+| Аудит | `GET audit?entityType&entityId` | A |
+
+Все изменения из админки пишутся в `admin_audit_log` (кто, что, до/после, причина, IP). Балансы меняются только через ledger.
 
 ## WebSocket (Socket.IO, `/socket.io`)
 

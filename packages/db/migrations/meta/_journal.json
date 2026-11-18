@@ -50,6 +50,13 @@
       "when": 1794968223242,
       "tag": "0006_bonuses",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794969689052,
+      "tag": "0007_withdrawals",
+      "breakpoints": true
     }
   ]
 }

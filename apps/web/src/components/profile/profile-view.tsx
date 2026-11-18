@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EntitlementsCard, LevelCard, ReferralCard } from '@/components/bonuses/bonuses-view';
 import { AchievementsPanel } from './achievements-panel';
+import { WithdrawalsPanel } from '@/components/withdrawals/withdrawals-panel';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/lib/api';
 import { useConfig } from '@/lib/config';
@@ -27,7 +28,14 @@ import { InventoryPanel } from './inventory-panel';
 import { SettingsPanel } from './settings-panel';
 import { StatsRow } from './stats-row';
 
-const TABS = ['inventory', 'history', 'achievements', 'referrals', 'settings'] as const;
+const TABS = [
+  'inventory',
+  'history',
+  'withdrawals',
+  'achievements',
+  'referrals',
+  'settings',
+] as const;
 type Tab = (typeof TABS)[number];
 
 export function ProfileView() {
@@ -85,6 +93,9 @@ export function ProfileView() {
         </TabsContent>
         <TabsContent value="settings">
           <SettingsPanel me={data} />
+        </TabsContent>
+        <TabsContent value="withdrawals">
+          <WithdrawalsPanel game={game} />
         </TabsContent>
         <TabsContent value="achievements">
           <AchievementsPanel />

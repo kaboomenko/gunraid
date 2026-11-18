@@ -10,6 +10,7 @@ import { InventoryModule } from './modules/inventory/inventory.module.js';
 import { LedgerModule } from './modules/ledger/ledger.module.js';
 import { BattlesModule } from './modules/battles/battles.module.js';
 import { BonusesModule } from './modules/bonuses/bonuses.module.js';
+import { WithdrawalsModule } from './modules/withdrawals/withdrawals.module.js';
 import { ModesModule } from './modules/modes/modes.module.js';
 import { PaymentsModule } from './modules/payments/payments.module.js';
 import { ProfileModule } from './modules/profile/profile.module.js';
@@ -43,6 +44,7 @@ export class AppModule {
         ModesModule,
         BattlesModule,
         BonusesModule,
+        WithdrawalsModule,
       ],
       providers: [
         { provide: APP_FILTER, useClass: AllExceptionsFilter },

@@ -18,8 +18,12 @@ export function useNotificationText() {
   const t = useTranslations('notifications.types');
   const tg = useTranslations('gems');
   const tl = useTranslations('leaderboard.periods');
+  const tw = useTranslations('withdraw.statuses');
   return (n: NotificationDto) => {
     const p = { ...n.params };
+    if (n.type === 'withdrawal_status' && typeof p.status === 'string' && tw.has(p.status)) {
+      p.status = tw(p.status);
+    }
     if (typeof p.gems === 'number') p.gems = tg('amount', { count: p.gems });
     if (p.period === 'day' || p.period === 'week') p.period = tl(p.period);
     try {

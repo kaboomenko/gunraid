@@ -1,7 +1,12 @@
 'use client';
 
-import { INVENTORY_SORTS, type InventorySort, type SellResultDto } from '@gunraid/shared';
-import { Backpack, CheckSquare, Coins, XSquare } from 'lucide-react';
+import {
+  INVENTORY_SORTS,
+  type InventorySort,
+  type SellResultDto,
+  type UserItemDto,
+} from '@gunraid/shared';
+import { ArrowUpFromLine, Backpack, CheckSquare, Coins, XSquare } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { ItemTile } from '@/components/items/item-tile';
@@ -11,6 +16,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { GemAmount } from '@/components/ui/gem';
 import { Modal } from '@/components/ui/modal';
 import { Skeleton } from '@/components/ui/skeleton';
+import { WithdrawModal } from '@/components/withdrawals/withdraw-modal';
 import { toast } from '@/components/ui/toast';
 import { api, newIdempotencyKey } from '@/lib/api';
 import { useErrorMessage } from '@/lib/errors';
@@ -26,6 +32,7 @@ export function InventoryPanel({ game }: { game: string }) {
   const [sort, setSort] = useState<InventorySort>('date_desc');
   const inv = useInventory(game, sort);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [withdrawItem, setWithdrawItem] = useState<UserItemDto | null>(null);
   const [confirm, setConfirm] = useState<SellTarget | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -133,22 +140,44 @@ export function InventoryPanel({ game }: { game: string }) {
             selected={selected.has(ui.id)}
             onClick={() => toggle(ui.id)}
             footer={
-              <span
-                role="button"
-                tabIndex={0}
-                className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-dim transition hover:text-accent"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setConfirm({ mode: 'ids', ids: [ui.id], total: ui.item.price });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+              <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-dim transition hover:text-accent"
+                  onClick={(e) => {
                     e.stopPropagation();
                     setConfirm({ mode: 'ids', ids: [ui.id], total: ui.item.price });
-                  }
-                }}
-              >
-                <Coins size={12} /> {t('inventory.sell')}
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.stopPropagation();
+                      setConfirm({ mode: 'ids', ids: [ui.id], total: ui.item.price });
+                    }
+                  }}
+                >
+                  <Coins size={12} /> {t('inventory.sell')}
+                </span>
+                {ui.item.isWithdrawable && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-dim transition hover:text-accent"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setWithdrawItem(ui);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.stopPropagation();
+                        setWithdrawItem(ui);
+                      }
+                    }}
+                    data-testid="withdraw-open"
+                  >
+                    <ArrowUpFromLine size={12} /> {t('withdraw.action')}
+                  </span>
+                )}
               </span>
             }
           />
@@ -218,6 +247,7 @@ export function InventoryPanel({ game }: { game: string }) {
           </div>
         )}
       </Modal>
+      <WithdrawModal game={game} item={withdrawItem} onClose={() => setWithdrawItem(null)} />
     </div>
   );
 }

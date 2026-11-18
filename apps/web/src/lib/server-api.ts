@@ -51,3 +51,22 @@ export async function getPublicConfig(): Promise<PublicConfigDto> {
     return FALLBACK_CONFIG;
   }
 }
+
+/**
+ * Роль текущего пользователя для серверной проверки доступа (админка): пробрасываем cookie access-токена.
+ * null — токена нет или он истёк (решит клиент после обновления сессии).
+ */
+export async function serverMeRole(accessToken: string | undefined): Promise<string | null> {
+  if (!accessToken) return null;
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/me`, {
+      headers: { accept: 'application/json', cookie: `gr_at=${accessToken}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const me = (await res.json()) as { role?: string };
+    return me.role ?? null;
+  } catch {
+    return null;
+  }
+}

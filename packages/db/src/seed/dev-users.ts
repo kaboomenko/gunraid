@@ -108,7 +108,18 @@ export async function seedDevUsers(db: Db): Promise<void> {
       .update(users)
       .set({ createdAt: sql`least(${users.createdAt}, now() - interval '30 days')` })
       .where(eq(users.id, userId as string));
-    if (p.key === 'player') await seedDemoDeposit(db, userId as string);
+    if (p.key === 'player') {
+      await seedDemoDeposit(db, userId as string);
+      // Пополнение «двухдневной давности»: вывод доступен сразу (задержка — сутки после первого пополнения).
+      await db
+        .update(users)
+        .set({ firstDepositAt: sql`least(${users.firstDepositAt}, now() - interval '2 days')` })
+        .where(eq(users.id, userId as string));
+      await db
+        .update(deposits)
+        .set({ completedAt: sql`least(${deposits.completedAt}, now() - interval '2 days')` })
+        .where(and(eq(deposits.userId, userId as string), sql`${deposits.meta}->>'seed' = 'true'`));
+    }
 
     if (p.items > 0) {
       const [has] = await db
