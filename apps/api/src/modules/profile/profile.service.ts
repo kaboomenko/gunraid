@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { caseOpenings, deposits, ledgerEntries, userItems, users, type Db } from '@gunraid/db';
+import { caseOpenings, contracts, deposits, ledgerEntries, upgrades, userItems, users, type Db } from '@gunraid/db';
 import type {
   PageDto,
   ProfileStatsDto,
@@ -22,11 +22,26 @@ export class ProfileService {
 
   /** Хуки для режимов следующих этапов (кейсы, апгрейды, контракты, баттлы). */
   protected async modeCounters(userId: string, gameId: number) {
-    const [cases] = await this.db
-      .select({ value: count() })
-      .from(caseOpenings)
-      .where(and(eq(caseOpenings.userId, userId), eq(caseOpenings.gameId, gameId)));
-    return { casesOpened: cases?.value ?? 0, upgradesWon: 0, contractsDone: 0, battlesWon: 0 };
+    const [[cases], [ups], [cts]] = await Promise.all([
+      this.db
+        .select({ value: count() })
+        .from(caseOpenings)
+        .where(and(eq(caseOpenings.userId, userId), eq(caseOpenings.gameId, gameId))),
+      this.db
+        .select({ value: count() })
+        .from(upgrades)
+        .where(and(eq(upgrades.userId, userId), eq(upgrades.gameId, gameId), eq(upgrades.isWin, true))),
+      this.db
+        .select({ value: count() })
+        .from(contracts)
+        .where(and(eq(contracts.userId, userId), eq(contracts.gameId, gameId))),
+    ]);
+    return {
+      casesOpened: cases?.value ?? 0,
+      upgradesWon: ups?.value ?? 0,
+      contractsDone: cts?.value ?? 0,
+      battlesWon: 0,
+    };
   }
 
   async bestDrop(userId: string, gameId: number): Promise<UserItemDto | null> {

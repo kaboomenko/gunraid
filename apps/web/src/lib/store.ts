@@ -66,6 +66,7 @@ export const usePrefs = create<PrefsState>()(
       setSound: (sound) => set({ sound }),
       setFast: (fast) => set({ fast }),
     }),
-    { name: 'gr-prefs', storage: createJSONStorage(() => safeStorage) },
+    // Восстанавливаем после гидратации (Providers), чтобы первый рендер совпадал с SSR.
+    { name: 'gr-prefs', storage: createJSONStorage(() => safeStorage), skipHydration: true },
   ),
 );

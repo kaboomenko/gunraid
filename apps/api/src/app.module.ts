@@ -8,6 +8,7 @@ import { CasesModule } from './modules/cases/cases.module.js';
 import { CatalogModule } from './modules/catalog/catalog.module.js';
 import { InventoryModule } from './modules/inventory/inventory.module.js';
 import { LedgerModule } from './modules/ledger/ledger.module.js';
+import { ModesModule } from './modules/modes/modes.module.js';
 import { PaymentsModule } from './modules/payments/payments.module.js';
 import { ProfileModule } from './modules/profile/profile.module.js';
 import { AuthGuard } from './modules/auth/auth.guard.js';
@@ -37,6 +38,7 @@ export class AppModule {
         PaymentsModule,
         ProfileModule,
         CasesModule,
+        ModesModule,
       ],
       providers: [
         { provide: APP_FILTER, useClass: AllExceptionsFilter },

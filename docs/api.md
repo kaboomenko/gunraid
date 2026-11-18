@@ -82,10 +82,12 @@
 | Метод | Путь | Доступ | Что делает |
 |---|---|---|---|
 | GET | `/games/{game}/upgrade/config` | P | комиссия, мин./макс. шанс, множители |
-| GET | `/games/{game}/upgrade/targets` | P | цели из каталога: `priceMin`, `q`, `sort`, `cursor` |
-| POST | `/games/{game}/upgrade` | U, IK | `{userItemIds}` или `{amount}` + `targetItemId` → результат |
-| GET | `/games/{game}/contract/config` | P | лимиты предметов и коэффициенты |
-| POST | `/games/{game}/contract` | U, IK | `{userItemIds}` (3–10) → результат |
+| GET | `/games/{game}/upgrade/targets` | P | цели из каталога: `minPrice`, `maxPrice`, `q`, `sort`, `page`, `pageSize` |
+| POST | `/games/{game}/upgrade` | U, IK | `{userItemIds}` (1–10) или `{amount}` + `targetItemId` → результат (шанс и бросок в миллионных) |
+| GET | `/games/{game}/upgrade/history` | U | последние апгрейды пользователя |
+| GET | `/games/{game}/contract/config` | P | лимиты предметов, коэффициенты, вероятность получить больше вложенного |
+| POST | `/games/{game}/contract` | U, IK | `{userItemIds}` (по настройкам: 3–10) → результат |
+| GET | `/games/{game}/contract/history` | U | последние контракты пользователя |
 
 ## Кейс-баттлы
 

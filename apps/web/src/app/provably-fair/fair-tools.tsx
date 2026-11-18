@@ -1,12 +1,23 @@
 'use client';
 
-import { hexToFloat, hmacSha256Hex, pickByTicket, sha256Hex, ticketFromFloat } from '@gunraid/game-core';
+import {
+  contractMultiplier,
+  hexToFloat,
+  hmacSha256Hex,
+  pickByTicket,
+  rollToScaled,
+  sha256Hex,
+  ticketFromFloat,
+  upgradeWins,
+} from '@gunraid/game-core';
 import type {
   CaseOpeningProofDto,
+  ContractProofDto,
   FairSeedDto,
   PageDto,
   RevealedSeedDto,
   RotateSeedResultDto,
+  UpgradeProofDto,
 } from '@gunraid/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, RefreshCw, XCircle } from 'lucide-react';
@@ -128,20 +139,27 @@ function SeedsPanel() {
   );
 }
 
+type ProofKind = 'case_opening' | 'upgrade' | 'contract';
+type AnyProof = CaseOpeningProofDto | UpgradeProofDto | ContractProofDto;
+const KINDS: ProofKind[] = ['case_opening', 'upgrade', 'contract'];
+const PARAM_TO_KIND: Record<string, ProofKind> = { opening: 'case_opening', upgrade: 'upgrade', contract: 'contract' };
+
 function Verifier() {
   const t = useTranslations('fair');
   const params = useSearchParams();
   const errorText = useErrorMessage();
-  const [resultId, setResultId] = useState(params.get('opening') ?? '');
-  const [proof, setProof] = useState<CaseOpeningProofDto | null>(null);
+  const initial = Object.entries(PARAM_TO_KIND).find(([param]) => params.get(param));
+  const [kind, setKind] = useState<ProofKind>(initial?.[1] ?? 'case_opening');
+  const [resultId, setResultId] = useState(initial ? (params.get(initial[0]) ?? '') : '');
+  const [proof, setProof] = useState<AnyProof | null>(null);
   const [serverSeed, setServerSeed] = useState('');
   const [clientSeed, setClientSeed] = useState('');
   const [nonce, setNonce] = useState('0');
   const [run, setRun] = useState(0);
 
-  const load = async (id: string) => {
+  const load = async (k: ProofKind, id: string) => {
     try {
-      const p = await api.get<CaseOpeningProofDto>(`/fair/proof/case_opening/${id}`);
+      const p = await api.get<AnyProof>(`/fair/proof/${k}/${id}`);
       setProof(p);
       setServerSeed(p.serverSeed ?? '');
       setClientSeed(p.clientSeed);
@@ -153,19 +171,33 @@ function Verifier() {
   };
 
   useEffect(() => {
-    const id = params.get('opening');
-    if (id && /^[0-9a-f-]{36}$/i.test(id)) void load(id);
+    if (initial && /^[0-9a-f-]{36}$/i.test(resultId)) void load(initial[1], resultId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const computed = useMemo(() => {
     if (!run || !serverSeed || !clientSeed || !/^\d+$/.test(nonce)) return null;
-    const hmac = hmacSha256Hex(serverSeed, `${clientSeed}:${nonce}:0`);
-    const float = hexToFloat(hmac);
-    const ticket = ticketFromFloat(float);
+    const float = hexToFloat(hmacSha256Hex(serverSeed, `${clientSeed}:${nonce}:0`));
     const hashOk = proof ? sha256Hex(serverSeed) === proof.serverSeedHash : null;
-    const entry = proof ? pickByTicket(proof.contents, ticket) : null;
-    return { hmac, float, ticket, hashOk, entry, match: proof ? entry?.itemId === proof.itemId : null };
+    if (proof?.type === 'upgrade') {
+      const roll = rollToScaled(float);
+      const win = upgradeWins(roll, proof.chance);
+      return { float, hashOk, kind: 'upgrade' as const, roll, win, match: roll === proof.roll && win === proof.isWin };
+    }
+    if (proof?.type === 'contract') {
+      const k = contractMultiplier(float, { commission: 0, coefMin: proof.coefMin, coefMax: proof.coefMax }, proof.gamma);
+      return { float, hashOk, kind: 'contract' as const, k, target: Math.round(proof.inputValue * k), match: Math.abs(k - proof.multiplier) < 1e-9 };
+    }
+    const ticket = ticketFromFloat(float);
+    const entry = proof?.type === 'case_opening' ? pickByTicket(proof.contents, ticket) : null;
+    return {
+      float,
+      hashOk,
+      kind: 'case_opening' as const,
+      ticket,
+      entry,
+      match: proof?.type === 'case_opening' ? entry?.itemId === proof.itemId : null,
+    };
   }, [run, serverSeed, clientSeed, nonce, proof]);
 
   return (
@@ -174,11 +206,26 @@ function Verifier() {
         <h2 className="font-display text-lg font-bold uppercase">{t('verifyTitle')}</h2>
         <p className="text-sm text-muted">{t('verifyLead')}</p>
       </div>
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('kind')}>
+        {KINDS.map((k) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => {
+              setKind(k);
+              setProof(null);
+            }}
+            className={`clip-cut h-8 px-3 text-xs font-bold uppercase [--cut:5px] ${kind === k ? 'bg-accent text-accent-ink' : 'bg-surface-3 text-muted'}`}
+          >
+            {t(`kinds.${k}`)}
+          </button>
+        ))}
+      </div>
       <form
         className="flex gap-2"
         onSubmit={(e) => {
           e.preventDefault();
-          if (/^[0-9a-f-]{36}$/i.test(resultId.trim())) void load(resultId.trim());
+          if (/^[0-9a-f-]{36}$/i.test(resultId.trim())) void load(kind, resultId.trim());
         }}
       >
         <Input value={resultId} onChange={(e) => setResultId(e.target.value)} placeholder={t('resultId')} aria-label={t('resultId')} className="h-10 font-mono text-xs" />
@@ -214,24 +261,47 @@ function Verifier() {
               <div className="text-xs text-dim">{t('float')}</div>
               <Mono>{computed.float.toFixed(12)}</Mono>
             </div>
-            <div className="clip-cut bg-surface-2 p-3 [--cut:6px]">
-              <div className="text-xs text-dim">{t('ticket')}</div>
-              <Mono>{computed.ticket}</Mono>
-            </div>
+            {computed.kind === 'case_opening' && (
+              <div className="clip-cut bg-surface-2 p-3 [--cut:6px]">
+                <div className="text-xs text-dim">{t('ticket')}</div>
+                <Mono>{computed.ticket}</Mono>
+              </div>
+            )}
+            {computed.kind === 'upgrade' && proof?.type === 'upgrade' && (
+              <div className="clip-cut bg-surface-2 p-3 [--cut:6px]">
+                <div className="text-xs text-dim">
+                  {t('upgradeRoll')} / {t('upgradeChance')}
+                </div>
+                <Mono>
+                  {computed.roll} / {proof.chance}
+                </Mono>
+              </div>
+            )}
+            {computed.kind === 'contract' && (
+              <div className="clip-cut bg-surface-2 p-3 [--cut:6px]">
+                <div className="text-xs text-dim">{t('contractMultiplier')}</div>
+                <Mono>
+                  ×{computed.k.toFixed(6)} → {computed.target}
+                </Mono>
+              </div>
+            )}
           </div>
-          {computed.entry && (
+          {computed.kind === 'case_opening' && computed.entry && (
             <div className="clip-cut bg-surface-2 p-3 [--cut:6px]">
               <div className="text-xs text-dim">{t('item')}</div>
               <div className="font-semibold">{computed.entry.name}</div>
-              <div className={`mt-1 flex items-center gap-2 text-xs ${computed.match ? 'text-accent' : 'text-danger'}`}>
-                {computed.match ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
-                {computed.match ? t('match') : t('mismatch')}
-              </div>
+            </div>
+          )}
+          {computed.kind === 'upgrade' && <div className="text-xs text-muted">{computed.win ? t('upgradeWin') : t('upgradeLose')}</div>}
+          {computed.match !== null && (
+            <div className={`flex items-center gap-2 text-xs ${computed.match ? 'text-accent' : 'text-danger'}`}>
+              {computed.match ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+              {computed.match ? t('match') : t('mismatch')}
             </div>
           )}
         </div>
       )}
-      {proof && (
+      {proof?.type === 'case_opening' && (
         <details className="text-xs text-muted">
           <summary className="cursor-pointer text-dim">{t('contents')}</summary>
           <ul className="mt-2 space-y-1">

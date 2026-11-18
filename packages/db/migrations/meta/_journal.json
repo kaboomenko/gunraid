@@ -29,6 +29,13 @@
       "when": 1794964423641,
       "tag": "0003_cases_fairness_outbox",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794965256814,
+      "tag": "0004_upgrades_contracts",
+      "breakpoints": true
     }
   ]
 }
