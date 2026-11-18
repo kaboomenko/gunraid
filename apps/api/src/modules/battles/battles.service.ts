@@ -679,9 +679,7 @@ export class BattlesService {
 
   // ---------- Чтение ----------
 
-  private async loadPlayers(
-    battleIds: string[],
-  ): Promise<
+  private async loadPlayers(battleIds: string[]): Promise<
     Map<
       string,
       Array<
