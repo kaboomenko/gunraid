@@ -22,6 +22,7 @@ async function main(): Promise<void> {
       const supportUrl = process.env.SUPPORT_TELEGRAM_URL;
       await seedAll(db, {
         demo: process.env.SEED_DEMO_DATA !== 'false',
+        devUsers: process.env.APP_ENV !== 'production',
         gemsPerUsd: Number.isSafeInteger(gemsPerUsd) && gemsPerUsd > 0 ? gemsPerUsd : undefined,
         supportTelegramUrl: supportUrl ? supportUrl : undefined,
       });

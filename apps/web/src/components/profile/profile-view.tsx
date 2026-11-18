@@ -2,7 +2,7 @@
 
 import { LINKABLE_PROVIDERS, type LinkableProvider, type MeDto } from '@gunraid/shared';
 import { useQueryClient } from '@tanstack/react-query';
-import { Backpack, Copy, History, LogIn } from 'lucide-react';
+import { Copy, LogIn } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Avatar } from '@/components/ui/avatar';
@@ -15,11 +15,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/lib/api';
 import { useConfig } from '@/lib/config';
+import { useGameCode } from '@/lib/game';
 import { useErrorMessage } from '@/lib/errors';
 import { ME_KEY, useMe } from '@/lib/me';
 import { useUi } from '@/lib/store';
 import { TelegramWidget } from '../auth/telegram-widget';
+import { HistoryPanel } from './history-panel';
+import { InventoryPanel } from './inventory-panel';
 import { SettingsPanel } from './settings-panel';
+import { StatsRow } from './stats-row';
 
 const TABS = ['inventory', 'history', 'settings', 'referrals'] as const;
 type Tab = (typeof TABS)[number];
@@ -31,6 +35,7 @@ export function ProfileView() {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const game = useGameCode();
   const tabParam = params.get('tab');
   const tab: Tab = (TABS as readonly string[]).includes(tabParam ?? '') ? (tabParam as Tab) : 'inventory';
 
@@ -56,6 +61,7 @@ export function ProfileView() {
   return (
     <div className="space-y-5">
       <ProfileHeader me={data} />
+      <StatsRow game={game} />
       <Tabs
         value={tab}
         onValueChange={(v) => router.replace(`${pathname}?tab=${v}`, { scroll: false })}
@@ -68,10 +74,10 @@ export function ProfileView() {
           ))}
         </TabsList>
         <TabsContent value="inventory">
-          <EmptyState icon={<Backpack size={36} />} text={t('profile.inventoryEmpty')} />
+          <InventoryPanel game={game} />
         </TabsContent>
         <TabsContent value="history">
-          <EmptyState icon={<History size={36} />} text={t('profile.historyEmpty')} />
+          <HistoryPanel game={game} />
         </TabsContent>
         <TabsContent value="settings">
           <SettingsPanel me={data} />

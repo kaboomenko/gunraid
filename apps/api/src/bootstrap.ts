@@ -21,6 +21,7 @@ export async function createApp(
   const app = await NestFactory.create<NestFastifyApplication>(AppModule.forRoot(env), adapter, {
     logger: options.logger === false ? false : ['error', 'warn', 'log'],
     bufferLogs: false,
+    rawBody: true,
   });
   await app.register(fastifyCookie, { secret: env.COOKIE_SECRET });
   await app.register(helmet, { contentSecurityPolicy: false, crossOriginResourcePolicy: false });

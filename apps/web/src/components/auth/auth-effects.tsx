@@ -8,6 +8,7 @@ import { toast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import { useErrorMessage } from '@/lib/errors';
 import { useMe } from '@/lib/me';
+import { useBalanceSync } from '@/lib/queries';
 import { usePrefs } from '@/lib/store';
 
 /**
@@ -23,6 +24,7 @@ export function AuthEffects() {
   const me = useMe();
   const setSound = usePrefs((s) => s.setSound);
   const setFast = usePrefs((s) => s.setFast);
+  useBalanceSync();
 
   useEffect(() => {
     const auth = params.get('auth');

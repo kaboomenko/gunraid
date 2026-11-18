@@ -7,3 +7,7 @@ export * from './http.js';
 export * from './me.js';
 export * from './settings.js';
 export * from './ws.js';
+export * from './catalog.js';
+export * from './inventory.js';
+export * from './money.js';
+export * from './profile.js';

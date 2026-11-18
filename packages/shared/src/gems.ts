@@ -23,7 +23,7 @@ export function formatGems(value: number): string {
 /** Компактная запись для узких мест: 12,3 тыс. → «12.3K». */
 export function formatGemsCompact(value: number): string {
   const abs = Math.abs(value);
-  if (abs < 10_000) return formatGems(value);
+  if (abs < 100_000) return formatGems(value);
   if (abs < 1_000_000) return `${trimZero((value / 1000).toFixed(1))}K`;
   return `${trimZero((value / 1_000_000).toFixed(2))}M`;
 }

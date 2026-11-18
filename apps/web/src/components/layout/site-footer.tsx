@@ -30,6 +30,11 @@ export async function SiteFooter({ supportUrl }: { supportUrl: string | null }) 
           <div className="mb-3 font-display text-xs font-bold uppercase tracking-widest text-dim">{t('sections.site')}</div>
           <ul className="space-y-2 text-sm">
             <li>
+              <Link className="text-muted hover:text-text" href="/items">
+                {t('items')}
+              </Link>
+            </li>
+            <li>
               <Link className="text-muted hover:text-text" href="/provably-fair">
                 {t('fair')}
               </Link>

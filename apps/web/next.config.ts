@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   typedRoutes: false,
+  agentRules: false,
   async rewrites() {
     return devApi ? [{ source: '/api/:path*', destination: `${devApi}/api/:path*` }] : [];
   },

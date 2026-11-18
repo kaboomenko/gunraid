@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/cn';
@@ -21,6 +22,7 @@ export function SiteHeader() {
   const pathname = usePathname();
   const me = useMe();
   const openLogin = useUi((s) => s.openLogin);
+  const openDeposit = useUi((s) => s.openDeposit);
 
   return (
     <header className="sticky top-0 z-40 h-[var(--header-h)] border-b border-line bg-bg/85 backdrop-blur-md">
@@ -57,7 +59,12 @@ export function SiteHeader() {
             <Skeleton className="h-10 w-28" />
           ) : me.data ? (
             <>
-              <BalancePill balance={me.data.balance} />
+              <div className="flex items-center">
+                <BalancePill balance={me.data.balance} />
+                <Button size="icon" className="ml-1 h-10 w-10" onClick={openDeposit} aria-label={t('gems.deposit')} data-testid="deposit-open">
+                  <Plus size={20} strokeWidth={3} />
+                </Button>
+              </div>
               <UserMenu me={me.data} />
             </>
           ) : (

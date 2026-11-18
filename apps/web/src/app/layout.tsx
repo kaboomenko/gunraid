@@ -12,6 +12,7 @@ import { LiveFeedBar } from '@/components/layout/live-feed';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { SiteHeader } from '@/components/layout/site-header';
 import { MobileTabBar } from '@/components/layout/tab-bar';
+import { DepositModal } from '@/components/payments/deposit-modal';
 import { getPublicConfig } from '@/lib/server-api';
 import { Providers } from './providers';
 
@@ -52,6 +53,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <MobileTabBar />
             <LoginModal />
             <AdultGate />
+            <DepositModal />
             <Suspense fallback={null}>
               <AuthEffects />
             </Suspense>

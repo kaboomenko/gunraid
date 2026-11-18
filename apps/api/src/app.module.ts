@@ -4,6 +4,11 @@ import type { Env } from './config/env.js';
 import { CoreModule } from './core/core.module.js';
 import { AllExceptionsFilter } from './common/exception.filter.js';
 import { AdminModule } from './modules/admin/admin.module.js';
+import { CatalogModule } from './modules/catalog/catalog.module.js';
+import { InventoryModule } from './modules/inventory/inventory.module.js';
+import { LedgerModule } from './modules/ledger/ledger.module.js';
+import { PaymentsModule } from './modules/payments/payments.module.js';
+import { ProfileModule } from './modules/profile/profile.module.js';
 import { AuthGuard } from './modules/auth/auth.guard.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { GamesModule } from './modules/games/games.module.js';
@@ -25,6 +30,11 @@ export class AppModule {
         RealtimeModule,
         SiteModule,
         AdminModule,
+        LedgerModule,
+        CatalogModule,
+        InventoryModule,
+        PaymentsModule,
+        ProfileModule,
       ],
       providers: [
         { provide: APP_FILTER, useClass: AllExceptionsFilter },

@@ -50,7 +50,7 @@
     "bonuses": "Бонусы",
     "leaderboard": "Топ",
     "profile": "Профиль",
-    "items": "Предметы",
+    "items": "Все предметы",
     "fair": "Честная игра"
   },
   "header": {
@@ -117,7 +117,8 @@
     "casesEmpty": "Кейсы появятся здесь совсем скоро",
     "statsCases": "{count, plural, one {кейс открыт} few {кейса открыто} many {кейсов открыто} other {кейса открыто}}",
     "statsUsers": "{count, plural, one {игрок} few {игрока} many {игроков} other {игрока}}",
-    "statsOnline": "онлайн"
+    "statsOnline": "онлайн",
+    "allItems": "Все предметы"
   },
   "modes": {
     "cases": {
@@ -204,7 +205,8 @@
       "site": "Сайт",
       "docs": "Документы",
       "help": "Помощь"
-    }
+    },
+    "items": "Все предметы"
   },
   "legal": {
     "terms": "Пользовательское соглашение (оферта)",
@@ -266,7 +268,23 @@
     "TRADE_URL_INVALID": "Неверный формат trade-ссылки",
     "TRADE_URL_STEAM_MISMATCH": "Trade-ссылка принадлежит другому аккаунту Steam",
     "PLAYER_ID_INVALID": "ID должен состоять только из цифр",
-    "NICKNAME_INVALID": "Недопустимый ник"
+    "NICKNAME_INVALID": "Недопустимый ник",
+    "IDEMPOTENCY_KEY_REQUIRED": "Повторите действие",
+    "IDEMPOTENCY_IN_PROGRESS": "Действие уже выполняется",
+    "IDEMPOTENCY_KEY_REUSED": "Повторите действие",
+    "INSUFFICIENT_BALANCE": "Недостаточно гемов на балансе",
+    "ITEM_NOT_AVAILABLE": "Предмет уже недоступен — обновите инвентарь",
+    "ITEM_NOT_FOUND": "Предмет не найден",
+    "NOTHING_TO_SELL": "Нечего продавать",
+    "AMOUNT_INVALID": "Неверная сумма",
+    "DEPOSIT_AMOUNT_TOO_LOW": "Сумма меньше минимальной",
+    "DEPOSIT_AMOUNT_TOO_HIGH": "Сумма больше максимальной",
+    "CURRENCY_NOT_SUPPORTED": "Эта валюта недоступна для выбранного способа",
+    "QUOTE_EXPIRED": "Курс устарел — пересчитайте сумму",
+    "QUOTE_NOT_FOUND": "Курс устарел — пересчитайте сумму",
+    "PAYMENT_SIGNATURE_INVALID": "Ошибка платежа",
+    "DEPOSIT_NOT_FOUND": "Платёж не найден",
+    "DEPOSIT_ALREADY_FINAL": "Платёж уже обработан"
   },
   "showcase": {
     "title": "Дизайн-система",
@@ -308,5 +326,168 @@
     "typography": "Типографика",
     "headline": "Заголовок H1",
     "body": "Основной текст: читаемый гротеск для описаний, подсказок и таблиц."
+  },
+  "items": {
+    "title": "Все предметы",
+    "metaTitle": "Все скины {game} — цены и редкости",
+    "metaDescription": "Каталог скинов {game}: цены в гемах, редкости, фильтры по типу, модели и цене.",
+    "count": "{count, plural, one {# предмет} few {# предмета} many {# предметов} other {# предмета}}",
+    "search": "Поиск по названию",
+    "filters": "Фильтры",
+    "reset": "Сбросить",
+    "apply": "Показать",
+    "rarity": "Редкость",
+    "type": "Тип",
+    "model": "Модель",
+    "price": "Цена, гемы",
+    "priceFrom": "от",
+    "priceTo": "до",
+    "stattrak": "Только StatTrak",
+    "sort": {
+      "label": "Сортировка",
+      "price_desc": "Сначала дорогие",
+      "price_asc": "Сначала дешёвые",
+      "rarity_desc": "По редкости",
+      "name_asc": "По названию",
+      "newest": "Новые"
+    },
+    "empty": "Ничего не найдено — попробуйте изменить фильтры",
+    "prev": "Назад",
+    "next": "Дальше",
+    "page": "Страница {page} из {pages}",
+    "back": "Все предметы",
+    "detailPrice": "Цена",
+    "detailRarity": "Редкость",
+    "detailCollection": "Коллекция",
+    "detailWear": "Износ",
+    "detailFloat": "Float",
+    "detailType": "Тип",
+    "withdrawable": "Можно вывести",
+    "notWithdrawable": "Не выводится",
+    "inCases": "В каких кейсах встречается",
+    "inCasesEmpty": "Пока не встречается ни в одном кейсе",
+    "chance": "шанс {chance}%",
+    "stattrakBadge": "ST",
+    "souvenirBadge": "SV"
+  },
+  "wear": {
+    "FN": "Прямо с завода",
+    "MW": "Немного поношенное",
+    "FT": "После полевых испытаний",
+    "WW": "Поношенное",
+    "BS": "Закалённое в боях"
+  },
+  "inventory": {
+    "title": "Инвентарь",
+    "total": "Стоимость инвентаря",
+    "selected": "Выбрано: {count}",
+    "selectedSum": "на сумму",
+    "selectAll": "Выбрать все",
+    "clear": "Снять выбор",
+    "sellSelected": "Продать выбранные",
+    "sellAll": "Продать всё",
+    "sell": "Продать",
+    "sellConfirmTitle": "Продать предметы?",
+    "sellConfirmText": "{count, plural, one {# предмет будет продан} few {# предмета будут проданы} many {# предметов будут проданы} other {# предмета будут проданы}} по текущей цене. Гемы сразу поступят на баланс.",
+    "sold": "Продано за",
+    "soldToast": "Продано: {count}. Начислено {gems}",
+    "empty": "Инвентарь пуст — открой кейс, чтобы получить первый скин",
+    "sortLabel": "Сортировка",
+    "sort": {
+      "date_desc": "Сначала новые",
+      "date_asc": "Сначала старые",
+      "price_desc": "Сначала дорогие",
+      "price_asc": "Сначала дешёвые",
+      "rarity_desc": "По редкости"
+    },
+    "status": {
+      "in_inventory": "В инвентаре",
+      "sold": "Продан",
+      "withdrawing": "На выводе",
+      "withdrawn": "Выведен",
+      "used_upgrade": "Использован в апгрейде",
+      "used_contract": "Использован в контракте",
+      "lost_battle": "Проигран в баттле"
+    },
+    "loadMore": "Показать ещё"
+  },
+  "history": {
+    "transactions": "Баланс",
+    "deposits": "Пополнения",
+    "drops": "Дропы",
+    "empty": "Записей пока нет",
+    "loadMore": "Показать ещё",
+    "types": {
+      "deposit": "Пополнение",
+      "deposit_bonus": "Бонус к пополнению",
+      "deposit_reversal": "Отмена пополнения",
+      "case_open": "Открытие кейса",
+      "item_sell": "Продажа предметов",
+      "upgrade_stake": "Ставка в апгрейде",
+      "battle_entry": "Вход в баттл",
+      "battle_refund": "Возврат за баттл",
+      "wheel_prize": "Приз колеса",
+      "promo_balance": "Промокод",
+      "daily_bonus": "Ежедневный бонус",
+      "level_reward": "Награда за уровень",
+      "referral_reward": "Реферальный доход",
+      "leaderboard_prize": "Приз лидерборда",
+      "admin_adjustment": "Корректировка"
+    },
+    "depositStatus": {
+      "pending": "Ожидает оплаты",
+      "succeeded": "Зачислено",
+      "failed": "Ошибка оплаты",
+      "cancelled": "Отменено",
+      "reversed": "Возвращено"
+    },
+    "paid": "Оплата: {amount} {currency}",
+    "bonus": "бонус"
+  },
+  "stats": {
+    "casesOpened": "Открыто кейсов",
+    "depositsTotal": "Пополнения",
+    "bestDrop": "Лучший дроп",
+    "upgradesWon": "Апгрейды",
+    "contractsDone": "Контракты",
+    "battlesWon": "Баттлы",
+    "noBestDrop": "Пока нет дропов",
+    "recentDrops": "Последние дропы"
+  },
+  "deposit": {
+    "title": "Пополнение баланса",
+    "rate": "Курс",
+    "method": "Способ оплаты",
+    "methods": {
+      "card": "Банковская карта",
+      "crypto": "Криптовалюта"
+    },
+    "currency": "Валюта",
+    "amount": "Сумма",
+    "amountIn": "Сумма в {currency}",
+    "min": "Минимум: {amount} {currency}",
+    "youGet": "Будет начислено",
+    "bonus": "Бонус за первое пополнение",
+    "total": "Итого на баланс",
+    "quoteValid": "Курс зафиксирован до {time}",
+    "pay": "Перейти к оплате",
+    "calculating": "Считаем…",
+    "test": "Тестовый режим",
+    "testHint": "Сейчас подключён тестовый платёжный провайдер: реальные деньги не списываются.",
+    "noWithdraw": "Гемы нельзя вывести деньгами — выводятся только предметы.",
+    "promoSoon": "Промокод можно будет ввести здесь"
+  },
+  "pay": {
+    "title": "Тестовая оплата",
+    "subtitle": "Заглушка платёжного провайдера: выберите результат платежа.",
+    "amount": "К оплате",
+    "gems": "Будет начислено",
+    "success": "Оплатить (тест)",
+    "fail": "Отклонить (тест)",
+    "succeeded": "Оплата прошла — гемы зачислены",
+    "failed": "Платёж отклонён",
+    "status": "Статус",
+    "back": "Вернуться на сайт",
+    "notFound": "Платёж не найден"
   }
 }

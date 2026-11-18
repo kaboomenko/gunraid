@@ -2,6 +2,7 @@ import type { SiteStatsDto } from '@gunraid/shared';
 import { Package } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import Link from 'next/link';
 import { Hero } from '@/components/home/hero';
 import { ModeGrid } from '@/components/home/mode-grid';
 import { StatsStrip } from '@/components/home/stats-strip';
@@ -34,7 +35,15 @@ export default async function GameHome({ params }: { params: Promise<{ game: str
       <StatsStrip stats={stats} />
       <ModeGrid game={game} />
       <section id="cases" className="scroll-mt-24">
-        <SectionTitle>{t('casesTitle')}</SectionTitle>
+        <SectionTitle
+          action={
+            <Link href={`/${game}/items`} className="text-sm font-semibold text-accent hover:underline">
+              {t('allItems')} →
+            </Link>
+          }
+        >
+          {t('casesTitle')}
+        </SectionTitle>
         <EmptyState icon={<Package size={40} />} text={t('casesEmpty')} />
       </section>
     </div>

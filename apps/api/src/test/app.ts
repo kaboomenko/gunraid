@@ -13,7 +13,8 @@ export interface TestResponse<T = unknown> {
 /** HTTP-клиент для тестов: хранит cookie (как браузер) и сам отправляет CSRF-заголовок. */
 export class TestClient {
   readonly cookies = new Map<string, string>();
-  ip = '127.0.0.1';
+  /** Каждый тестовый клиент — со своего IP (как разные игроки), чтобы не упираться в лимиты по IP. */
+  ip = `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.${1 + Math.floor(Math.random() * 250)}`;
 
   constructor(private readonly app: NestFastifyApplication) {}
 
