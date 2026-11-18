@@ -3,7 +3,10 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/kaboomenko/gunraid/refs/heads/claude/new-session-kvf1bn/scripts/server-setup.sh | bash
 #   С доменом (A-запись уже указывает на сервер) — HTTPS:
-#   curl -fsSL .../server-setup.sh | DOMAIN=test.example.com bash
+#   curl -fsSL .../server-setup.sh | DOMAIN=example.com bash
+#   Доп. домены — постоянный редирект на основной (их A-записи тоже на сервер):
+#   curl -fsSL .../server-setup.sh | DOMAIN=example.com EXTRA_DOMAINS="www.example.com example.net" bash
+#   Новый пароль на сайт: ROTATE_PASSWORD=1. Домены запоминаются (.server-config).
 #
 # Что делает: ставит Docker, скачивает проект в /opt/gunraid, генерирует секреты в .env
 # (только на сервере), закрывает весь сайт паролем (тестовый вход открыт — без пароля любой
@@ -14,7 +17,6 @@ set -euo pipefail
 REPO_URL="${REPO_URL:-https://github.com/kaboomenko/gunraid.git}"
 BRANCH="${BRANCH:-claude/new-session-kvf1bn}"
 DIR="${GUNRAID_DIR:-/opt/gunraid}"
-DOMAIN="${DOMAIN:-}"
 SITE_USER="gunraid"
 
 say() { printf '\n\033[1;32m==> %s\033[0m\n' "$*"; }
@@ -52,6 +54,20 @@ else
 fi
 cd "$DIR"
 
+# Домены запоминаем: повторный запуск без DOMAIN не должен вернуть сайт на IP.
+CONF_FILE="$DIR/.server-config"
+SAVED_DOMAIN=""
+SAVED_EXTRA=""
+if [ -f "$CONF_FILE" ]; then
+  # shellcheck disable=SC1090
+  . "$CONF_FILE"
+  SAVED_DOMAIN="${SERVER_DOMAIN:-}"
+  SAVED_EXTRA="${SERVER_EXTRA_DOMAINS:-}"
+fi
+DOMAIN="${DOMAIN:-$SAVED_DOMAIN}"
+EXTRA_DOMAINS="$(echo "${EXTRA_DOMAINS:-$SAVED_EXTRA}" | tr ',' ' ' | xargs)"
+printf 'SERVER_DOMAIN="%s"\nSERVER_EXTRA_DOMAINS="%s"\n' "$DOMAIN" "$EXTRA_DOMAINS" > "$CONF_FILE"
+
 # Адрес сайта
 if [ -n "$DOMAIN" ]; then
   PUBLIC_URL="https://$DOMAIN"
@@ -88,7 +104,7 @@ else
 fi
 chmod 600 .env
 
-if [ ! -f "$CRED_FILE" ]; then
+if [ ! -f "$CRED_FILE" ] || [ -n "${ROTATE_PASSWORD:-}" ]; then
   umask 077
   echo "SITE_PASSWORD=$(openssl rand -base64 18 | tr -d '/+=' | cut -c1-16)" > "$CRED_FILE"
 fi
@@ -119,6 +135,14 @@ $SITE_ADDR {
 	}
 }
 EOF
+if [ -n "$DOMAIN" ] && [ -n "$EXTRA_DOMAINS" ]; then
+  cat >> infra/caddy/Caddyfile.server <<EOF
+
+$(echo "$EXTRA_DOMAINS" | sed 's/ /, /g') {
+	redir https://$DOMAIN{uri} permanent
+}
+EOF
+fi
 
 # docker compose подхватывает override автоматически.
 cat > docker-compose.override.yml <<'EOF'
@@ -142,7 +166,8 @@ if [ -n "${NO_BUILD:-}" ]; then docker compose up -d --wait; else docker compose
 say "Готово"
 cat <<EOF
 
-  Сайт:   $PUBLIC_URL
+  Сайт:   $PUBLIC_URL${EXTRA_DOMAINS:+
+  Редирект: $EXTRA_DOMAINS → $PUBLIC_URL}
   Логин:  $SITE_USER
   Пароль: $SITE_PASSWORD
 
