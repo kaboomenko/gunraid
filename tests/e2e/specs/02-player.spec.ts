@@ -81,6 +81,25 @@ test.describe('Игрок: вход, пополнение, кейсы', () => {
     await api.expectLedgerConsistent();
   });
 
+  test('«уменьшить движение»: результат кейса без долгой прокрутки', async ({
+    page,
+    api,
+    player,
+  }) => {
+    expect(player.id).toBeTruthy();
+    // Обычный режим (не «быстро»), но системная настройка просит меньше анимаций.
+    await api.send('PATCH', '/me/settings', { fastModeDefault: false });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await api.topUp(5);
+    const c = await api.cheapestCase('cs2');
+    await page.goto(`/cs2/case/${c.slug}`);
+    const started = Date.now();
+    await page.getByTestId('case-open').first().click();
+    // Обычная прокрутка рулетки — около 6 с.
+    await expect(page.getByTestId('result-sell-all')).toBeVisible({ timeout: 3000 });
+    expect(Date.now() - started).toBeLessThan(3000);
+  });
+
   test('продажа из инвентаря в профиле', async ({ page, api, player }) => {
     expect(player.id).toBeTruthy();
     await api.topUp(5);

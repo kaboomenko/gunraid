@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { cn } from '@/lib/cn';
 import { serverNow } from '@/lib/socket';
 import { sound } from '@/lib/sound';
+import { prefersReducedMotion, REDUCED_MOTION_MS } from '@/lib/motion';
 
 const LENGTH = 36;
 const WIN_INDEX = 30;
@@ -94,18 +95,25 @@ export function BattleReel({
       return;
     }
     tr.style.transform = 'translateY(0px)';
-    const anim = tr.animate(
-      [{ transform: 'translateY(0px)' }, { transform: `translateY(${target}px)` }],
-      {
-        duration: durationMs,
-        delay: Math.max(0, -elapsed),
-        easing: 'cubic-bezier(0.08, 0.6, 0.12, 1)',
-        fill: 'both',
-      },
-    );
-    if (elapsed > 0) anim.currentTime = elapsed;
+    const reduced = prefersReducedMotion();
+    // «Уменьшить движение»: без прокрутки — короткий переход к результату в тот же момент,
+    // когда у остальных зрителей останавливается рулетка.
+    const anim = reduced
+      ? tr.animate([{ transform: 'translateY(0px)' }, { transform: `translateY(${target}px)` }], {
+          duration: REDUCED_MOTION_MS,
+          delay: Math.max(0, durationMs - REDUCED_MOTION_MS - elapsed),
+          easing: 'ease-out',
+          fill: 'both',
+        })
+      : tr.animate([{ transform: 'translateY(0px)' }, { transform: `translateY(${target}px)` }], {
+          duration: durationMs,
+          delay: Math.max(0, -elapsed),
+          easing: 'cubic-bezier(0.08, 0.6, 0.12, 1)',
+          fill: 'both',
+        });
+    if (elapsed > 0 && !reduced) anim.currentTime = elapsed;
     let raf = 0;
-    if (ticks) {
+    if (ticks && !reduced) {
       let last = -1;
       const loop = () => {
         const m = new DOMMatrixReadOnly(getComputedStyle(tr).transform);

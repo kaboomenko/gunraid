@@ -4,6 +4,7 @@ import type { CaseContentItemDto, ItemDto } from '@gunraid/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { sound } from '@/lib/sound';
+import { prefersReducedMotion } from '@/lib/motion';
 
 const STRIP_LENGTH = 54;
 const WIN_INDEX = 46;
@@ -73,7 +74,7 @@ export function Roulette({
     const target = -(WIN_INDEX * cardW) + width / 2 - cardW / 2 + jitter;
     tr.getAnimations().forEach((a) => a.cancel());
     tr.style.transform = 'translateX(0px)';
-    if (fast) {
+    if (fast || prefersReducedMotion()) {
       tr.style.transform = `translateX(${target}px)`;
       setDone(true);
       onDone?.();

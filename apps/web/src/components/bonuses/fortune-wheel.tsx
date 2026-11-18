@@ -4,6 +4,7 @@ import { formatGemsCompact, type WheelPrizeDto } from '@gunraid/shared';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef } from 'react';
 import { sound } from '@/lib/sound';
+import { prefersReducedMotion, REDUCED_MOTION_MS } from '@/lib/motion';
 
 const R = 200;
 const C = 210;
@@ -69,11 +70,16 @@ export function FortuneWheel({ prizes, target, durationMs = 5200, onDone }: Fort
     const want = 360 - (target.index * seg + seg / 2) + jitter;
     const current = angle.current;
     const base = current - (current % 360);
-    const final = base + 360 * 6 + (((want % 360) + 360) % 360);
+    const reduced = prefersReducedMotion();
+    const final = base + 360 * (reduced ? 1 : 6) + (((want % 360) + 360) % 360);
     angle.current = final;
     const anim = g.animate(
       [{ transform: `rotate(${current}deg)` }, { transform: `rotate(${final}deg)` }],
-      { duration: durationMs, easing: 'cubic-bezier(0.12, 0.62, 0.08, 1)', fill: 'forwards' },
+      {
+        duration: reduced ? REDUCED_MOTION_MS * 2 : durationMs,
+        easing: 'cubic-bezier(0.12, 0.62, 0.08, 1)',
+        fill: 'forwards',
+      },
     );
     let last = Math.floor(current / seg);
     let raf = 0;
