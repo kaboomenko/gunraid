@@ -11,3 +11,8 @@
 **/playwright-report
 **/test-results
 apps/api/storage
+# Файлы тестового сервера (scripts/server-setup.sh): не в образ и не в кэш сборки
+.server-config
+.server-credentials
+docker-compose.override.yml
+infra/caddy/Caddyfile.server

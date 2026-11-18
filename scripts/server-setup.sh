@@ -6,12 +6,16 @@
 #   curl -fsSL .../server-setup.sh | DOMAIN=example.com bash
 #   Доп. домены — постоянный редирект на основной (их A-записи тоже на сервер):
 #   curl -fsSL .../server-setup.sh | DOMAIN=example.com EXTRA_DOMAINS="www.example.com example.net" bash
-#   Новый пароль на сайт: ROTATE_PASSWORD=1. Домены запоминаются (.server-config).
+#   Пароль (basic auth): PROTECT=1 — на весь сайт, PROTECT=admin — только на админку
+#   (/admin и /api/v1/admin), PROTECT=0 — выключен (по умолчанию); ROTATE_PASSWORD=1 — новый пароль.
+#   Поисковики: по умолчанию сайт закрыт от индексации (заголовок X-Robots-Tag: noindex),
+#   ALLOW_INDEXING=1 — открыть (для публичного запуска).
+#   Домены и эти настройки запоминаются (.server-config): для обновления хватает команды без параметров.
 #
 # Что делает: ставит Docker, скачивает проект в /opt/gunraid, генерирует секреты в .env
-# (только на сервере), закрывает весь сайт паролем (тестовый вход открыт — без пароля любой
-# зашёл бы в админку), собирает и запускает. Повторный запуск обновляет код и пересобирает,
-# секреты и пароль сохраняются.
+# (только на сервере), собирает и запускает. Повторный запуск обновляет код и пересобирает,
+# секреты и пароль сохраняются. Внимание: тестовый вход («Игрок», «Админ») включён — без
+# PROTECT=1 зайти в админку может любой, кто откроет сайт.
 set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/kaboomenko/gunraid.git}"
@@ -58,15 +62,46 @@ cd "$DIR"
 CONF_FILE="$DIR/.server-config"
 SAVED_DOMAIN=""
 SAVED_EXTRA=""
+SAVED_PROTECT=""
+SAVED_INDEXING=""
 if [ -f "$CONF_FILE" ]; then
   # shellcheck disable=SC1090
   . "$CONF_FILE"
   SAVED_DOMAIN="${SERVER_DOMAIN:-}"
   SAVED_EXTRA="${SERVER_EXTRA_DOMAINS:-}"
+  SAVED_PROTECT="${SERVER_PROTECT:-}"
+  SAVED_INDEXING="${SERVER_ALLOW_INDEXING:-}"
 fi
+if [ -z "$SAVED_DOMAIN" ] && [ -f .env ]; then
+  # Установка первой версией скрипта (или прерванный запуск): домен записан только в .env.
+  SAVED_DOMAIN="$(sed -n 's#^PUBLIC_URL=https://\([^/]*\).*#\1#p' .env | head -n 1)"
+fi
+# Флаги: 1/0, yes/no, true/false, on/off в любом регистре; опечатка — ошибка, а не молчаливый «0».
+flag() {
+  case "$(printf '%s' "${2:-}" | tr '[:upper:]' '[:lower:]')" in
+    1 | yes | true | on) echo 1 ;;
+    "" | 0 | no | false | off) echo 0 ;;
+    *) fail "$1 должен быть 1 или 0, а сейчас «$2»" ;;
+  esac
+}
 DOMAIN="${DOMAIN:-$SAVED_DOMAIN}"
 EXTRA_DOMAINS="$(echo "${EXTRA_DOMAINS:-$SAVED_EXTRA}" | tr ',' ' ' | xargs)"
-printf 'SERVER_DOMAIN="%s"\nSERVER_EXTRA_DOMAINS="%s"\n' "$DOMAIN" "$EXTRA_DOMAINS" > "$CONF_FILE"
+# Основной домен в списке редиректов дал бы два одинаковых сайта в Caddyfile — Caddy не стартует.
+if [ -n "$DOMAIN" ] && [ -n "$EXTRA_DOMAINS" ]; then
+  EXTRA_DOMAINS="$(echo "$EXTRA_DOMAINS" | tr ' ' '\n' | grep -vixF "$DOMAIN" | awk '!seen[tolower($0)]++' | xargs || true)"
+fi
+# Пароль: all — весь сайт, admin — только админка, off — нет (старые значения 1/0 = all/off).
+protect_mode() {
+  case "$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')" in
+    1 | yes | true | on | all) echo all ;;
+    admin) echo admin ;;
+    "" | 0 | no | false | off) echo off ;;
+    *) fail "PROTECT должен быть 1, admin или 0, а сейчас «$1»" ;;
+  esac
+}
+PROTECT="$(protect_mode "${PROTECT:-$SAVED_PROTECT}")"
+ALLOW_INDEXING="$(flag ALLOW_INDEXING "${ALLOW_INDEXING:-$SAVED_INDEXING}")"
+ROTATE_PASSWORD="$(flag ROTATE_PASSWORD "${ROTATE_PASSWORD:-}")"
 
 # Адрес сайта
 if [ -n "$DOMAIN" ]; then
@@ -104,16 +139,43 @@ else
 fi
 chmod 600 .env
 
-if [ ! -f "$CRED_FILE" ] || [ -n "${ROTATE_PASSWORD:-}" ]; then
-  umask 077
-  echo "SITE_PASSWORD=$(openssl rand -base64 18 | tr -d '/+=' | cut -c1-16)" > "$CRED_FILE"
+AUTH_BLOCK=""
+SITE_PASSWORD=""
+if [ "$PROTECT" != off ]; then
+  if [ ! -f "$CRED_FILE" ] || [ "$ROTATE_PASSWORD" = 1 ]; then
+    umask 077
+    echo "SITE_PASSWORD=$(openssl rand -base64 18 | tr -d '/+=' | cut -c1-16)" > "$CRED_FILE"
+  fi
+  chmod 600 "$CRED_FILE"
+  SITE_PASSWORD_HASH=""
+  SITE_PASSWORD_HASH_OF=""
+  # shellcheck disable=SC1090
+  . "$CRED_FILE"
+  # Хэш храним рядом с паролем: bcrypt с новой солью менял бы конфиг (и перезапускал Caddy)
+  # на каждом запуске. Пересчитываем, только если сменился сам пароль (в том числе вручную).
+  PW_FINGERPRINT="$(printf '%s' "$SITE_PASSWORD" | sha256sum | cut -d' ' -f1)"
+  if [ -z "$SITE_PASSWORD_HASH" ] || [ "$SITE_PASSWORD_HASH_OF" != "$PW_FINGERPRINT" ]; then
+    SITE_PASSWORD_HASH=$(docker run --rm caddy:2-alpine caddy hash-password --plaintext "$SITE_PASSWORD" </dev/null)
+    printf "SITE_PASSWORD=%q\nSITE_PASSWORD_HASH='%s'\nSITE_PASSWORD_HASH_OF=%s\n" \
+      "$SITE_PASSWORD" "$SITE_PASSWORD_HASH" "$PW_FINGERPRINT" > "$CRED_FILE"
+  fi
+  HASH="$SITE_PASSWORD_HASH"
+  if [ "$PROTECT" = admin ]; then
+    AUTH_BLOCK="$(printf '\t@admin path /admin /admin/* /api/v1/admin/*\n\tbasic_auth @admin {\n\t\t%s %s\n\t}' "$SITE_USER" "$HASH")"
+  else
+    AUTH_BLOCK="$(printf '\tbasic_auth {\n\t\t%s %s\n\t}' "$SITE_USER" "$HASH")"
+  fi
 fi
-# shellcheck disable=SC1090
-. "$CRED_FILE"
-HASH=$(docker run --rm caddy:2-alpine caddy hash-password --plaintext "$SITE_PASSWORD")
+ROBOTS_LINE=""
+if [ "$ALLOW_INDEXING" != 1 ]; then
+  ROBOTS_LINE="$(printf '\theader X-Robots-Tag "noindex, nofollow"')"
+fi
 
-say "Caddy: $SITE_ADDR, пароль на весь сайт"
-cat > infra/caddy/Caddyfile.server <<EOF
+CADDYFILE=infra/caddy/Caddyfile.server
+CADDY_NEW="$(mktemp)"
+case "$PROTECT" in all) PROTECT_TEXT="на весь сайт" ;; admin) PROTECT_TEXT="только на админку" ;; *) PROTECT_TEXT="выключен" ;; esac
+say "Caddy: $SITE_ADDR; пароль: $PROTECT_TEXT; индексация: $([ "$ALLOW_INDEXING" = 1 ] && echo разрешена || echo запрещена)"
+cat > "$CADDY_NEW" <<EOF
 {
 	admin off
 	$GLOBAL_OPTS
@@ -121,9 +183,8 @@ cat > infra/caddy/Caddyfile.server <<EOF
 
 $SITE_ADDR {
 	encode zstd gzip
-	basic_auth {
-		$SITE_USER $HASH
-	}
+$ROBOTS_LINE
+$AUTH_BLOCK
 
 	@backend path /api/* /socket.io/*
 	handle @backend {
@@ -136,7 +197,7 @@ $SITE_ADDR {
 }
 EOF
 if [ -n "$DOMAIN" ] && [ -n "$EXTRA_DOMAINS" ]; then
-  cat >> infra/caddy/Caddyfile.server <<EOF
+  cat >> "$CADDY_NEW" <<EOF
 
 $(echo "$EXTRA_DOMAINS" | sed 's/ /, /g') {
 	redir https://$DOMAIN{uri} permanent
@@ -144,11 +205,35 @@ $(echo "$EXTRA_DOMAINS" | sed 's/ /, /g') {
 EOF
 fi
 
-# docker compose подхватывает override автоматически.
-cat > docker-compose.override.yml <<'EOF'
-# Создано scripts/server-setup.sh: Caddy на 80/443 с паролем и сертификатами.
+# Проверяем конфиг до применения: с битым конфигом Caddy не стартует, и сайт ляжет.
+if ! docker run --rm -v "$CADDY_NEW:/etc/caddy/Caddyfile:ro" caddy:2-alpine \
+  caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile </dev/null >/dev/null 2>&1; then
+  docker run --rm -v "$CADDY_NEW:/etc/caddy/Caddyfile:ro" caddy:2-alpine \
+    caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile </dev/null || true
+  rm -f "$CADDY_NEW"
+  fail "сгенерированный конфиг Caddy не прошёл проверку (см. выше), сайт не тронут"
+fi
+# Перезапись на месте (тот же inode): файл смонтирован в контейнер.
+cat "$CADDY_NEW" > "$CADDYFILE"
+rm -f "$CADDY_NEW"
+
+# Настройки запоминаем только после успешной проверки — ошибочный параметр не «застрянет».
+umask 077
+printf 'SERVER_DOMAIN="%s"\nSERVER_EXTRA_DOMAINS="%s"\nSERVER_PROTECT="%s"\nSERVER_ALLOW_INDEXING="%s"\n' \
+  "$DOMAIN" "$EXTRA_DOMAINS" "$PROTECT" "$ALLOW_INDEXING" > "$CONF_FILE"
+chmod 600 "$CONF_FILE"
+
+# docker compose подхватывает override автоматически. Метка с хэшем конфига: Caddy читает конфиг
+# только при старте, а изменение смонтированного файла compose сам не замечает. С меткой compose
+# пересоздаёт Caddy ровно тогда, когда запущенный контейнер стартовал с другим конфигом — в том
+# числе если прошлый запуск оборвался между записью конфига и перезапуском.
+CADDY_SUM="$(sha256sum "$CADDYFILE" | cut -d' ' -f1)"
+cat > docker-compose.override.yml <<EOF
+# Создано scripts/server-setup.sh: Caddy на 80/443 со своим конфигом и сертификатами.
 services:
   caddy:
+    labels:
+      gunraid.caddyfile-sha256: "$CADDY_SUM"
     ports:
       - '80:80'
       - '443:443'
@@ -160,19 +245,42 @@ volumes:
   caddy_data:
 EOF
 
+# Сначала — Caddy (пароль, домены): так настройка вступает в силу, даже если сборка сайта упадёт.
+# compose пересоздаёт его только при смене конфига (метка выше).
+say "Caddy: применение конфигурации"
+docker compose up -d --no-deps caddy
+for _ in $(seq 1 20); do
+  curl -s -o /dev/null --max-time 2 http://127.0.0.1/ && break
+  sleep 1
+done
+curl -s -o /dev/null --max-time 2 http://127.0.0.1/ ||
+  fail "Caddy не отвечает — см. cd $DIR && docker compose logs caddy"
+
 say "Сборка и запуск (первый раз 5–15 минут)"
 if [ -n "${NO_BUILD:-}" ]; then docker compose up -d --wait; else docker compose up -d --build --wait; fi
+
 
 say "Готово"
 cat <<EOF
 
   Сайт:   $PUBLIC_URL${EXTRA_DOMAINS:+
   Редирект: $EXTRA_DOMAINS → $PUBLIC_URL}
-  Логин:  $SITE_USER
-  Пароль: $SITE_PASSWORD
+EOF
+if [ "$PROTECT" != off ]; then
+  cat <<EOF
+  Пароль $PROTECT_TEXT — логин: $SITE_USER, пароль: $SITE_PASSWORD   (хранится в $CRED_FILE)
+EOF
+fi
+if [ "$PROTECT" = off ]; then
+  cat <<EOF
+  Пароля нет: тестовый вход, включая «Админ», доступен всем. В админке видны IP-адреса и
+  устройства всех, кто заходил на сайт. Пароль только на админку: PROTECT=admin, на весь сайт: PROTECT=1.
+EOF
+fi
+[ "$ALLOW_INDEXING" = 1 ] || echo "  Поисковики сайт не индексируют (noindex). Разрешить: ALLOW_INDEXING=1."
+cat <<EOF
 
   Внутри сайта: «Войти» → «Тестовый вход» → «Игрок» или «Админ».
-  Обновить до свежей версии — запустить эту же команду ещё раз.
+  Обновить до свежей версии — запустить команду установки ещё раз (параметры запоминаются).
   Логи: cd $DIR && docker compose logs -f api worker
-  Пароль хранится в $CRED_FILE.
 EOF

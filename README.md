@@ -50,6 +50,26 @@ docker compose up --build
 | `port is already allocated` про 5432 или 6379 (на Маке уже работает свой PostgreSQL или Redis) | `POSTGRES_PORT=5433 REDIS_PORT=6380 docker compose up -d --build --wait`                                                                         |
 | сборка обрывается: `killed`, `exit code 137`                                                   | Docker Desktop → Settings → Resources → Memory: 4 ГБ или больше                                                                                  |
 
+## Тестовый сервер (Ubuntu)
+
+На чистом сервере под root (домен заранее направьте A-записью на IP сервера):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kaboomenko/gunraid/refs/heads/claude/new-session-kvf1bn/scripts/server-setup.sh | DOMAIN=example.com bash
+```
+
+Скрипт ставит Docker, скачивает код в `/opt/gunraid`, генерирует секреты (только на сервере), выпускает HTTPS-сертификат и запускает сайт. Обновление до свежей версии — та же команда без параметров: домен и настройки запоминаются.
+
+| Параметр                                      | Что делает                                                          |
+| --------------------------------------------- | ------------------------------------------------------------------- |
+| `DOMAIN=example.com`                          | адрес сайта с HTTPS (без него — `http://IP`)                        |
+| `EXTRA_DOMAINS="www.example.com example.net"` | постоянный редирект этих доменов на основной                        |
+| `PROTECT=1` / `PROTECT=admin` / `PROTECT=0`   | пароль на весь сайт / только на админку / без пароля (по умолчанию) |
+| `ROTATE_PASSWORD=1`                           | новый пароль (при включённом пароле)                                |
+| `ALLOW_INDEXING=1`                            | разрешить поисковикам индексировать сайт (по умолчанию запрещено)   |
+
+Тестовый вход включён: без пароля войти как «Админ» может любой, кто откроет сайт, а в админке видны IP-адреса и устройства всех, кто заходил. `PROTECT=admin` закрывает паролем только админку, сайт остаётся открытым.
+
 ## Разработка с горячей перезагрузкой
 
 ```bash
