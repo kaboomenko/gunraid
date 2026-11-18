@@ -169,16 +169,16 @@ PK `(user_id, key)`, `available_at`. Ключи: `free_case:{caseId}`, `wheel`, 
 ## 8. Кейс-баттлы
 
 **battles**
-`id uuid`, `game_id`, `creator_id`, `format` (`1v1`, `1v1v1`, `1v1v1v1`, `2v2`), `max_players`, `mode` (`classic` / `crazy`), `status` (`waiting` / `in_progress` / `finished` / `cancelled`), `entry_price`, `rounds_count`, `current_round`, `total_value`, `server_seed_enc`, `server_seed_hash`, `client_seed?` (фиксируется при старте), `winner_team?`, `created_at`, `started_at?`, `finished_at?`, `cancel_reason?`.
+`id uuid`, `game_id`, `creator_id`, `format` (`1v1`, `1v1v1`, `1v1v1v1`, `2v2`), `mode` (`classic` / `crazy`), `status` (`waiting` / `in_progress` / `finished` / `cancelled`), `max_players`, `entry_price`, `rounds_count`, `round_duration_ms`, `server_seed_enc`, `server_seed_hash`, `client_seed?` (фиксируется при старте), `tiebreak_roll?`, `winner_team?`, `total_value`, `created_at`, `expires_at` (таймаут лобби), `started_at?` (заполнено последнее место), `starts_at?` (старт вращения первого раунда), `ends_at?` (выдача выигрыша), `finished_at?`, `cancel_reason?` (`creator` / `timeout`).
 
 **battle_cases** — кейс каждого раунда.
-PK `(battle_id, round_index)`, `case_id`, `revision_id`, `price`.
+PK `(battle_id, round_index)`, `case_id`, `revision_id` (неизменяемая ревизия состава), `price`.
 
 **battle_participants**
-PK `(battle_id, slot)`, `team?`, `user_id?` (пусто у бота), `bot_profile_id?`, `client_seed`, `paid_amount`, `ledger_entry_id?`, `total_value`, `is_winner`, `joined_at`; unique `(battle_id, user_id)`.
+PK `(battle_id, slot)`, `team?`, `user_id?` или `bot_id?` (ровно одно из двух), `client_seed`, `paid_amount`, `total_value`, `is_winner?`, `payout_value`, `joined_at`; уникальность `(battle_id, user_id)` для людей.
 
 **battle_drops**
-PK `(battle_id, round_index, slot)`, `item_id`, `item_value`, `roll`, `user_item_id?` (у того, кому предмет достался).
+PK `(battle_id, round_index, slot)`, `item_id`, `item_value`, `roll`, `ticket`, `recipient_slot` (кому достаётся), `user_item_id?` (выданный предмет).
 
 **bot_profiles** — `id`, `nickname`, `avatar_url`.
 

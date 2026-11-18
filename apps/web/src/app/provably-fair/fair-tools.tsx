@@ -1,16 +1,21 @@
 'use client';
 
 import {
+  battleClientSeed,
+  battleRoll,
+  battleTiebreak,
   contractMultiplier,
   hexToFloat,
   hmacSha256Hex,
   pickByTicket,
+  resolveBattle,
   rollToScaled,
   sha256Hex,
   ticketFromFloat,
   upgradeWins,
 } from '@gunraid/game-core';
 import type {
+  BattleProofDto,
   CaseOpeningProofDto,
   ContractProofDto,
   FairSeedDto,
@@ -148,13 +153,14 @@ function SeedsPanel() {
   );
 }
 
-type ProofKind = 'case_opening' | 'upgrade' | 'contract';
-type AnyProof = CaseOpeningProofDto | UpgradeProofDto | ContractProofDto;
-const KINDS: ProofKind[] = ['case_opening', 'upgrade', 'contract'];
+type ProofKind = 'case_opening' | 'upgrade' | 'contract' | 'battle';
+type SeedProof = CaseOpeningProofDto | UpgradeProofDto | ContractProofDto;
+const KINDS: ProofKind[] = ['case_opening', 'upgrade', 'contract', 'battle'];
 const PARAM_TO_KIND: Record<string, ProofKind> = {
   opening: 'case_opening',
   upgrade: 'upgrade',
   contract: 'contract',
+  battle: 'battle',
 };
 
 function Verifier() {
@@ -164,7 +170,8 @@ function Verifier() {
   const initial = Object.entries(PARAM_TO_KIND).find(([param]) => params.get(param));
   const [kind, setKind] = useState<ProofKind>(initial?.[1] ?? 'case_opening');
   const [resultId, setResultId] = useState(initial ? (params.get(initial[0]) ?? '') : '');
-  const [proof, setProof] = useState<AnyProof | null>(null);
+  const [proof, setProof] = useState<SeedProof | null>(null);
+  const [battleProof, setBattleProof] = useState<BattleProofDto | null>(null);
   const [serverSeed, setServerSeed] = useState('');
   const [clientSeed, setClientSeed] = useState('');
   const [nonce, setNonce] = useState('0');
@@ -172,7 +179,13 @@ function Verifier() {
 
   const load = async (k: ProofKind, id: string) => {
     try {
-      const p = await api.get<AnyProof>(`/fair/proof/${k}/${id}`);
+      const p = await api.get<SeedProof | BattleProofDto>(`/fair/proof/${k}/${id}`);
+      if (p.type === 'battle') {
+        setBattleProof(p);
+        setProof(null);
+        return;
+      }
+      setBattleProof(null);
       setProof(p);
       setServerSeed(p.serverSeed ?? '');
       setClientSeed(p.clientSeed);
@@ -245,6 +258,7 @@ function Verifier() {
             onClick={() => {
               setKind(k);
               setProof(null);
+              setBattleProof(null);
             }}
             className={`clip-cut h-8 px-3 text-xs font-bold uppercase [--cut:5px] ${kind === k ? 'bg-accent text-accent-ink' : 'bg-surface-3 text-muted'}`}
           >
@@ -270,112 +284,199 @@ function Verifier() {
           {t('load')}
         </Button>
       </form>
-      {proof && !proof.revealed && <p className="text-xs text-warning">{t('serverSeedHidden')}</p>}
-      <div className="grid gap-3 sm:grid-cols-[2fr_1fr_120px]">
-        <Field label={t('serverSeed')} htmlFor="v-server">
-          <Input
-            id="v-server"
-            value={serverSeed}
-            onChange={(e) => setServerSeed(e.target.value.trim())}
-            className="h-10 font-mono text-xs"
-          />
-        </Field>
-        <Field label={t('clientSeed')} htmlFor="v-client">
-          <Input
-            id="v-client"
-            value={clientSeed}
-            onChange={(e) => setClientSeed(e.target.value.trim())}
-            className="h-10 font-mono text-xs"
-          />
-        </Field>
-        <Field label="Nonce" htmlFor="v-nonce">
-          <Input
-            id="v-nonce"
-            value={nonce}
-            inputMode="numeric"
-            onChange={(e) => setNonce(e.target.value.replace(/\D/g, ''))}
-            className="h-10 font-mono text-xs"
-          />
-        </Field>
-      </div>
-      <Button onClick={() => setRun((x) => x + 1)} disabled={!serverSeed || !clientSeed}>
-        {t('verify')}
-      </Button>
-      {computed && (
-        <div className="space-y-2 text-sm">
-          {computed.hashOk !== null && (
-            <div
-              className={`flex items-center gap-2 ${computed.hashOk ? 'text-accent' : 'text-danger'}`}
-            >
-              {computed.hashOk ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
-              {computed.hashOk ? t('hashOk') : t('hashBad')}
-            </div>
+      {kind !== 'battle' && (
+        <>
+          {proof && !proof.revealed && (
+            <p className="text-xs text-warning">{t('serverSeedHidden')}</p>
           )}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="clip-cut bg-surface-2 p-3 [--cut:6px]">
-              <div className="text-xs text-dim">{t('float')}</div>
-              <Mono>{computed.float.toFixed(12)}</Mono>
-            </div>
-            {computed.kind === 'case_opening' && (
-              <div className="clip-cut bg-surface-2 p-3 [--cut:6px]">
-                <div className="text-xs text-dim">{t('ticket')}</div>
-                <Mono>{computed.ticket}</Mono>
-              </div>
-            )}
-            {computed.kind === 'upgrade' && proof?.type === 'upgrade' && (
-              <div className="clip-cut bg-surface-2 p-3 [--cut:6px]">
-                <div className="text-xs text-dim">
-                  {t('upgradeRoll')} / {t('upgradeChance')}
-                </div>
-                <Mono>
-                  {computed.roll} / {proof.chance}
-                </Mono>
-              </div>
-            )}
-            {computed.kind === 'contract' && (
-              <div className="clip-cut bg-surface-2 p-3 [--cut:6px]">
-                <div className="text-xs text-dim">{t('contractMultiplier')}</div>
-                <Mono>
-                  ×{computed.k.toFixed(6)} → {computed.target}
-                </Mono>
-              </div>
-            )}
+          <div className="grid gap-3 sm:grid-cols-[2fr_1fr_120px]">
+            <Field label={t('serverSeed')} htmlFor="v-server">
+              <Input
+                id="v-server"
+                value={serverSeed}
+                onChange={(e) => setServerSeed(e.target.value.trim())}
+                className="h-10 font-mono text-xs"
+              />
+            </Field>
+            <Field label={t('clientSeed')} htmlFor="v-client">
+              <Input
+                id="v-client"
+                value={clientSeed}
+                onChange={(e) => setClientSeed(e.target.value.trim())}
+                className="h-10 font-mono text-xs"
+              />
+            </Field>
+            <Field label="Nonce" htmlFor="v-nonce">
+              <Input
+                id="v-nonce"
+                value={nonce}
+                inputMode="numeric"
+                onChange={(e) => setNonce(e.target.value.replace(/\D/g, ''))}
+                className="h-10 font-mono text-xs"
+              />
+            </Field>
           </div>
-          {computed.kind === 'case_opening' && computed.entry && (
-            <div className="clip-cut bg-surface-2 p-3 [--cut:6px]">
-              <div className="text-xs text-dim">{t('item')}</div>
-              <div className="font-semibold">{computed.entry.name}</div>
+          <Button onClick={() => setRun((x) => x + 1)} disabled={!serverSeed || !clientSeed}>
+            {t('verify')}
+          </Button>
+          {computed && (
+            <div className="space-y-2 text-sm">
+              {computed.hashOk !== null && (
+                <div
+                  className={`flex items-center gap-2 ${computed.hashOk ? 'text-accent' : 'text-danger'}`}
+                >
+                  {computed.hashOk ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
+                  {computed.hashOk ? t('hashOk') : t('hashBad')}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="clip-cut bg-surface-2 p-3 [--cut:6px]">
+                  <div className="text-xs text-dim">{t('float')}</div>
+                  <Mono>{computed.float.toFixed(12)}</Mono>
+                </div>
+                {computed.kind === 'case_opening' && (
+                  <div className="clip-cut bg-surface-2 p-3 [--cut:6px]">
+                    <div className="text-xs text-dim">{t('ticket')}</div>
+                    <Mono>{computed.ticket}</Mono>
+                  </div>
+                )}
+                {computed.kind === 'upgrade' && proof?.type === 'upgrade' && (
+                  <div className="clip-cut bg-surface-2 p-3 [--cut:6px]">
+                    <div className="text-xs text-dim">
+                      {t('upgradeRoll')} / {t('upgradeChance')}
+                    </div>
+                    <Mono>
+                      {computed.roll} / {proof.chance}
+                    </Mono>
+                  </div>
+                )}
+                {computed.kind === 'contract' && (
+                  <div className="clip-cut bg-surface-2 p-3 [--cut:6px]">
+                    <div className="text-xs text-dim">{t('contractMultiplier')}</div>
+                    <Mono>
+                      ×{computed.k.toFixed(6)} → {computed.target}
+                    </Mono>
+                  </div>
+                )}
+              </div>
+              {computed.kind === 'case_opening' && computed.entry && (
+                <div className="clip-cut bg-surface-2 p-3 [--cut:6px]">
+                  <div className="text-xs text-dim">{t('item')}</div>
+                  <div className="font-semibold">{computed.entry.name}</div>
+                </div>
+              )}
+              {computed.kind === 'upgrade' && (
+                <div className="text-xs text-muted">
+                  {computed.win ? t('upgradeWin') : t('upgradeLose')}
+                </div>
+              )}
+              {computed.match !== null && (
+                <div
+                  className={`flex items-center gap-2 text-xs ${computed.match ? 'text-accent' : 'text-danger'}`}
+                >
+                  {computed.match ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                  {computed.match ? t('match') : t('mismatch')}
+                </div>
+              )}
             </div>
           )}
-          {computed.kind === 'upgrade' && (
-            <div className="text-xs text-muted">
-              {computed.win ? t('upgradeWin') : t('upgradeLose')}
-            </div>
+          {proof?.type === 'case_opening' && (
+            <details className="text-xs text-muted">
+              <summary className="cursor-pointer text-dim">{t('contents')}</summary>
+              <ul className="mt-2 space-y-1">
+                {proof.contents.map((c) => (
+                  <li key={c.itemId} className="flex justify-between gap-3">
+                    <span className="truncate">{c.name}</span>
+                    <span className="tabular text-dim">{(c.odds / 100000).toFixed(5)}%</span>
+                  </li>
+                ))}
+              </ul>
+            </details>
           )}
-          {computed.match !== null && (
-            <div
-              className={`flex items-center gap-2 text-xs ${computed.match ? 'text-accent' : 'text-danger'}`}
-            >
-              {computed.match ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
-              {computed.match ? t('match') : t('mismatch')}
-            </div>
-          )}
-        </div>
+        </>
       )}
-      {proof?.type === 'case_opening' && (
-        <details className="text-xs text-muted">
-          <summary className="cursor-pointer text-dim">{t('contents')}</summary>
-          <ul className="mt-2 space-y-1">
-            {proof.contents.map((c) => (
-              <li key={c.itemId} className="flex justify-between gap-3">
-                <span className="truncate">{c.name}</span>
-                <span className="tabular text-dim">{(c.odds / 100000).toFixed(5)}%</span>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
+      {kind === 'battle' && battleProof && <BattleProofView proof={battleProof} />}
     </Card>
+  );
+}
+
+/** Проверка баттла: client seed из сидов участников, каждый раунд и победитель — в браузере. */
+function BattleProofView({ proof }: { proof: BattleProofDto }) {
+  const t = useTranslations('fair');
+  const result = useMemo(() => {
+    if (!proof.revealed || !proof.serverSeed || !proof.clientSeed) return null;
+    const serverSeed = proof.serverSeed;
+    const clientSeed = proof.clientSeed;
+    const hashOk = sha256Hex(serverSeed) === proof.serverSeedHash;
+    const clientOk = battleClientSeed(proof.slotSeeds) === clientSeed;
+    const slots = proof.slotSeeds.length;
+    const totals = Array.from({ length: slots }, () => 0);
+    const rounds = proof.rounds.map((r) => ({
+      round: r.round,
+      caseName: r.caseName,
+      rows: r.drops.map((d) => {
+        const ticket = ticketFromFloat(battleRoll(serverSeed, clientSeed, r.round, d.slot));
+        const entry = pickByTicket(r.contents, ticket);
+        totals[d.slot] = (totals[d.slot] ?? 0) + d.value;
+        return {
+          slot: d.slot,
+          ticket,
+          name: entry.name,
+          ok: entry.itemId === d.itemId && ticket === d.ticket,
+        };
+      }),
+    }));
+    const tiebreak = battleTiebreak(serverSeed, clientSeed);
+    const res = resolveBattle(proof.format, proof.mode, totals, tiebreak);
+    const winnerOk = res.winnerSlots.join(',') === (proof.winnerSlots ?? []).join(',');
+    const allOk = rounds.every((r) => r.rows.every((x) => x.ok));
+    return { hashOk, clientOk, rounds, res, winnerOk, allOk };
+  }, [proof]);
+  if (!result) return <p className="text-xs text-warning">{t('battleNotFinished')}</p>;
+  const Check = ({ ok, children }: { ok: boolean; children: React.ReactNode }) => (
+    <div className={`flex items-center gap-2 text-sm ${ok ? 'text-accent' : 'text-danger'}`}>
+      {ok ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
+      {children}
+    </div>
+  );
+  return (
+    <div className="space-y-3" data-testid="battle-proof">
+      <Check ok={result.hashOk}>{result.hashOk ? t('hashOk') : t('hashBad')}</Check>
+      <Check ok={result.clientOk}>{t('battleClientSeed')}</Check>
+      <Check ok={result.allOk}>{result.allOk ? t('match') : t('mismatch')}</Check>
+      <Check ok={result.winnerOk}>
+        {t('battleWinner', { slots: result.res.winnerSlots.map((s) => s + 1).join(', ') })}
+      </Check>
+      <details className="text-xs text-muted">
+        <summary className="cursor-pointer text-dim">{t('battleSlotSeeds')}</summary>
+        <ol className="mt-2 space-y-1 font-mono">
+          {proof.slotSeeds.map((seed, i) => (
+            <li key={i} className="break-all">
+              {i + 1}. {seed}
+            </li>
+          ))}
+        </ol>
+      </details>
+      <div className="space-y-2">
+        {result.rounds.map((r) => (
+          <div key={r.round} className="clip-cut bg-surface-2 p-3 text-xs [--cut:6px]">
+            <div className="mb-1 font-semibold text-text">
+              {t('battleRound', { n: r.round + 1 })} · {r.caseName}
+            </div>
+            <ul className="space-y-0.5">
+              {r.rows.map((x) => (
+                <li key={x.slot} className="flex items-center justify-between gap-3">
+                  <span className="truncate">
+                    #{x.slot + 1} · {x.name}
+                  </span>
+                  <span className={`tabular ${x.ok ? 'text-dim' : 'text-danger'}`}>{x.ticket}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

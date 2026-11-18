@@ -1,5 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  battleParticipants,
+  battles,
   caseOpenings,
   contracts,
   deposits,
@@ -31,7 +33,7 @@ export class ProfileService {
 
   /** Хуки для режимов следующих этапов (кейсы, апгрейды, контракты, баттлы). */
   protected async modeCounters(userId: string, gameId: number) {
-    const [[cases], [ups], [cts]] = await Promise.all([
+    const [[cases], [ups], [cts], [bts]] = await Promise.all([
       this.db
         .select({ value: count() })
         .from(caseOpenings)
@@ -46,12 +48,24 @@ export class ProfileService {
         .select({ value: count() })
         .from(contracts)
         .where(and(eq(contracts.userId, userId), eq(contracts.gameId, gameId))),
+      this.db
+        .select({ value: count() })
+        .from(battleParticipants)
+        .innerJoin(battles, eq(battles.id, battleParticipants.battleId))
+        .where(
+          and(
+            eq(battleParticipants.userId, userId),
+            eq(battleParticipants.isWinner, true),
+            eq(battles.gameId, gameId),
+            eq(battles.status, 'finished'),
+          ),
+        ),
     ]);
     return {
       casesOpened: cases?.value ?? 0,
       upgradesWon: ups?.value ?? 0,
       contractsDone: cts?.value ?? 0,
-      battlesWon: 0,
+      battlesWon: bts?.value ?? 0,
     };
   }
 
@@ -63,6 +77,7 @@ export class ProfileService {
           eq(userItems.userId, userId),
           eq(userItems.gameId, gameId),
           ne(userItems.sourceType, 'seed'),
+          ne(userItems.status, 'lost_battle'),
         ),
       )
       .orderBy(desc(userItems.acquiredValue))

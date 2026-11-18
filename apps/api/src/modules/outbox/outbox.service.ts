@@ -3,7 +3,13 @@ import { outboxEvents, type Db, type DbOrTx } from '@gunraid/db';
 import { DB } from '../../core/tokens.js';
 
 export type OutboxEventType =
-  'case.opened' | 'drop.created' | 'deposit.succeeded' | 'battle.finished';
+  | 'case.opened'
+  | 'drop.created'
+  | 'deposit.succeeded'
+  | 'battle.round'
+  | 'battle.finalize'
+  | 'battle.expire'
+  | 'battle.finished';
 
 /** Запись доменного события в той же транзакции, что и операция (transactional outbox). */
 @Injectable()

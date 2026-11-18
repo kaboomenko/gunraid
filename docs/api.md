@@ -93,12 +93,15 @@
 
 | Метод | Путь | Доступ | Что делает |
 |---|---|---|---|
-| GET | `/games/{game}/battles` | P | активные / завершённые: `status`, `players`, `mode`, `priceMin`, `priceMax` |
-| POST | `/games/{game}/battles` | U, IK | `{cases: [{caseId, count}], format, mode, payWith?}` — создать и занять место |
-| GET | `/battles/{id}` | P | состояние или повтор завершённого |
-| POST | `/battles/{id}/join` | U, IK | `{slot?, payWith?}` |
-| POST | `/battles/{id}/bots` | U | создатель заполняет свободные места ботами |
-| POST | `/battles/{id}/cancel` | U | создатель до старта; возвраты участникам |
+| GET | `/games/{game}/battles/config` | P | лимит кейсов, длительность раунда, обратный отсчёт, боты, таймаут лобби |
+| GET | `/games/{game}/battles/cases` | P | кейсы, доступные для баттлов (платные, без тиража, уровня и кулдауна) |
+| GET | `/games/{game}/battles` | P | `status=active\|finished`, `format`, `mode`, `minPrice`, `maxPrice`, `mine=1`, `page`, `pageSize` |
+| POST | `/games/{game}/battles` | U, IK | `{cases: [{caseId, count}], format, mode}` — создать, оплатить и занять место 1 |
+| GET | `/battles/{id}` | P | состояние; раунды видны с момента их вращения, итог и server seed — после завершения |
+| POST | `/battles/{id}/join` | U, IK | `{slot?}` — занять место (в 2×2 место определяет команду) |
+| POST | `/battles/{id}/bots` | U | создатель заполняет свободные места ботами; `{clientSeed?}` — сид из браузера для ботов |
+| POST | `/battles/{id}/cancel` | U | создатель до старта; возврат всем участникам |
+| GET | `/fair/proof/battle/{id}` | P | сиды участников, client seed баттла, составы кейсов и билеты по раундам, бросок ничьей |
 
 ## Бонусы
 
@@ -158,9 +161,9 @@
 | `stats:update` | все | онлайн, открыто кейсов |
 | `case:supply` | `case:{id}` | остаток тиража |
 | `battles:upsert`, `battles:remove` | `battles:{game}` | изменения списка лобби |
-| `battle:state` | `battle:{id}` | участники, статус, текущий раунд |
-| `battle:round` | `battle:{id}` | дропы раунда, `spinStartAt`, длительность |
-| `battle:finished` | `battle:{id}` | победители, итог, раскрытый seed |
+| `battle:state` | `battle:{id}` | полное состояние (`BattleDto`): участники, статус, `startsAt` |
+| `battle:round` | `battle:{id}` | дропы раунда и `spinStartAt` (приходит за 1 с до старта вращения) |
+| `battle:finished` | `battle:{id}` | итоговое состояние: победители, выигрыши, раскрытый server seed |
 | `balance:update` | `user:{id}` | новый баланс |
 | `inventory:update` | `user:{id}` | изменения инвентаря |
 | `notification:new` | `user:{id}` | уведомление |

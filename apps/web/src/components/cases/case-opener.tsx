@@ -16,7 +16,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { ItemTile } from '@/components/items/item-tile';
 import { Button } from '@/components/ui/button';
 import { Countdown } from '@/components/ui/countdown';
-import { GemAmount } from '@/components/ui/gem';
+import { GemAmount, GemPill } from '@/components/ui/gem';
 import { Modal } from '@/components/ui/modal';
 import { Progress } from '@/components/ui/progress';
 import { toast } from '@/components/ui/toast';
@@ -187,7 +187,7 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
           t('case.openFree')
         ) : (
           <>
-            {t('case.openFor')} <GemAmount value={total} size="md" />
+            {t('case.openFor')} <GemPill value={total} size="md" />
           </>
         )}
       </Button>

@@ -48,7 +48,9 @@ export const SETTINGS_SCHEMAS = {
       .int()
       .min(1)
       .max(24 * 60),
-    roundDurationMs: z.number().int().min(1000).max(30_000),
+    roundDurationMs: z.number().int().min(3000).max(30_000),
+    /** Обратный отсчёт перед первым раундом. */
+    countdownMs: z.number().int().min(0).max(15_000).default(3000),
     allowBots: z.boolean(),
   }),
   feed: z.object({
@@ -114,7 +116,13 @@ export const DEFAULT_SETTINGS: AllSettings = {
   sell: { rate: 1 },
   upgrade: { commission: 0.1, maxChance: 0.75, minChance: 0.01, multipliers: [1.5, 2, 5, 10] },
   contract: { commission: 0.1, coefMin: 0.25, coefMax: 4, minItems: 3, maxItems: 10 },
-  battle: { maxCases: 25, lobbyTimeoutMinutes: 30, roundDurationMs: 6000, allowBots: true },
+  battle: {
+    maxCases: 25,
+    lobbyTimeoutMinutes: 30,
+    roundDurationMs: 6000,
+    countdownMs: 3000,
+    allowBots: true,
+  },
   feed: { minValueGems: 0, delayMs: 6000 },
   firstDeposit: { percent: 0.1, maxBonusGems: 1000 },
   wheel: { cooldownHours: 24, minAccountAgeHours: 24, requireDepositWithinDays: 30 },

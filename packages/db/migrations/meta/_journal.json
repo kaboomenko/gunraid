@@ -36,6 +36,13 @@
       "when": 1794965256814,
       "tag": "0004_upgrades_contracts",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794966555304,
+      "tag": "0005_battles",
+      "breakpoints": true
     }
   ]
 }

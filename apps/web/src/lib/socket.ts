@@ -6,6 +6,7 @@ import { io, type Socket } from 'socket.io-client';
 
 let socket: Socket | null = null;
 let clockOffset = 0;
+let clockSynced = false;
 
 /** Один Socket.IO-клиент на вкладку. В docker — тот же origin, в pnpm dev — NEXT_PUBLIC_SOCKET_URL. */
 export function getSocket(): Socket {
@@ -18,6 +19,7 @@ export function getSocket(): Socket {
     });
     socket.on(WS_EVENTS.timeSync, (p: { serverTime: number }) => {
       clockOffset = p.serverTime - Date.now();
+      clockSynced = true;
     });
   }
   return socket;
@@ -33,6 +35,13 @@ export function reconnectSocket(): void {
 /** Серверное время (для синхронных рулеток). */
 export function serverNow(): number {
   return Date.now() + clockOffset;
+}
+
+/** Запасная синхронизация часов по ответу API, пока не пришёл time:sync от сокета. */
+export function noteServerTime(iso: string): void {
+  if (clockSynced) return;
+  const t = Date.parse(iso);
+  if (Number.isFinite(t)) clockOffset = t - Date.now();
 }
 
 export function useSocketEvent<T>(event: string, handler: (payload: T) => void): void {

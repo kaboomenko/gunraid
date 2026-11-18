@@ -1,6 +1,7 @@
 import { Module, type DynamicModule } from '@nestjs/common';
 import type { Env } from './config/env.js';
 import { CoreModule } from './core/core.module.js';
+import { BattlesWorkerModule } from './modules/battles/battles-worker.module.js';
 import { FeedWorkerModule } from './modules/feed/feed-worker.module.js';
 import { LedgerModule } from './modules/ledger/ledger.module.js';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module.js';
@@ -15,6 +16,7 @@ export class WorkerModule {
         LedgerModule,
         MaintenanceModule,
         FeedWorkerModule,
+        BattlesWorkerModule,
       ],
     };
   }

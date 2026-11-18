@@ -67,3 +67,12 @@ export function GemAmount({ value, size = 'md', compact, signed, className }: Ge
     </span>
   );
 }
+
+/** Сумма на акцентной (лаймовой) кнопке: тёмная плашка, чтобы кристалл не сливался с фоном. */
+export function GemPill({ value, size = 'sm' }: { value: number; size?: 'xs' | 'sm' | 'md' }) {
+  return (
+    <span className="clip-cut inline-flex items-center bg-accent-ink px-1.5 py-0.5 text-accent [--cut:4px]">
+      <GemAmount value={value} size={size} />
+    </span>
+  );
+}

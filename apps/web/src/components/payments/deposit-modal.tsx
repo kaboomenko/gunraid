@@ -166,7 +166,7 @@ export function DepositModal() {
       ) : (
         <div className="space-y-5">
           {methodDto?.isTest && (
-            <div className="cut flex gap-3 p-3 text-xs text-warning [--cut-bg:rgb(255_178_30/0.08)] [--cut-border:rgb(255_178_30/0.35)]">
+            <div className="cut flex gap-3 p-3 text-xs text-warning [--cut-bg:#262016] [--cut-border:rgb(255_178_30/0.35)]">
               <FlaskConical size={16} className="mt-0.5 shrink-0" />
               <div>
                 <div className="font-bold uppercase tracking-wide">{t('deposit.test')}</div>

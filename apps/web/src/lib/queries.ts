@@ -107,6 +107,12 @@ export function useBalanceSync() {
     qc.setQueryData<MeDto | null>(ME_KEY, (me) => (me ? { ...me, balance: p.balance } : me));
     void qc.invalidateQueries({ queryKey: qk.transactions });
   });
+  // Предметы выданы в фоне (например, выигрыш баттла) — обновить инвентарь и историю.
+  useSocketEvent(WS_EVENTS.inventoryUpdate, () => {
+    void qc.invalidateQueries({ queryKey: ['inventory'] });
+    void qc.invalidateQueries({ queryKey: ['drops'] });
+    void qc.invalidateQueries({ queryKey: ['stats'] });
+  });
 }
 
 /** После операций с балансом и инвентарём. */
