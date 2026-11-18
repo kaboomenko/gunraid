@@ -5,11 +5,19 @@ test.describe('Игрок: вход, пополнение, кейсы', () => {
   test('вход через окно входа и выход', async ({ page, api }) => {
     await page.goto('/cs2');
     await page.getByTestId('login-button').click();
+    // После входа сайт перезапрашивает профиль; по нему видно, нужно ли окно 18+
+    // (на чистой базе демо-игрок его ещё не подтверждал).
+    const meLoaded = page.waitForResponse(
+      (r) => r.url().endsWith('/api/v1/me') && r.request().method() === 'GET' && r.ok(),
+    );
     await page.getByTestId('dev-login-player').click();
-    const gate = page.getByTestId('adult-confirm');
-    if (await gate.isVisible().catch(() => false)) {
+    const me = (await (await meLoaded).json()) as MeDto;
+    if (!me.adultConfirmed) {
+      const gate = page.getByTestId('adult-confirm');
+      await expect(gate).toBeVisible();
       await page.locator('#adult-confirm').click();
       await gate.click();
+      await expect(gate).toBeHidden();
     }
     await expect(page.getByTestId('user-menu')).toBeVisible();
     expect((await api.me()).nickname).toBeTruthy();
