@@ -8,6 +8,7 @@ x-app-env: &app-env
   PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
   DATABASE_URL: postgres://${POSTGRES_USER:-gunraid}:${POSTGRES_PASSWORD:-gunraid}@postgres:5432/${POSTGRES_DB:-gunraid}
   REDIS_URL: redis://redis:6379
+  APP_VERSION: ${APP_VERSION:-dev}
   DB_POOL_SIZE: ${DB_POOL_SIZE:-}
   DB_POOL_ACQUIRE_TIMEOUT_MS: ${DB_POOL_ACQUIRE_TIMEOUT_MS:-10000}
   DB_IDLE_IN_TX_TIMEOUT_MS: ${DB_IDLE_IN_TX_TIMEOUT_MS:-60000}
@@ -129,6 +130,18 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    # robots.txt отдаёт сам Next (без API): проверка, что фронт запущен и отвечает.
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/robots.txt').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
 
   caddy:
     image: caddy:2-alpine

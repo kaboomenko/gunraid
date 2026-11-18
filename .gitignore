@@ -19,3 +19,4 @@ apps/api/storage/
 infra/caddy/Caddyfile.server
 docker-compose.override.yml
 .server-config
+.deploy/

@@ -16,3 +16,4 @@ apps/api/storage
 .server-credentials
 docker-compose.override.yml
 infra/caddy/Caddyfile.server
+.deploy

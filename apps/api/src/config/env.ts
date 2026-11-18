@@ -42,6 +42,8 @@ export const envSchema = z.object({
   ACCESS_TOKEN_TTL_SEC: z.coerce.number().int().min(60).max(86_400).default(900),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  /** Версия (коммит), которую выкладка записывает в окружение; видна в /api/v1/health. */
+  APP_VERSION: z.string().trim().max(64).default('dev'),
   STORAGE_DIR: z.string().default('./storage'),
 });
 

@@ -32,7 +32,7 @@ export class SiteController {
   async health() {
     await this.db.execute(sql`select 1`);
     await this.redis.ping();
-    return { ok: true };
+    return { ok: true, version: this.env.APP_VERSION };
   }
 
   @Get('config')
