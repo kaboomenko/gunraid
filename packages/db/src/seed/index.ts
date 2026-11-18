@@ -1,5 +1,6 @@
 import { pathToFileURL } from 'node:url';
 import { createDb, type Db } from '../client.js';
+import { seedCases } from './cases.js';
 import { seedCatalog, seedFxRates } from './catalog.js';
 import { seedDevUsers } from './dev-users.js';
 import { seedGames } from './games.js';
@@ -18,6 +19,7 @@ export async function seedAll(db: Db, options: SeedOptions = {}): Promise<void> 
   await seedSettings(db, options);
   await seedFxRates(db);
   if (options.demo) await seedCatalog(db);
+  if (options.demo) await seedCases(db);
   if (options.demo && options.devUsers) await seedDevUsers(db);
 }
 

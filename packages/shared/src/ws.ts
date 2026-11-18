@@ -27,6 +27,12 @@ export const WS_ROOMS = {
 /** Комнаты, на которые клиент может подписаться сам (личная user:* — только автоматически). */
 export const PUBLIC_ROOM_RE = /^(feed|battles):[a-z0-9-]{2,32}$|^(battle|case):[0-9a-f-]{36}$/;
 
+export interface CaseSupplyPayload {
+  caseId: string;
+  supplyUsed: number;
+  supplyTotal: number;
+}
+
 export interface StatsUpdatePayload {
   online: number;
   casesOpened?: number;

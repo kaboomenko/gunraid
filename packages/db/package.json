@@ -25,6 +25,7 @@
     "lint": "eslint src"
   },
   "dependencies": {
+    "@gunraid/game-core": "workspace:*",
     "@gunraid/shared": "workspace:*",
     "drizzle-orm": "0.45.4",
     "pg": "8.23.1",

@@ -11,3 +11,5 @@ export * from './catalog.js';
 export * from './inventory.js';
 export * from './money.js';
 export * from './profile.js';
+export * from './cases.js';
+export * from './fair.js';

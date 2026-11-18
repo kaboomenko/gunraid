@@ -50,6 +50,9 @@ importers:
       '@gunraid/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@gunraid/game-core':
+        specifier: workspace:*
+        version: link:../../packages/game-core
       '@gunraid/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -144,6 +147,9 @@ importers:
       '@fontsource-variable/tektur':
         specifier: ^5.3.0
         version: 5.3.0
+      '@gunraid/game-core':
+        specifier: workspace:*
+        version: link:../../packages/game-core
       '@gunraid/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -213,6 +219,9 @@ importers:
 
   packages/db:
     dependencies:
+      '@gunraid/game-core':
+        specifier: workspace:*
+        version: link:../game-core
       '@gunraid/shared':
         specifier: workspace:*
         version: link:../shared
@@ -235,6 +244,22 @@ importers:
       drizzle-kit:
         specifier: 0.31.11
         version: 0.31.11
+
+  packages/game-core:
+    dependencies:
+      '@noble/hashes':
+        specifier: 2.4.0
+        version: 2.4.0
+    devDependencies:
+      '@gunraid/config':
+        specifier: workspace:*
+        version: link:../config
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
+      vitest:
+        specifier: 5.1.0
+        version: 5.1.0(@types/node@24.19.2)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
 
   packages/shared:
     dependencies:
@@ -1381,6 +1406,10 @@ packages:
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
+
+  '@noble/hashes@2.4.0':
+    resolution: {integrity: sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA==}
+    engines: {node: '>= 20.19.0'}
 
   '@node-rs/xxhash-android-arm-eabi@1.7.8':
     resolution: {integrity: sha512-dOwbmnDzULc5uRgbIvcrxDa7vGdk51GQVREcY98DdxTBd0lomRg/gqAR9ny/S533cD5QTRSvrK+q8KEJMqoG4w==}
@@ -5668,6 +5697,8 @@ snapshots:
 
   '@next/swc-win32-x64-msvc@16.4.6':
     optional: true
+
+  '@noble/hashes@2.4.0': {}
 
   '@node-rs/xxhash-android-arm-eabi@1.7.8':
     optional: true

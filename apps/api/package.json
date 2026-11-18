@@ -17,6 +17,7 @@
     "@fastify/cookie": "^11.1.5",
     "@fastify/helmet": "^13.2.0",
     "@gunraid/db": "workspace:*",
+    "@gunraid/game-core": "workspace:*",
     "@gunraid/shared": "workspace:*",
     "@nestjs/common": "12.5.1",
     "@nestjs/core": "12.5.1",

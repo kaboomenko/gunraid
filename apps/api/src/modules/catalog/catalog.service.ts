@@ -1,5 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  caseItems,
+  cases,
   collections,
   itemModels,
   itemTypes,
@@ -10,6 +12,7 @@ import {
 } from '@gunraid/db';
 import type { ItemDetailDto, ItemDto, ItemFacetsDto, ItemsPageDto, ItemsQuery, RarityDto } from '@gunraid/shared';
 import { and, asc, count, desc, eq, gte, ilike, inArray, lte, max, min, type SQL } from 'drizzle-orm';
+import { oddsToPercent } from '@gunraid/game-core';
 import { DB } from '../../core/tokens.js';
 import { notFound } from '../../common/app-error.js';
 import { itemColumns, localize, toItemDto, toRarityDto, type ItemRow } from './item-mapper.js';
@@ -129,9 +132,21 @@ export class CatalogService {
     return { ...item, collection: col?.name ?? null, cases: await this.casesContaining(itemId) };
   }
 
-  /** В каких кейсах встречается предмет и с каким шансом (наполняется с этапа 3). */
-  protected async casesContaining(_itemId: string): Promise<ItemDetailDto['cases']> {
-    return [];
+  /** В каких кейсах встречается предмет и с каким шансом. */
+  protected async casesContaining(itemId: string): Promise<ItemDetailDto['cases']> {
+    const rows = await this.db
+      .select({ slug: cases.slug, name: cases.name, imageUrl: cases.imageUrl, price: cases.price, odds: caseItems.odds })
+      .from(caseItems)
+      .innerJoin(cases, eq(cases.id, caseItems.caseId))
+      .where(and(eq(caseItems.itemId, itemId), eq(cases.isActive, true)))
+      .orderBy(desc(caseItems.odds));
+    return rows.map((r) => ({
+      slug: r.slug,
+      name: localize(r.name),
+      imageUrl: r.imageUrl,
+      price: r.price,
+      chance: oddsToPercent(r.odds),
+    }));
   }
 
   async getItemsByIds(ids: string[], tx: DbOrTx = this.db): Promise<Map<string, ItemDto>> {

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { deposits, ledgerEntries, userItems, users, type Db } from '@gunraid/db';
+import { caseOpenings, deposits, ledgerEntries, userItems, users, type Db } from '@gunraid/db';
 import type {
   PageDto,
   ProfileStatsDto,
@@ -7,7 +7,7 @@ import type {
   TransactionDto,
   UserItemDto,
 } from '@gunraid/shared';
-import { and, desc, eq, lt, ne, sql } from 'drizzle-orm';
+import { and, count, desc, eq, lt, ne, sql } from 'drizzle-orm';
 import { DB } from '../../core/tokens.js';
 import { notFound } from '../../common/app-error.js';
 import { InventoryService, toUserItemDto } from '../inventory/inventory.service.js';
@@ -21,8 +21,12 @@ export class ProfileService {
   ) {}
 
   /** Хуки для режимов следующих этапов (кейсы, апгрейды, контракты, баттлы). */
-  protected async modeCounters(_userId: string, _gameId: number) {
-    return { casesOpened: 0, upgradesWon: 0, contractsDone: 0, battlesWon: 0 };
+  protected async modeCounters(userId: string, gameId: number) {
+    const [cases] = await this.db
+      .select({ value: count() })
+      .from(caseOpenings)
+      .where(and(eq(caseOpenings.userId, userId), eq(caseOpenings.gameId, gameId)));
+    return { casesOpened: cases?.value ?? 0, upgradesWon: 0, contractsDone: 0, battlesWon: 0 };
   }
 
   async bestDrop(userId: string, gameId: number): Promise<UserItemDto | null> {

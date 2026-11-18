@@ -1,5 +1,5 @@
 import { Controller, Get, Inject } from '@nestjs/common';
-import { users, type Db } from '@gunraid/db';
+import { caseOpenings, users, type Db } from '@gunraid/db';
 import type { PublicConfigDto, SiteStatsDto } from '@gunraid/shared';
 import { count, sql } from 'drizzle-orm';
 import type { Redis } from 'ioredis';
@@ -9,6 +9,7 @@ import {
   isTelegramEnabled,
   type Env,
 } from '../../config/env.js';
+import { rkey } from '../../core/redis.js';
 import { DB, ENV, REDIS } from '../../core/tokens.js';
 import { GamesService } from '../games/games.service.js';
 import { OnlineService } from '../realtime/online.service.js';
@@ -64,8 +65,18 @@ export class SiteController {
     return {
       online: await this.online.total(),
       users: await this.usersTotal(),
-      casesOpened: 0,
+      casesOpened: await this.casesOpened(),
     };
+  }
+
+  private async casesOpened(): Promise<number> {
+    const key = rkey(this.env, 'stats', 'cases_opened');
+    const cached = await this.redis.get(key);
+    if (cached !== null) return Number(cached) || 0;
+    const [row] = await this.db.select({ value: count() }).from(caseOpenings);
+    const value = row?.value ?? 0;
+    await this.redis.set(key, String(value), 'NX');
+    return value;
   }
 
   private async usersTotal(): Promise<number> {

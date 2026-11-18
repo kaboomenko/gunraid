@@ -4,6 +4,7 @@ import type { Env } from './config/env.js';
 import { CoreModule } from './core/core.module.js';
 import { AllExceptionsFilter } from './common/exception.filter.js';
 import { AdminModule } from './modules/admin/admin.module.js';
+import { CasesModule } from './modules/cases/cases.module.js';
 import { CatalogModule } from './modules/catalog/catalog.module.js';
 import { InventoryModule } from './modules/inventory/inventory.module.js';
 import { LedgerModule } from './modules/ledger/ledger.module.js';
@@ -35,6 +36,7 @@ export class AppModule {
         InventoryModule,
         PaymentsModule,
         ProfileModule,
+        CasesModule,
       ],
       providers: [
         { provide: APP_FILTER, useClass: AllExceptionsFilter },

@@ -106,6 +106,21 @@ const SHAPES: Record<string, Part[]> = {
   ],
 };
 
+/** Кейс — открытый ящик со «стрелочными» гранями (квадратный viewBox 0 0 256 256). */
+const CASE_PARTS: Part[] = [
+  ['M40 112 L216 112 L232 132 L232 220 L216 236 L40 236 L24 220 L24 132 Z', 'c2'],
+  ['M40 112 L216 112 L232 132 L24 132 Z', 'shine'],
+  ['M52 140 L204 140 L204 220 L52 220 Z', 'c1'],
+  ['M52 140 L204 140 L204 152 L52 152 Z', 'shine'],
+  ['M24 132 L232 132 L232 144 L24 144 Z', 'dark'],
+  ['M112 164 L144 164 L150 176 L144 188 L112 188 L106 176 Z', 'c2'],
+  ['M120 170 L136 170 L140 176 L136 182 L120 182 L116 176 Z', 'c1'],
+  ['M30 108 L64 38 L224 26 L234 46 L76 60 L48 112 Z', 'c1'],
+  ['M64 38 L224 26 L230 38 L70 50 Z', 'shine'],
+  ['M48 112 L76 60 L234 46 L214 98 L200 98 L214 60 L84 72 L62 112 Z', 'c2'],
+  ['M96 200 L160 200 L160 210 L96 210 Z', 'dark'],
+];
+
 function color(value: string | null, fallback: string): string {
   return value && /^[0-9A-Fa-f]{6}$/.test(value) ? `#${value}` : fallback;
 }
@@ -113,7 +128,8 @@ function color(value: string | null, fallback: string): string {
 export async function GET(request: Request, { params }: { params: Promise<{ shape: string }> }) {
   const { shape: raw } = await params;
   const shape = raw.replace(/\.svg$/, '');
-  const parts = SHAPES[shape];
+  const isCase = shape === 'case';
+  const parts = isCase ? CASE_PARTS : SHAPES[shape];
   if (!parts) return new Response('Not found', { status: 404 });
   const url = new URL(request.url);
   const c1 = color(url.searchParams.get('c1'), '#C6FF00');
@@ -122,7 +138,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ shap
   const body = parts.map(([d, f]) => `<path d="${d}" fill="${fills[f]}"/>`).join('');
   const ring =
     shape === 'charm' ? `<circle cx="128" cy="22" r="9" fill="none" stroke="${METAL}" stroke-width="4"/>` : '';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 128" width="256" height="128">${ring}${body}</svg>`;
+  const size = isCase ? 'viewBox="0 0 256 256" width="256" height="256"' : 'viewBox="0 0 256 128" width="256" height="128"';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" ${size}>${ring}${body}</svg>`;
   return new Response(svg, {
     headers: {
       'content-type': 'image/svg+xml; charset=utf-8',
