@@ -141,42 +141,22 @@ export function InventoryPanel({ game }: { game: string }) {
             onClick={() => toggle(ui.id)}
             footer={
               <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span
-                  role="button"
-                  tabIndex={0}
+                <button
+                  type="button"
                   className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-dim transition hover:text-accent"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConfirm({ mode: 'ids', ids: [ui.id], total: ui.item.price });
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.stopPropagation();
-                      setConfirm({ mode: 'ids', ids: [ui.id], total: ui.item.price });
-                    }
-                  }}
+                  onClick={() => setConfirm({ mode: 'ids', ids: [ui.id], total: ui.item.price })}
                 >
                   <Coins size={12} /> {t('inventory.sell')}
-                </span>
+                </button>
                 {ui.item.isWithdrawable && (
-                  <span
-                    role="button"
-                    tabIndex={0}
+                  <button
+                    type="button"
                     className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-dim transition hover:text-accent"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setWithdrawItem(ui);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.stopPropagation();
-                        setWithdrawItem(ui);
-                      }
-                    }}
+                    onClick={() => setWithdrawItem(ui)}
                     data-testid="withdraw-open"
                   >
                     <ArrowUpFromLine size={12} /> {t('withdraw.action')}
-                  </span>
+                  </button>
                 )}
               </span>
             }

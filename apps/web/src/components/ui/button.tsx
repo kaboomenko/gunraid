@@ -10,7 +10,7 @@ const VARIANTS = {
   ghost: 'bg-transparent text-muted hover:text-text hover:bg-surface-2',
   outline:
     'cut [--cut-bg:var(--color-surface-2)] [--cut-border:rgb(198_255_0/0.65)] text-accent hover:[--cut-bg:#232b10]',
-  danger: 'bg-danger text-white hover:brightness-110',
+  danger: 'bg-danger text-bg hover:brightness-110',
 } as const;
 
 const SIZES = {

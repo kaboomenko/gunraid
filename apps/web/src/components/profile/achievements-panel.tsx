@@ -90,7 +90,12 @@ export function AchievementsPanel() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <Progress value={a.progress} max={a.target} className="h-1.5 flex-1" />
+                  <Progress
+                    value={a.progress}
+                    max={a.target}
+                    label={a.name}
+                    className="h-1.5 flex-1"
+                  />
                   <span className="text-[10px] text-dim tabular">
                     {t('progress', { progress: a.progress, target: a.target })}
                   </span>

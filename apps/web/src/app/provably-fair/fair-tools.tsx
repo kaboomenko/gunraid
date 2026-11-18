@@ -128,7 +128,11 @@ function SeedsPanel() {
       <Card className="space-y-3 p-5">
         <h2 className="font-display text-lg font-bold uppercase">{t('revealedTitle')}</h2>
         {revealed.data?.items.length ? (
-          <ul className="max-h-80 space-y-3 overflow-y-auto pr-1">
+          <ul
+            className="max-h-80 space-y-3 overflow-y-auto pr-1 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            tabIndex={0}
+            aria-label={t('revealedTitle')}
+          >
             {revealed.data.items.map((r) => (
               <li key={r.id} className="clip-cut space-y-1 bg-surface-2 p-3 text-xs [--cut:6px]">
                 <div className="flex justify-between text-dim">

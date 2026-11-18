@@ -16,6 +16,8 @@ export function Providers({ config, children }: { config: PublicConfigDto; child
   );
   useEffect(() => {
     void usePrefs.persist.rehydrate();
+    // Маркер для e2e: интерфейс гидратирован и реагирует на ввод.
+    document.documentElement.dataset.hydrated = 'true';
   }, []);
   return (
     <ConfigProvider value={config}>

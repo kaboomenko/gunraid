@@ -44,7 +44,7 @@ export function GameSwitcher() {
   return (
     <Dropdown>
       <DropdownTrigger
-        className="clip-cut flex h-10 items-center gap-2 bg-surface-2 pl-1.5 pr-2.5 transition hover:bg-surface-3 [--cut:7px]"
+        className="clip-cut flex h-10 shrink-0 items-center gap-1 bg-surface-2 pl-1.5 pr-1.5 transition hover:bg-surface-3 [--cut:7px] sm:gap-2 sm:pr-2.5"
         aria-label={t('selectGame')}
       >
         <GameIcon shortName={current.shortName} />

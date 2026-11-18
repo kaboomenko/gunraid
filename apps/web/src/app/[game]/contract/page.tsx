@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { ContractView } from '@/components/modes/contract-view';
 import { SectionTitle } from '@/components/ui/card';
 import { getPublicConfig } from '@/lib/server-api';
+import { pageMeta } from '@/lib/seo';
 
 export async function generateMetadata({
   params,
@@ -12,7 +13,11 @@ export async function generateMetadata({
   const { game } = await params;
   const [t, config] = await Promise.all([getTranslations('contract'), getPublicConfig()]);
   const name = config.games.find((g) => g.code === game)?.name ?? game;
-  return { title: t('metaTitle', { game: name }), alternates: { canonical: `/${game}/contract` } };
+  return pageMeta({
+    title: t('metaTitle', { game: name }),
+    description: t('metaDescription', { game: name }),
+    path: `/${game}/contract`,
+  });
 }
 
 export default async function ContractPage({ params }: { params: Promise<{ game: string }> }) {

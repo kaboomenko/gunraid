@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import { BonusesView } from '@/components/bonuses/bonuses-view';
 import { SectionTitle } from '@/components/ui/card';
 import { getPublicConfig, serverGet } from '@/lib/server-api';
+import { pageMeta } from '@/lib/seo';
 
 export async function generateMetadata({
   params,
@@ -13,11 +14,11 @@ export async function generateMetadata({
   const { game } = await params;
   const [t, config] = await Promise.all([getTranslations('bonuses'), getPublicConfig()]);
   const name = config.games.find((g) => g.code === game)?.name ?? game;
-  return {
+  return pageMeta({
     title: t('metaTitle', { game: name }),
     description: t('metaDescription'),
-    alternates: { canonical: `/${game}/bonuses` },
-  };
+    path: `/${game}/bonuses`,
+  });
 }
 
 export default async function BonusesPage({ params }: { params: Promise<{ game: string }> }) {

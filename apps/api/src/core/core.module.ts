@@ -40,14 +40,23 @@ class CoreLifecycle implements OnApplicationShutdown {
 @Global()
 @Module({})
 export class CoreModule {
-  static forRoot(env: Env, options: { dbPoolSize?: number } = {}): DynamicModule {
+  static forRoot(
+    env: Env,
+    options: { dbPoolSize?: number; role?: 'api' | 'worker' } = {},
+  ): DynamicModule {
     return {
       module: CoreModule,
       providers: [
         { provide: ENV, useValue: env },
         {
           provide: DB_HANDLE,
-          useFactory: (): DbHandle => createDb(env.DATABASE_URL, { max: options.dbPoolSize ?? 20 }),
+          useFactory: (): DbHandle =>
+            createDb(env.DATABASE_URL, {
+              max: env.DB_POOL_SIZE ?? options.dbPoolSize ?? 20,
+              acquireTimeoutMs: env.DB_POOL_ACQUIRE_TIMEOUT_MS,
+              idleInTransactionTimeoutMs: env.DB_IDLE_IN_TX_TIMEOUT_MS,
+              applicationName: `gunraid-${options.role ?? 'api'}`,
+            }),
         },
         { provide: DB, useFactory: (h: DbHandle) => h.db, inject: [DB_HANDLE] },
         { provide: DB_POOL, useFactory: (h: DbHandle) => h.pool, inject: [DB_HANDLE] },

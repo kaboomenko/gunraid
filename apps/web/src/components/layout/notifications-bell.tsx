@@ -88,13 +88,13 @@ export function NotificationsBell() {
       }}
     >
       <Popover.Trigger
-        className="clip-cut relative grid h-10 w-10 place-items-center bg-surface-2 text-muted transition hover:text-text [--cut:6px]"
+        className="clip-cut relative grid h-10 w-9 shrink-0 place-items-center bg-surface-2 text-muted transition hover:text-text [--cut:6px] sm:w-10"
         aria-label={t('open')}
         data-testid="notifications-bell"
       >
         <Bell size={18} />
         {unread > 0 && (
-          <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center bg-danger px-1 text-[10px] font-bold leading-none text-white">
+          <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center bg-danger px-1 text-[10px] font-bold leading-none text-bg">
             {unread > 9 ? '9+' : unread}
           </span>
         )}

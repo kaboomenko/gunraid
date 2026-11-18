@@ -12,6 +12,8 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test --concurrency 1",
+    "e2e": "pnpm --filter @gunraid/e2e e2e",
+    "load": "pnpm --filter @gunraid/load start",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:generate": "pnpm --filter @gunraid/db generate",

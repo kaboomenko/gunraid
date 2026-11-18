@@ -27,10 +27,10 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 h-[var(--header-h)] border-b border-line bg-bg/85 backdrop-blur-md">
-      <div className="mx-auto flex h-full max-w-[1440px] items-center gap-2 px-3 sm:gap-3 sm:px-5">
+      <div className="mx-auto flex h-full max-w-[1440px] items-center gap-1.5 px-3 sm:gap-3 sm:px-5">
         <Link
           href={`/${game}`}
-          className="mr-1 flex shrink-0 items-center"
+          className="flex shrink-0 items-center sm:mr-1"
           aria-label={t('brand.name')}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -58,7 +58,7 @@ export function SiteHeader() {
             );
           })}
         </nav>
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-3">
           <OnlineBadge className="hidden xl:flex" />
           {me.isLoading ? (
             <Skeleton className="h-10 w-28" />
@@ -68,7 +68,7 @@ export function SiteHeader() {
                 <BalancePill balance={me.data.balance} />
                 <Button
                   size="icon"
-                  className="ml-1 h-10 w-10"
+                  className="ml-1 h-10 w-9 sm:w-10"
                   onClick={openDeposit}
                   aria-label={t('gems.deposit')}
                   data-testid="deposit-open"

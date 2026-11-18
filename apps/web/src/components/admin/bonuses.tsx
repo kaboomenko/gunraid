@@ -131,6 +131,7 @@ function ValueFields({
         value={value.caseId ?? ''}
         onChange={(e) => onChange({ caseId: e.target.value || null })}
         aria-label={t('case')}
+        className="max-w-full"
       >
         <option value="">—</option>
         {(refs.data?.cases ?? []).map((c) => (
@@ -143,7 +144,7 @@ function ValueFields({
   }
   if (type === 'item') {
     return (
-      <span className="flex gap-1.5">
+      <span className="flex min-w-0 flex-wrap gap-1.5">
         <Input
           value={itemQ}
           onChange={(e) => setItemQ(e.target.value)}
@@ -155,7 +156,7 @@ function ValueFields({
           value={value.itemId ?? ''}
           onChange={(e) => onChange({ itemId: e.target.value || null })}
           aria-label={t('item')}
-          className="max-w-[220px]"
+          className="max-w-full sm:max-w-[220px]"
         >
           <option value="">—</option>
           {(refs.data?.items ?? []).map((i) => (

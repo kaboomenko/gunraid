@@ -15,7 +15,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { useMe } from '@/lib/me';
@@ -140,16 +140,16 @@ export function BattleList({ game, initial }: { game: string; initial: BattleLis
     );
 
   return (
-    <div className="space-y-4">
+    <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="space-y-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+        <div>
           <TabsList>
             <TabsTrigger value="active">{t('tabs.active')}</TabsTrigger>
             <TabsTrigger value="finished">{t('tabs.finished')}</TabsTrigger>
             {me.data && <TabsTrigger value="mine">{t('tabs.mine')}</TabsTrigger>}
           </TabsList>
-        </Tabs>
-        <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 lg:mx-0 lg:px-0">
+        </div>
+        <div className="no-scrollbar -mx-3 flex gap-1.5 overflow-x-auto px-3 sm:-mx-5 sm:px-5 lg:mx-0 lg:px-0">
           <button type="button" className={chip(format === 'all')} onClick={() => setFormat('all')}>
             {t('all')}
           </button>
@@ -175,36 +175,38 @@ export function BattleList({ game, initial }: { game: string; initial: BattleLis
         </div>
       </div>
 
-      {loading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 4 }, (_, i) => (
-            <div key={i} className="skeleton clip-cut h-20" />
-          ))}
-        </div>
-      ) : list.length ? (
-        <div className="space-y-2" data-testid="battle-list">
-          {list.map((b) => (
-            <BattleCard key={b.id} battle={b} meId={meId} />
-          ))}
-        </div>
-      ) : (
-        <EmptyState
-          icon={<Swords size={32} />}
-          text={
-            tab === 'active' ? t('empty') : tab === 'mine' ? t('emptyMine') : t('emptyFinished')
-          }
-        />
-      )}
-      {tab !== 'active' && history.hasNextPage && (
-        <Button
-          variant="ghost"
-          block
-          loading={history.isFetchingNextPage}
-          onClick={() => void history.fetchNextPage()}
-        >
-          {t('loadMore')}
-        </Button>
-      )}
-    </div>
+      <TabsContent value={tab} className="space-y-4 pt-0">
+        {loading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="skeleton clip-cut h-20" />
+            ))}
+          </div>
+        ) : list.length ? (
+          <div className="space-y-2" data-testid="battle-list">
+            {list.map((b) => (
+              <BattleCard key={b.id} battle={b} meId={meId} />
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            icon={<Swords size={32} />}
+            text={
+              tab === 'active' ? t('empty') : tab === 'mine' ? t('emptyMine') : t('emptyFinished')
+            }
+          />
+        )}
+        {tab !== 'active' && history.hasNextPage && (
+          <Button
+            variant="ghost"
+            block
+            loading={history.isFetchingNextPage}
+            onClick={() => void history.fetchNextPage()}
+          >
+            {t('loadMore')}
+          </Button>
+        )}
+      </TabsContent>
+    </Tabs>
   );
 }

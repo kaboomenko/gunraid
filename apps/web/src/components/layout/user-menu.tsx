@@ -38,7 +38,7 @@ export function UserMenu({ me }: { me: MeDto }) {
   return (
     <Dropdown>
       <DropdownTrigger
-        className="flex items-center gap-2"
+        className="flex shrink-0 items-center gap-2"
         aria-label={t('header.profile')}
         data-testid="user-menu"
       >

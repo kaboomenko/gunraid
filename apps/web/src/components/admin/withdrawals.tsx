@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { GemAmount } from '@/components/ui/gem';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/toast';
 import { WithdrawalStatusBadge } from '@/components/withdrawals/withdrawals-panel';
 import { api } from '@/lib/api';
@@ -226,6 +226,7 @@ export function AdminWithdrawals() {
           setTab(v as keyof typeof TABS);
           setPage(1);
         }}
+        className="space-y-4"
       >
         <TabsList>
           {(Object.keys(TABS) as Array<keyof typeof TABS>).map((k) => (
@@ -234,22 +235,29 @@ export function AdminWithdrawals() {
             </TabsTrigger>
           ))}
         </TabsList>
+        <TabsContent value={tab} className="space-y-4 pt-0">
+          <div className="space-y-2.5">
+            {(list.data?.items ?? []).map((w) => (
+              <WithdrawalCard
+                key={w.id}
+                w={w}
+                onChange={() => void qc.invalidateQueries({ queryKey: ['admin', 'withdrawals'] })}
+              />
+            ))}
+            {list.data && !list.data.items.length && (
+              <p className="py-8 text-center text-sm text-dim">{tc('empty')}</p>
+            )}
+          </div>
+          {list.data && (
+            <Pager
+              page={page}
+              pageSize={list.data.pageSize}
+              total={list.data.total}
+              onPage={setPage}
+            />
+          )}
+        </TabsContent>
       </Tabs>
-      <div className="space-y-2.5">
-        {(list.data?.items ?? []).map((w) => (
-          <WithdrawalCard
-            key={w.id}
-            w={w}
-            onChange={() => void qc.invalidateQueries({ queryKey: ['admin', 'withdrawals'] })}
-          />
-        ))}
-        {list.data && !list.data.items.length && (
-          <p className="py-8 text-center text-sm text-dim">{tc('empty')}</p>
-        )}
-      </div>
-      {list.data && (
-        <Pager page={page} pageSize={list.data.pageSize} total={list.data.total} onPage={setPage} />
-      )}
     </div>
   );
 }

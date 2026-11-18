@@ -88,27 +88,33 @@ export class WithdrawalsService {
     return Number(row?.sum ?? 0);
   }
 
-  async requirements(userId: string, game: GameRow): Promise<WithdrawalRequirementsDto> {
+  /**
+   * tx — при вызове из транзакции заявки: все чтения идут через её соединение
+   * (второе соединение пула внутри транзакции под нагрузкой = взаимоблокировка пула).
+   */
+  async requirements(
+    userId: string,
+    game: GameRow,
+    tx: DbOrTx = this.db,
+  ): Promise<WithdrawalRequirementsDto> {
     const [af, ws] = await Promise.all([
       this.settings.get('antifraud'),
       this.settings.get('withdrawal'),
     ]);
-    const [[u], [profile], identities, deposited, used] = await Promise.all([
-      this.db
-        .select({ createdAt: users.createdAt, firstDepositAt: users.firstDepositAt })
-        .from(users)
-        .where(eq(users.id, userId)),
-      this.db
-        .select()
-        .from(userGameProfiles)
-        .where(and(eq(userGameProfiles.userId, userId), eq(userGameProfiles.gameId, game.id))),
-      this.db
-        .select({ provider: authIdentities.provider })
-        .from(authIdentities)
-        .where(eq(authIdentities.userId, userId)),
-      this.depositedGems(userId),
-      this.usedToday(userId),
-    ]);
+    const [u] = await tx
+      .select({ createdAt: users.createdAt, firstDepositAt: users.firstDepositAt })
+      .from(users)
+      .where(eq(users.id, userId));
+    const [profile] = await tx
+      .select()
+      .from(userGameProfiles)
+      .where(and(eq(userGameProfiles.userId, userId), eq(userGameProfiles.gameId, game.id)));
+    const identities = await tx
+      .select({ provider: authIdentities.provider })
+      .from(authIdentities)
+      .where(eq(authIdentities.userId, userId));
+    const deposited = await this.depositedGems(userId, tx);
+    const used = await this.usedToday(userId, tx);
     const targetField = game.features.withdrawTarget;
     const targetSet = Boolean(targetField === 'trade_url' ? profile?.tradeUrl : profile?.playerId);
     const providers = identities.map((i) => i.provider);
@@ -148,7 +154,7 @@ export class WithdrawalsService {
       this.settings.get('antifraud'),
       this.settings.get('withdrawal'),
     ]);
-    const req = await this.requirements(userId, game);
+    const req = await this.requirements(userId, game, tx);
     if (!req.targetSet) {
       throw new AppError('WITHDRAW_PROFILE_REQUIRED', 400, { field: req.targetField });
     }

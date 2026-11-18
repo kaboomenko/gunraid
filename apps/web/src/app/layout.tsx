@@ -8,31 +8,40 @@ import { Suspense, type ReactNode } from 'react';
 import { AdultGate } from '@/components/auth/adult-gate';
 import { AuthEffects } from '@/components/auth/auth-effects';
 import { LoginModal } from '@/components/auth/login-modal';
+import { CookieBanner } from '@/components/layout/cookie-banner';
 import { LiveFeedBar } from '@/components/layout/live-feed';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { SiteHeader } from '@/components/layout/site-header';
 import { MobileTabBar } from '@/components/layout/tab-bar';
 import { DepositModal } from '@/components/payments/deposit-modal';
 import { getPublicConfig } from '@/lib/server-api';
+import { DEFAULT_OG_IMAGE } from '@/lib/seo';
+import { siteUrl } from '@/lib/site';
 import { Providers } from './providers';
 
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('meta');
-  const base = process.env.PUBLIC_URL ?? 'http://localhost:8080';
   return {
-    metadataBase: new URL(base),
+    metadataBase: new URL(siteUrl()),
     title: { default: t('title'), template: '%s · GunRaid' },
     description: t('description'),
     applicationName: 'GunRaid',
     openGraph: {
       type: 'website',
       siteName: 'GunRaid',
+      locale: 'ru_RU',
       title: t('title'),
       description: t('description'),
+      images: [DEFAULT_OG_IMAGE],
     },
-    twitter: { card: 'summary_large_image', title: t('title'), description: t('description') },
+    twitter: {
+      card: 'summary_large_image',
+      title: t('title'),
+      description: t('description'),
+      images: [DEFAULT_OG_IMAGE.url],
+    },
     manifest: '/manifest.webmanifest',
   };
 }
@@ -61,6 +70,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <LoginModal />
             <AdultGate />
             <DepositModal />
+            <CookieBanner />
             <Suspense fallback={null}>
               <AuthEffects />
             </Suspense>

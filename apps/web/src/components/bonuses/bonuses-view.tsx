@@ -511,7 +511,10 @@ export function LevelCard() {
           {t('xp', { xp: l.xp.toLocaleString('ru-RU') })}
         </span>
       </div>
-      <Progress value={Math.max(0, Math.min(100, (done / span) * 100))} />
+      <Progress
+        value={Math.max(0, Math.min(100, (done / span) * 100))}
+        label={t('level', { level: l.level })}
+      />
       {l.nextLevelXp !== null ? (
         <p className="text-xs text-muted">
           {t('toNext', {

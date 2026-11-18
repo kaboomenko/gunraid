@@ -1,5 +1,6 @@
 'use client';
 
+import { useSyncExternalStore } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 
@@ -53,8 +54,11 @@ export const useUi = create<UiState>()((set) => ({
 interface PrefsState {
   sound: boolean;
   fast: boolean;
+  /** Пользователь закрыл уведомление о cookie. */
+  cookiesAck: boolean;
   setSound: (v: boolean) => void;
   setFast: (v: boolean) => void;
+  ackCookies: () => void;
 }
 
 /** Локальные предпочтения (для гостей); у вошедших синхронизируются с профилем. */
@@ -63,10 +67,21 @@ export const usePrefs = create<PrefsState>()(
     (set) => ({
       sound: true,
       fast: false,
+      cookiesAck: false,
       setSound: (sound) => set({ sound }),
       setFast: (fast) => set({ fast }),
+      ackCookies: () => set({ cookiesAck: true }),
     }),
     // Восстанавливаем после гидратации (Providers), чтобы первый рендер совпадал с SSR.
     { name: 'gr-prefs', storage: createJSONStorage(() => safeStorage), skipHydration: true },
   ),
 );
+
+/** true, когда настройки восстановлены из localStorage (до этого показывать «запомненное» нельзя). */
+export function usePrefsHydrated(): boolean {
+  return useSyncExternalStore(
+    (cb) => usePrefs.persist.onFinishHydration(cb),
+    () => usePrefs.persist.hasHydrated(),
+    () => false,
+  );
+}

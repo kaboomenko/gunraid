@@ -7,6 +7,7 @@ import { BattleList } from '@/components/battles/battle-list';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { getPublicConfig, serverGet } from '@/lib/server-api';
+import { pageMeta } from '@/lib/seo';
 
 export async function generateMetadata({
   params,
@@ -16,11 +17,11 @@ export async function generateMetadata({
   const { game } = await params;
   const [t, config] = await Promise.all([getTranslations('battles'), getPublicConfig()]);
   const name = config.games.find((g) => g.code === game)?.name ?? game;
-  return {
+  return pageMeta({
     title: t('metaTitle', { game: name }),
     description: t('metaDescription', { game: name }),
-    alternates: { canonical: `/${game}/battles` },
-  };
+    path: `/${game}/battles`,
+  });
 }
 
 export default async function BattlesPage({ params }: { params: Promise<{ game: string }> }) {
@@ -45,7 +46,7 @@ export default async function BattlesPage({ params }: { params: Promise<{ game: 
           </Link>
         </Button>
       </div>
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-start">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-start">
         <BattleList game={game} initial={initial} />
         <Card className="space-y-3 p-4 text-sm">
           <h2 className="font-display text-base font-bold uppercase">{t('rulesTitle')}</h2>

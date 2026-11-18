@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { SectionTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { getPublicConfig, serverGet } from '@/lib/server-api';
+import { pageMeta } from '@/lib/seo';
 
 const PASS = [
   'q',
@@ -42,11 +43,11 @@ export async function generateMetadata({
   const { game } = await params;
   const [t, config] = await Promise.all([getTranslations('items'), getPublicConfig()]);
   const name = config.games.find((g) => g.code === game)?.name ?? game;
-  return {
+  return pageMeta({
     title: t('metaTitle', { game: name }),
     description: t('metaDescription', { game: name }),
-    alternates: { canonical: `/${game}/items` },
-  };
+    path: `/${game}/items`,
+  });
 }
 
 export default async function ItemsPage({

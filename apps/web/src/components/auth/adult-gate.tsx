@@ -46,7 +46,7 @@ export function AdultGate() {
     <Modal open={open} onOpenChange={() => undefined} title={t('title')} persistent size="sm">
       <div className="flex flex-col gap-5">
         <div className="flex items-center gap-4">
-          <span className="clip-cut grid h-14 w-16 shrink-0 place-items-center bg-danger font-display text-xl font-extrabold [--cut:8px]">
+          <span className="clip-cut grid h-14 w-16 shrink-0 place-items-center bg-danger font-display text-xl font-extrabold text-bg [--cut:8px]">
             18+
           </span>
           <p className="text-sm text-muted">{t('text')}</p>

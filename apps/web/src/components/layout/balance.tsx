@@ -26,7 +26,7 @@ export function BalancePill({ balance }: { balance: number }) {
     >
       <button
         type="button"
-        className="clip-cut flex h-10 items-center gap-2 bg-surface-2 px-3 transition hover:bg-surface-3 [--cut:7px]"
+        className="clip-cut flex h-10 items-center gap-2 bg-surface-2 px-2.5 transition hover:bg-surface-3 [--cut:7px] sm:px-3"
         aria-label={t('balance')}
         data-testid="balance"
       >

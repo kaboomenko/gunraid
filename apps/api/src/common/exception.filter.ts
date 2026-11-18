@@ -70,8 +70,21 @@ export class AllExceptionsFilter implements ExceptionFilter {
         body: { error: { code: STATUS_CODES[maybe.statusCode] ?? 'VALIDATION_ERROR' } },
       };
     }
+    if (isPoolExhausted(exception)) {
+      // Пул соединений БД занят дольше DB_POOL_ACQUIRE_TIMEOUT_MS: перегрузка, повторить позже.
+      return { status: 503, body: { error: { code: 'SERVICE_BUSY' } } };
+    }
     return { status: 500, body: { error: { code: 'INTERNAL' } } };
   }
+}
+
+function isPoolExhausted(exception: unknown): boolean {
+  // Ошибку драйвера может обернуть Drizzle — смотрим и цепочку cause.
+  for (let e: unknown = exception, depth = 0; e instanceof Error && depth < 4; depth++) {
+    if (/timeout exceeded when trying to connect/i.test(e.message)) return true;
+    e = (e as Error & { cause?: unknown }).cause;
+  }
+  return false;
 }
 
 export function formatZodIssues(

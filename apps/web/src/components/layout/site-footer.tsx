@@ -20,7 +20,7 @@ export async function SiteFooter({ supportUrl }: { supportUrl: string | null }) 
           <img src="/brand/logo.svg" alt="GunRaid" className="h-7 w-auto" />
           <p className="max-w-sm text-sm text-muted">{t('about')}</p>
           <div className="flex items-center gap-3">
-            <span className="clip-cut grid h-9 w-11 place-items-center bg-danger font-display text-sm font-extrabold [--cut:6px]">
+            <span className="clip-cut grid h-9 w-11 place-items-center bg-danger font-display text-sm font-extrabold text-bg [--cut:6px]">
               18+
             </span>
             <p className="text-xs text-dim">{t('disclaimer')}</p>

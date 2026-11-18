@@ -14,7 +14,7 @@ export class WorkerModule {
     return {
       module: WorkerModule,
       imports: [
-        CoreModule.forRoot(env, { dbPoolSize: 10 }),
+        CoreModule.forRoot(env, { dbPoolSize: 10, role: 'worker' }),
         LedgerModule,
         MaintenanceModule,
         FeedWorkerModule,

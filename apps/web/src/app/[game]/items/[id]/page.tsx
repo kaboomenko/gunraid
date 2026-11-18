@@ -1,4 +1,4 @@
-import { formatGems, type ItemDetailDto } from '@gunraid/shared';
+import type { ItemDetailDto } from '@gunraid/shared';
 import { ArrowLeft, Check, X } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
@@ -8,7 +8,8 @@ import { ItemBadges } from '@/components/items/item-tile';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { GemAmount } from '@/components/ui/gem';
-import { serverGetOrNull } from '@/lib/server-api';
+import { pageMeta } from '@/lib/seo';
+import { getPublicConfig, serverGetOrNull } from '@/lib/server-api';
 
 async function load(game: string, id: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
@@ -21,14 +22,24 @@ export async function generateMetadata({
   params: Promise<{ game: string; id: string }>;
 }): Promise<Metadata> {
   const { game, id } = await params;
-  const item = await load(game, id);
+  const [item, t, config] = await Promise.all([
+    load(game, id),
+    getTranslations('items'),
+    getPublicConfig(),
+  ]);
   if (!item) return {};
-  return {
+  const gameName = config.games.find((g) => g.code === game)?.name ?? game;
+  return pageMeta({
     title: item.fullName,
-    description: `${item.fullName} — ${item.rarity.name}, ${formatGems(item.price)} GEMS`,
-    alternates: { canonical: `/${game}/items/${id}` },
-    openGraph: { images: item.imageUrl ? [item.imageUrl] : undefined },
-  };
+    description: t('itemMetaDescription', {
+      name: item.fullName,
+      game: gameName,
+      rarity: item.rarity.name,
+      price: item.price,
+    }),
+    path: `/${game}/items/${id}`,
+    image: item.imageUrl,
+  });
 }
 
 export default async function ItemPage({

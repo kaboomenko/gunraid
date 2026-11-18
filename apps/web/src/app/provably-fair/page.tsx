@@ -3,14 +3,11 @@ import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 import { Card } from '@/components/ui/card';
 import { FairTools } from './fair-tools';
+import { pageMeta } from '@/lib/seo';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('fair');
-  return {
-    title: t('title'),
-    description: t('metaDescription'),
-    alternates: { canonical: '/provably-fair' },
-  };
+  return pageMeta({ title: t('title'), description: t('metaDescription'), path: '/provably-fair' });
 }
 
 export default async function FairPage() {

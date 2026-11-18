@@ -11,7 +11,7 @@ import { Card } from '@/components/ui/card';
 import { Countdown } from '@/components/ui/countdown';
 import { EmptyState } from '@/components/ui/empty-state';
 import { GemAmount } from '@/components/ui/gem';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { useMe } from '@/lib/me';
@@ -138,14 +138,18 @@ export function LeaderboardView({ game, initial }: { game: string; initial: Lead
   });
   const board = (data.data ?? initial)[period];
   return (
-    <div className="space-y-4">
-      <Tabs value={period} onValueChange={(v) => setPeriod(v as 'day' | 'week')}>
-        <TabsList>
-          <TabsTrigger value="day">{t('periods.day')}</TabsTrigger>
-          <TabsTrigger value="week">{t('periods.week')}</TabsTrigger>
-        </TabsList>
-      </Tabs>
-      {board ? <Board board={board} game={game} /> : <EmptyState text={t('empty')} />}
-    </div>
+    <Tabs
+      value={period}
+      onValueChange={(v) => setPeriod(v as 'day' | 'week')}
+      className="space-y-4"
+    >
+      <TabsList>
+        <TabsTrigger value="day">{t('periods.day')}</TabsTrigger>
+        <TabsTrigger value="week">{t('periods.week')}</TabsTrigger>
+      </TabsList>
+      <TabsContent value={period} className="pt-0">
+        {board ? <Board board={board} game={game} /> : <EmptyState text={t('empty')} />}
+      </TabsContent>
+    </Tabs>
   );
 }

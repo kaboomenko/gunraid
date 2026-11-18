@@ -34,11 +34,14 @@ export function ItemCard({
   size = 'md',
   className,
 }: ItemCardProps) {
-  const Comp = onClick ? 'button' : 'div';
+  // С кнопками в футере вся карточка кнопкой быть не может (кнопка в кнопке) —
+  // тогда выбор делает прозрачная кнопка-подложка, а футер лежит поверх неё.
+  const overlay = Boolean(onClick && footer);
+  const Comp = onClick && !overlay ? 'button' : 'div';
   return (
     <Comp
-      type={onClick ? 'button' : undefined}
-      onClick={onClick}
+      type={Comp === 'button' ? 'button' : undefined}
+      onClick={overlay ? undefined : onClick}
       className={cn(
         'cut group flex w-full flex-col overflow-hidden text-left transition duration-150',
         '[--cut-bg:var(--color-surface-1)]',
@@ -48,8 +51,17 @@ export function ItemCard({
         className,
       )}
       style={{ ['--rarity' as string]: rarityColor }}
-      aria-pressed={onClick ? Boolean(selected) : undefined}
+      aria-pressed={Comp === 'button' ? Boolean(selected) : undefined}
     >
+      {overlay && (
+        <button
+          type="button"
+          onClick={onClick}
+          aria-pressed={Boolean(selected)}
+          aria-label={skin ? `${name} | ${skin}` : name}
+          className="absolute inset-0 z-[1] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+        />
+      )}
       <div
         className={cn('relative grid place-items-center', size === 'sm' ? 'h-20' : 'h-28 sm:h-32')}
         style={{
@@ -91,7 +103,7 @@ export function ItemCard({
           {skin ?? name}
         </div>
         <GemAmount value={price} size={size === 'sm' ? 'xs' : 'sm'} className="mt-1 text-accent" />
-        {footer}
+        {footer && <div className={cn(overlay && 'relative z-[2]')}>{footer}</div>}
       </div>
     </Comp>
   );

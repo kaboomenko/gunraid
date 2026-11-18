@@ -10,6 +10,7 @@ import { ModeGrid } from '@/components/home/mode-grid';
 import { StatsStrip } from '@/components/home/stats-strip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { getPublicConfig, serverGet } from '@/lib/server-api';
+import { pageMeta } from '@/lib/seo';
 
 export async function generateMetadata({
   params,
@@ -19,11 +20,11 @@ export async function generateMetadata({
   const { game } = await params;
   const [t, config] = await Promise.all([getTranslations('meta'), getPublicConfig()]);
   const name = config.games.find((g) => g.code === game)?.name ?? game;
-  return {
+  return pageMeta({
     title: t('gameTitle', { game: name }),
     description: t('gameDescription', { game: name }),
-    alternates: { canonical: `/${game}` },
-  };
+    path: `/${game}`,
+  });
 }
 
 export default async function GameHome({ params }: { params: Promise<{ game: string }> }) {

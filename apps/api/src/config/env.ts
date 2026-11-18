@@ -15,6 +15,15 @@ export const envSchema = z.object({
   HOST: z.string().default('0.0.0.0'),
   PUBLIC_URL: z.string().url().default('http://localhost:8080'),
   DATABASE_URL: z.string().min(1),
+  /** Размер пула соединений (по умолчанию: API — 20, воркер — 10). */
+  DB_POOL_SIZE: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.coerce.number().int().min(1).max(200).optional(),
+  ),
+  /** Ожидание свободного соединения пула, мс: дольше — ошибка 503 вместо зависания. */
+  DB_POOL_ACQUIRE_TIMEOUT_MS: z.coerce.number().int().min(100).max(120_000).default(10_000),
+  /** PostgreSQL закрывает сессию, простаивающую внутри транзакции дольше, мс. */
+  DB_IDLE_IN_TX_TIMEOUT_MS: z.coerce.number().int().min(1000).max(3_600_000).default(60_000),
   REDIS_URL: z.string().min(1),
   REDIS_PREFIX: z.string().default('gr:'),
   JWT_ACCESS_SECRET: z.string().min(32),

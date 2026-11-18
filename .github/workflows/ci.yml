@@ -46,3 +46,9 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      # Пул из одного соединения: транзакция, берущая второе соединение, упадёт по таймауту
+      # (под нагрузкой это взаимоблокировка пула и зависание API).
+      - name: Тесты API с пулом из одного соединения
+        run: pnpm --filter @gunraid/api test
+        env:
+          TEST_DB_POOL_SIZE: '1'

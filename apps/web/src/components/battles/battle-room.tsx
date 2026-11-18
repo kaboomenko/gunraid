@@ -361,7 +361,7 @@ export function BattleRoom({ initial }: { initial: BattleDto }) {
 
       {/* Кейсы по раундам */}
       <div
-        className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 sm:mx-0 sm:px-0"
+        className="no-scrollbar -mx-3 flex gap-1.5 overflow-x-auto px-3 sm:mx-0 sm:px-0"
         data-testid="battle-rounds"
       >
         {battle.rounds.map((r) => {

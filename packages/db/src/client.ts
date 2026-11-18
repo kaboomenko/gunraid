@@ -19,11 +19,28 @@ export interface DbHandle {
   pool: pg.Pool;
 }
 
-export function createDb(connectionString: string, options: { max?: number } = {}): DbHandle {
+export interface CreateDbOptions {
+  max?: number;
+  /** Сколько ждать свободное соединение пула, мс (0 — бесконечно). */
+  acquireTimeoutMs?: number;
+  /**
+   * PostgreSQL сам закрывает сессию, «зависшую» внутри транзакции дольше этого времени (мс):
+   * блокировки строк не держатся вечно, если процесс потерял транзакцию.
+   */
+  idleInTransactionTimeoutMs?: number;
+  applicationName?: string;
+}
+
+export function createDb(connectionString: string, options: CreateDbOptions = {}): DbHandle {
   const pool = new pg.Pool({
     connectionString,
     max: options.max ?? 10,
     idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: options.acquireTimeoutMs ?? 0,
+    ...(options.idleInTransactionTimeoutMs
+      ? { idle_in_transaction_session_timeout: options.idleInTransactionTimeoutMs }
+      : {}),
+    ...(options.applicationName ? { application_name: options.applicationName } : {}),
   });
   const db = drizzle(pool, { schema, casing: 'snake_case' });
   return { db, pool };

@@ -221,7 +221,11 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
               {t('case.supply', { left: supply.total - supply.used, total: supply.total })}
             </span>
           </div>
-          <Progress value={supply.total - supply.used} max={supply.total} />
+          <Progress
+            value={supply.total - supply.used}
+            max={supply.total}
+            label={t('case.limited')}
+          />
         </div>
       )}
 

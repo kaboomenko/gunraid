@@ -21,6 +21,13 @@ export function testEnv(overrides: Record<string, string> = {}): Env {
     TELEGRAM_BOT_USERNAME: 'gunraid_test_bot',
     LOG_LEVEL: 'silent',
     TRUST_PROXY: 'false',
+    // TEST_DB_POOL_SIZE=1 — поиск мест, где транзакция берёт второе соединение пула (взаимоблокировка).
+    ...(process.env.TEST_DB_POOL_SIZE
+      ? {
+          DB_POOL_SIZE: process.env.TEST_DB_POOL_SIZE,
+          DB_POOL_ACQUIRE_TIMEOUT_MS: process.env.TEST_DB_POOL_ACQUIRE_TIMEOUT_MS ?? '3000',
+        }
+      : {}),
     ...overrides,
   });
 }

@@ -1,4 +1,4 @@
-import { formatGems, type CaseDetailDto } from '@gunraid/shared';
+import type { CaseDetailDto } from '@gunraid/shared';
 import { ArrowLeft, Clock, Crown } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { SectionTitle } from '@/components/ui/card';
 import { GemAmount } from '@/components/ui/gem';
 import { getPublicConfig, serverGetOrNull } from '@/lib/server-api';
+import { pageMeta } from '@/lib/seo';
 
 async function load(game: string, slug: string) {
   if (!/^[a-z0-9-]{1,80}$/.test(slug)) return null;
@@ -29,12 +30,12 @@ export async function generateMetadata({
   ]);
   if (!c) return {};
   const gameName = config.games.find((g) => g.code === game)?.name ?? game;
-  return {
+  return pageMeta({
     title: t('metaTitle', { name: c.name, game: gameName }),
-    description: t('metaDescription', { name: c.name, game: gameName, price: formatGems(c.price) }),
-    alternates: { canonical: `/${game}/case/${slug}` },
-    openGraph: { images: c.imageUrl ? [c.imageUrl] : undefined },
-  };
+    description: t('metaDescription', { name: c.name, game: gameName, price: c.price }),
+    path: `/${game}/case/${slug}`,
+    image: c.imageUrl,
+  });
 }
 
 export default async function CasePage({
