@@ -13,3 +13,8 @@ test-results/
 .DS_Store
 *.log
 apps/api/storage/
+
+# Сервер (scripts/server-setup.sh)
+.server-credentials
+infra/caddy/Caddyfile.server
+docker-compose.override.yml
