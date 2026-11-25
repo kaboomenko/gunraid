@@ -8,6 +8,7 @@ export async function SiteFooter({ supportUrl }: { supportUrl: string | null }) 
   const docs = [
     { href: '/legal/terms', label: t('terms') },
     { href: '/legal/privacy', label: t('privacy') },
+    { href: '/legal/cookies', label: t('cookies') },
     { href: '/legal/rules', label: t('rules') },
     { href: '/legal/age', label: t('adult') },
     { href: '/legal/responsible', label: t('responsible') },

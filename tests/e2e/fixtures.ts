@@ -175,7 +175,10 @@ export async function quietPrefs(context: BrowserContext): Promise<void> {
     try {
       window.localStorage.setItem(
         'gr-prefs',
-        JSON.stringify({ state: { sound: false, fast: true, cookiesAck: true }, version: 0 }),
+        JSON.stringify({
+          state: { sound: false, fast: true, cookieConsent: 'necessary' },
+          version: 0,
+        }),
       );
     } catch {
       // приватный режим — не критично

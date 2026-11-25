@@ -70,7 +70,9 @@ test.describe('Публичная часть', () => {
     await page.goto('/faq');
     const banner = page.getByTestId('cookie-banner');
     await expect(banner).toBeVisible();
-    await banner.getByRole('button').click();
+    await expect(banner.getByRole('link')).toHaveAttribute('href', '/legal/cookies');
+    await expect(banner.getByRole('button', { name: 'Отклонить' })).toBeVisible();
+    await banner.getByRole('button', { name: 'Принять все' }).click();
     await expect(banner).toBeHidden();
     await page.reload();
     await expect(page.getByTestId('faq-list')).toBeVisible();

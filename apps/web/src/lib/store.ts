@@ -56,14 +56,19 @@ export const useUi = create<UiState>()((set) => ({
   setOnline: (online) => set({ online }),
 }));
 
+export type CookieConsent = 'all' | 'necessary';
+
 interface PrefsState {
   sound: boolean;
   fast: boolean;
-  /** Пользователь закрыл уведомление о cookie. */
-  cookiesAck: boolean;
+  /**
+   * Выбор в уведомлении о cookie: 'all' — все, 'necessary' — только обязательные, null — ещё не выбран.
+   * Необязательные (аналитика) можно включать только при 'all'.
+   */
+  cookieConsent: CookieConsent | null;
   setSound: (v: boolean) => void;
   setFast: (v: boolean) => void;
-  ackCookies: () => void;
+  setCookieConsent: (v: CookieConsent) => void;
 }
 
 /** Локальные предпочтения (для гостей); у вошедших синхронизируются с профилем. */
@@ -72,10 +77,10 @@ export const usePrefs = create<PrefsState>()(
     (set) => ({
       sound: true,
       fast: false,
-      cookiesAck: false,
+      cookieConsent: null,
       setSound: (sound) => set({ sound }),
       setFast: (fast) => set({ fast }),
-      ackCookies: () => set({ cookiesAck: true }),
+      setCookieConsent: (cookieConsent) => set({ cookieConsent }),
     }),
     // Восстанавливаем после гидратации (Providers), чтобы первый рендер совпадал с SSR.
     { name: 'gr-prefs', storage: createJSONStorage(() => safeStorage), skipHydration: true },

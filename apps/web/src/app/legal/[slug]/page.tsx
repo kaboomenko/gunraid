@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { pageMeta } from '@/lib/seo';
 
-const SLUGS = ['terms', 'privacy', 'rules', 'age', 'responsible'] as const;
+const SLUGS = ['terms', 'privacy', 'cookies', 'rules', 'age', 'responsible'] as const;
 type Slug = (typeof SLUGS)[number];
 const isSlug = (s: string): s is Slug => (SLUGS as readonly string[]).includes(s);
 
