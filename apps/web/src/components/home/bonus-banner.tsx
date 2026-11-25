@@ -14,7 +14,8 @@ import { useUi } from '@/lib/store';
  * Medium Italic 36, кнопка — шаблон ×1.5 (460×108), иконка 36 + 24 + DemiBold 36,
  * #121117 на #B7FF00. Процент бонуса — из настроек (бонус к первому пополнению).
  * Кнопка: гостю — вход, вошедшему — бесплатный кейс (если есть), иначе пополнение.
- * На экранах шире макета картинка не растягивается (см. .bonus-banner в globals.css).
+ * На экранах шире макета картинка заполняет баннер по ширине и сдвинута вниз так, чтобы
+ * голова солдата оставалась в кадре (обрезается низ, а не верх).
  */
 export function BonusBanner({ game, freeCaseSlug }: { game: string; freeCaseSlug: string | null }) {
   const t = useTranslations('home.bonusBanner');
@@ -33,7 +34,7 @@ export function BonusBanner({ game, freeCaseSlug }: { game: string; freeCaseSlug
 
   return (
     <section
-      className="bonus-banner relative isolate h-[360px] overflow-hidden rounded-[24px] md:h-[520px] md:rounded-[36px] xl:h-[750px]"
+      className="relative isolate h-[360px] overflow-hidden rounded-[24px] bg-[#25304a] md:h-[520px] md:rounded-[36px] xl:h-[750px]"
       data-testid="bonus-banner"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -42,7 +43,7 @@ export function BonusBanner({ game, freeCaseSlug }: { game: string; freeCaseSlug
         alt=""
         width={1872}
         height={750}
-        className="bonus-banner__image absolute inset-0 -z-10 h-full w-full object-cover object-[70%_center] xl:left-auto xl:w-auto xl:max-w-none"
+        className="absolute inset-0 -z-10 h-full w-full object-cover object-[70%_center] xl:object-[right_20%]"
         draggable={false}
         fetchPriority="high"
       />
