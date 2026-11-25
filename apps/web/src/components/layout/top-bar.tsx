@@ -12,7 +12,7 @@ import {
 import { ChevronDownIcon, SoundOffIcon, SoundOnIcon } from '@/components/icons/design-icons';
 import { cn } from '@/lib/cn';
 import { usePrefs, usePrefsHydrated } from '@/lib/store';
-import { useGameSelect } from './game-switcher';
+import { GameMenuContent, useGameSelect } from './game-switcher';
 import { LiveFeed } from './live-feed';
 
 /** «CS2» → «CS 2», как в макете. */
@@ -22,33 +22,28 @@ function spacedShortName(shortName: string): string {
 
 const TILE = 'h-[72px] rounded-[12px] p-6 transition-[filter] duration-150 hover:brightness-125';
 
-/** Выбор игры: 249×72, текст слева, стрелка справа (#B7FF00), градиент #282F1E → #181821; левый верхний угол — 24. */
+/**
+ * Выбор игры: 249×72, текст слева, стрелка справа (#B7FF00), градиент #282F1E → #181821;
+ * левый верхний угол — 24. Открытое меню — стрелка вверх, панель на 6px ниже (GameMenuContent).
+ */
 function GameSelect() {
   const t = useTranslations('header');
   const { current, games, select } = useGameSelect();
-  if (!current) return <div className={cn(TILE, 'w-[249px] bg-surface-1')} />;
+  if (!current) return <div className={cn(TILE, 'w-[249px] rounded-tl-[24px] bg-surface-1')} />;
   return (
     <Dropdown>
       <DropdownTrigger
         className={cn(
           TILE,
-          'flex w-[249px] items-center justify-between rounded-tl-[24px] bg-[linear-gradient(90deg,#282f1e,#181821)] text-lime',
+          'group flex w-[249px] items-center justify-between rounded-tl-[24px] bg-[linear-gradient(90deg,#282f1e,#181821)] text-lime',
         )}
         aria-label={t('selectGame')}
         data-testid="game-select"
       >
         <span className="text-[24px] font-semibold">{spacedShortName(current.shortName)}</span>
-        <ChevronDownIcon />
+        <ChevronDownIcon className="transition-transform duration-150 group-data-[state=open]:rotate-180" />
       </DropdownTrigger>
-      <DropdownContent align="start" className="w-[249px]">
-        <DropdownLabel>{t('games')}</DropdownLabel>
-        {games.map((g) => (
-          <DropdownItem key={g.code} onSelect={() => select(g.code)}>
-            <span className="flex-1 font-semibold text-text">{g.name}</span>
-            {g.code === current.code && <Check size={16} className="text-accent" />}
-          </DropdownItem>
-        ))}
-      </DropdownContent>
+      <GameMenuContent games={games} current={current.code} onSelect={select} />
     </Dropdown>
   );
 }

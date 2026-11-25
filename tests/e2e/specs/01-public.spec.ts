@@ -12,7 +12,7 @@ test.describe('Публичная часть', () => {
     await expect(page.locator('[data-testid^="case-card-"]').first()).toBeVisible();
 
     await page.getByRole('button', { name: 'Выбрать игру' }).click();
-    await page.getByRole('menuitem', { name: other!.name }).click();
+    await page.getByRole('menuitemradio', { name: other!.name }).click();
     await expect(page).toHaveURL(new RegExp(`/${other!.code}$`));
     await expect(page.locator('[data-testid^="case-card-"]').first()).toBeVisible();
 
