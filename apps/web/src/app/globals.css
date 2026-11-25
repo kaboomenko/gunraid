@@ -513,7 +513,7 @@
     justify-content: center;
     gap: calc(12 * var(--case-u));
     min-width: calc(160 * var(--case-u));
-    padding-inline: calc(20 * var(--case-u));
+    padding-inline: calc(12 * var(--case-u));
     transform: translateX(-50%);
     background: var(--color-lime);
     color: #121117;

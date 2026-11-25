@@ -47,6 +47,7 @@ export function AdrenalineBar({
  */
 export function CaseTile({ game, c }: { game: string; c: CaseCardDto }) {
   const t = useTranslations('case');
+  const tg = useTranslations('gems');
   const notes = [
     c.supplyTotal !== null
       ? t('supply', { left: c.supplyTotal - c.supplyUsed, total: c.supplyTotal })
@@ -79,12 +80,15 @@ export function CaseTile({ game, c }: { game: string; c: CaseCardDto }) {
         className="case-tile__price shape"
         style={{ '--h': 'calc(48 * var(--case-u))' } as CSSProperties}
       >
+        {/* Текст — в <span>: голый текст во flex-контейнере не получает обрезку по прописным
+            и встаёт выше центра плашки. Цифры читаются вслух с единицей: «49 гемов». */}
         {c.kind === 'free' ? (
-          t('free')
+          <span>{t('free')}</span>
         ) : (
           <>
             <GemIcon className="case-tile__gem" />
-            {c.price}
+            <span aria-hidden="true">{c.price}</span>
+            <span className="sr-only">{tg('amount', { count: c.price })}</span>
           </>
         )}
       </span>
