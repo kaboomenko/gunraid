@@ -11,26 +11,21 @@ import {
   games,
   itemTypes,
   items,
+  rarities,
 } from '../schema/index.js';
+import { planContents as planForLevel, spread } from './case-planner.js';
 import { BANNERS, CASE_CATEGORIES, CS2_CASES, SO2_CASES, type CaseSeed } from './cases-data.js';
 
-function spread<T>(list: T[], count: number): T[] {
-  if (list.length <= count) return list;
-  const out: T[] = [];
-  for (let i = 0; i < count; i++) {
-    const idx = Math.round((i * (list.length - 1)) / (count - 1));
-    const v = list[idx];
-    if (v !== undefined && !out.includes(v)) out.push(v);
-  }
-  return out;
-}
-
 type TypeRows = Array<{ id: number; code: string }>;
+type GameRef = { id: number; code: string };
 
-/** Состав демо-кейса: предметы из диапазона цен, шансы под целевой RTP. */
+/**
+ * Состав демо-кейса. Кейсы из макета — подбор под уровень адреналина (case-planner),
+ * бонусные — предметы из диапазона цен, шансы под целевой RTP / ожидаемую стоимость.
+ */
 async function planContents(
   db: Db,
-  gameId: number,
+  game: GameRef,
   s: CaseSeed,
   price: number,
   typeRows: TypeRows,
@@ -39,14 +34,33 @@ async function planContents(
   rtp: number | null;
   isFree: boolean;
 } | null> {
+  const isFree = s.kind === 'free';
+  if (!s.pick) {
+    if (isFree || !s.adrenaline) return null;
+    const pool = await db
+      .select({
+        id: items.id,
+        price: items.price,
+        rarityRank: rarities.sortOrder,
+        rarity: rarities.code,
+      })
+      .from(items)
+      .innerJoin(rarities, eq(rarities.id, items.rarityId))
+      .where(and(eq(items.gameId, game.id), eq(items.isActive, true)));
+    const wanted = s.rarity?.[game.code as 'standoff2' | 'cs2'];
+    const prefer = wanted ? pool.find((p) => p.rarity === wanted)?.rarityRank : undefined;
+    const plan = planForLevel(pool, price, s.target, s.adrenaline, s.count ?? 10, prefer);
+    return plan ? { entries: plan.entries, rtp: plan.rtp, isFree } : null;
+  }
+  const pick = s.pick;
   const conds = [
-    eq(items.gameId, gameId),
+    eq(items.gameId, game.id),
     eq(items.isActive, true),
-    gte(items.price, s.pick.minPrice),
-    lte(items.price, s.pick.maxPrice),
+    gte(items.price, pick.minPrice),
+    lte(items.price, pick.maxPrice),
   ];
-  if (s.pick.types?.length) {
-    const ids = typeRows.filter((t) => s.pick.types?.includes(t.code)).map((t) => t.id);
+  if (pick.types?.length) {
+    const ids = typeRows.filter((t) => pick.types?.includes(t.code)).map((t) => t.id);
     conds.push(inArray(items.typeId, ids));
   }
   const pool = await db
@@ -54,10 +68,9 @@ async function planContents(
     .from(items)
     .where(and(...conds))
     .orderBy(asc(items.price), asc(items.marketName));
-  const chosen = spread(pool, s.pick.count);
+  const chosen = spread(pool, pick.count);
   if (chosen.length < 2) return null;
 
-  const isFree = s.kind === 'free';
   const odds = fitOddsToRtp(
     chosen.map((c) => c.price),
     isFree ? 1 : price,
@@ -77,7 +90,7 @@ async function planContents(
  */
 async function refreshDemoCase(
   db: Db,
-  gameId: number,
+  game: GameRef,
   existing: { id: string; price: number },
   s: CaseSeed,
   typeRows: TypeRows,
@@ -88,7 +101,7 @@ async function refreshDemoCase(
     .innerJoin(items, eq(items.id, caseItems.itemId))
     .where(and(eq(caseItems.caseId, existing.id), eq(items.isActive, false)));
   if (!stale || stale.n === 0) return;
-  const plan = await planContents(db, gameId, s, existing.price, typeRows);
+  const plan = await planContents(db, game, s, existing.price, typeRows);
   if (!plan) return;
   const { entries, rtp } = plan;
   await db.transaction(async (tx) => {
@@ -146,11 +159,11 @@ async function seedGameCases(db: Db, gameCode: string, seeds: CaseSeed[]): Promi
       .from(cases)
       .where(and(eq(cases.gameId, game.id), eq(cases.slug, s.slug)));
     if (exists) {
-      await refreshDemoCase(db, game.id, exists, s, typeRows);
+      await refreshDemoCase(db, game, exists, s, typeRows);
       continue;
     }
 
-    const plan = await planContents(db, game.id, s, s.price, typeRows);
+    const plan = await planContents(db, game, s, s.price, typeRows);
     if (!plan) continue;
     const { entries, rtp, isFree } = plan;
 
@@ -163,13 +176,16 @@ async function seedGameCases(db: Db, gameCode: string, seeds: CaseSeed[]): Promi
         categoryId: cats.get(s.category) as number,
         slug: s.slug,
         name: { ru: s.name },
-        imageUrl: `/media/demo/chest.svg?c1=${s.accent}&c2=${s.secondary}`,
+        imageUrl: s.image
+          ? `/media/cases/${s.image}.webp`
+          : `/media/demo/chest.svg?c1=${s.accent}&c2=${s.secondary ?? '2A2D36'}`,
         accentColor: `#${s.accent}`,
         price: s.price,
         kind: isFree ? 'free' : 'paid',
         minLevel: s.minLevel ?? null,
         cooldownSeconds: s.cooldownHours ? s.cooldownHours * 3600 : null,
         supplyTotal: s.supply ?? null,
+        adrenaline: s.adrenaline ?? null,
         sortOrder: index + 1,
       });
       await tx

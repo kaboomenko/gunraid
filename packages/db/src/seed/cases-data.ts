@@ -1,90 +1,98 @@
-/** Демо-кейсы. Состав подбирается из каталога по ценовому диапазону, шансы — под целевой RTP. */
+import type { AdrenalineLevel } from '@gunraid/shared';
+
+/**
+ * Демо-кейсы. Платные — каталог из макета (названия, цены, картинки, уровни адреналина):
+ * состав подбирается из каталога предметов под уровень адреналина при RTP 90%. Бонусные
+ * (ежедневный, за уровень) — по диапазону цен, на главной не показываются (их открывают из
+ * баннера и бонусов).
+ */
 export interface CaseSeed {
   slug: string;
   name: string;
   category: string;
   price: number;
   accent: string;
-  secondary: string;
-  pick: { minPrice: number; maxPrice: number; count: number; types?: string[] };
+  /** Картинка из макета в apps/web/public/media/cases; без неё — демо-сундук (accent/secondary). */
+  image?: string;
+  secondary?: string;
+  /** Явный состав по диапазону цен; без него состав подбирается под adrenaline. */
+  pick?: { minPrice: number; maxPrice: number; count: number; types?: string[] };
   /** Целевой RTP платного кейса или ожидаемая стоимость (гемы) бесплатного. */
   target: number;
   kind?: 'paid' | 'free';
   minLevel?: number;
   cooldownHours?: number;
   supply?: number;
+  /** Уровень адреналина из макета: на карточке — он, состав подбирается как можно ближе к нему. */
+  adrenaline?: AdrenalineLevel;
+  /** Сейф по редкости: предпочитаются предметы не ниже этой редкости (код редкости в игре). */
+  rarity?: { standoff2: string; cs2: string };
+  /** Сколько предметов в кейсе (по умолчанию 10). */
+  count?: number;
 }
 
 export const CASE_CATEGORIES = [
-  { code: 'popular', name: 'Популярные', sortOrder: 1 },
-  { code: 'premium', name: 'Премиальные', sortOrder: 2 },
-  { code: 'limited', name: 'Лимитированные', sortOrder: 3 },
-  { code: 'free', name: 'Бесплатные', sortOrder: 4 },
-  { code: 'level', name: 'За уровень', sortOrder: 5 },
+  { code: 'snowfall', name: 'Операция: “Снегопад”', sortOrder: 1 },
+  { code: 'easy', name: 'Лёгкий заход', sortOrder: 2 },
+  { code: 'safes', name: 'Редкостные сейфы', sortOrder: 3 },
+  { code: 'free', name: 'Бесплатные', sortOrder: 104 },
+  { code: 'level', name: 'За уровень', sortOrder: 105 },
 ];
 
-export const SO2_CASES: CaseSeed[] = [
-  {
-    slug: 'novobranets',
-    name: 'Новобранец',
-    category: 'popular',
-    price: 49,
-    accent: '7FD8FF',
-    secondary: '2A2D36',
-    pick: { minPrice: 4, maxPrice: 690, count: 9 },
-    target: 0.9,
-  },
-  {
-    slug: 'lime-rush',
-    name: 'Лайм-раш',
-    category: 'popular',
-    price: 149,
-    accent: 'C6FF00',
-    secondary: '2A2D36',
-    pick: { minPrice: 5, maxPrice: 3200, count: 10 },
-    target: 0.9,
-  },
-  {
-    slug: 'raid',
-    name: 'Рейд',
-    category: 'popular',
-    price: 399,
-    accent: 'FF8A1F',
-    secondary: '2A2D36',
-    pick: { minPrice: 22, maxPrice: 9890, count: 10 },
-    target: 0.9,
-  },
-  {
-    slug: 'arsenal',
-    name: 'Арсенал',
-    category: 'premium',
-    price: 990,
-    accent: '8B4DFF',
-    secondary: '1B1B22',
-    pick: { minPrice: 160, maxPrice: 21900, count: 9 },
-    target: 0.9,
-  },
-  {
-    slug: 'klinok',
-    name: 'Клинок',
-    category: 'premium',
-    price: 2490,
-    accent: 'FF4646',
-    secondary: '1B1B22',
-    pick: { minPrice: 540, maxPrice: 89900, count: 8 },
-    target: 0.9,
-  },
-  {
-    slug: 'nulevoy-tirazh',
-    name: 'Нулевой тираж',
-    category: 'limited',
-    price: 690,
-    accent: 'FFD23F',
-    secondary: '2A2D36',
-    pick: { minPrice: 35, maxPrice: 14900, count: 9 },
-    target: 0.92,
-    supply: 500,
-  },
+const paid = (
+  slug: string,
+  name: string,
+  category: string,
+  price: number,
+  adrenaline: AdrenalineLevel,
+  image: string,
+  accent: string,
+  extra: Partial<CaseSeed> = {},
+): CaseSeed => ({ slug, name, category, price, adrenaline, image, accent, target: 0.9, ...extra });
+
+/** Каталог из макета — одинаковый для обеих игр (состав — из предметов своей игры). */
+export const MOCKUP_CASES: CaseSeed[] = [
+  paid('stellar-start', 'Звёздный старт', 'snowfall', 39, 'low', 'stellar-start', '2A4A8C'),
+  paid('polar-luck', 'Полярная удача', 'snowfall', 69, 'low', 'polar-luck', '7FD8FF'),
+  paid('juicy-drop', 'Сочный дроп', 'snowfall', 129, 'low', 'juicy-drop', 'FF7A1A'),
+  paid('luck-spark', 'Искра удачи', 'snowfall', 299, 'normal', 'luck-spark', 'E8C27A'),
+  paid('generous-gift', 'Щедрый подарок', 'snowfall', 599, 'normal', 'generous-gift', 'D42A2A'),
+  paid('festive-volley', 'Праздничный залп', 'snowfall', 999, 'normal', 'festive-volley', 'FF3EC9'),
+  paid('snow-avalanche', 'Снежная лавина', 'snowfall', 1999, 'normal', 'snow-avalanche', 'E6EEF5'),
+  paid(
+    'christmas-miracle',
+    'Рождественское чудо',
+    'snowfall',
+    3999,
+    'normal',
+    'christmas-miracle',
+    '1E8A4A',
+  ),
+  paid('ice-crown', 'Ледяная корона', 'snowfall', 15999, 'high', 'ice-crown', 'BFE6FF'),
+  paid('krampus-lair', 'Логово Крампуса', 'snowfall', 19999, 'high', 'krampus-lair', '8E1B2A'),
+  paid('first-blood', 'Первая кровь', 'easy', 39, 'low', 'first-blood', 'D9C29A'),
+  paid('pocket-drop', 'Карманный дроп', 'easy', 79, 'low', 'pocket-drop', 'C9A27A'),
+  paid('raid-step', 'Шаг в рейд', 'easy', 249, 'low', 'raid-step', '6B7A3A'),
+  paid('fresh-loot', 'Свежий трофей', 'easy', 999, 'normal', 'fresh-loot', '7A4A2A'),
+  paid('stray-bullet', 'Шальная пуля', 'easy', 1299, 'normal', 'stray-bullet', '5A5F66'),
+  paid('rare-safe', 'Редкие', 'safes', 89, 'normal', 'safe-blue', '2A68DC', {
+    rarity: { standoff2: 'rare', cs2: 'milspec' },
+  }),
+  paid('epic-safe', 'Эпические', 'safes', 259, 'normal', 'safe-purple', '742ADC', {
+    rarity: { standoff2: 'epic', cs2: 'restricted' },
+  }),
+  paid('legendary-safe', 'Легендарные', 'safes', 899, 'normal', 'safe-pink', 'DC2AC1', {
+    rarity: { standoff2: 'legendary', cs2: 'classified' },
+  }),
+  paid('arcane-safe', 'Арканы', 'safes', 1799, 'high', 'safe-red', 'DC2A2A', {
+    rarity: { standoff2: 'arcane', cs2: 'covert' },
+  }),
+  paid('nameless-safe', 'Nameless', 'safes', 75999, 'extreme', 'safe-yellow', 'DCBB2A', {
+    rarity: { standoff2: 'nameless', cs2: 'rare_special' },
+  }),
+];
+
+const SO2_BONUS_CASES: CaseSeed[] = [
   {
     slug: 'ezhednevnyy',
     name: 'Ежедневный',
@@ -112,68 +120,7 @@ export const SO2_CASES: CaseSeed[] = [
   },
 ];
 
-export const CS2_CASES: CaseSeed[] = [
-  {
-    slug: 'novobranets',
-    name: 'Новобранец',
-    category: 'popular',
-    price: 49,
-    accent: '7FD8FF',
-    secondary: '2A2D36',
-    pick: { minPrice: 8, maxPrice: 690, count: 9 },
-    target: 0.9,
-  },
-  {
-    slug: 'neon-district',
-    name: 'Неоновый район',
-    category: 'popular',
-    price: 199,
-    accent: 'FF3EC9',
-    secondary: '2A2D36',
-    pick: { minPrice: 10, maxPrice: 4890, count: 10 },
-    target: 0.9,
-  },
-  {
-    slug: 'raid',
-    name: 'Рейд',
-    category: 'popular',
-    price: 499,
-    accent: 'FF8A1F',
-    secondary: '2A2D36',
-    pick: { minPrice: 22, maxPrice: 12900, count: 10 },
-    target: 0.9,
-  },
-  {
-    slug: 'arsenal',
-    name: 'Арсенал',
-    category: 'premium',
-    price: 1490,
-    accent: '8B4DFF',
-    secondary: '1B1B22',
-    pick: { minPrice: 140, maxPrice: 31900, count: 9 },
-    target: 0.9,
-  },
-  {
-    slug: 'klinok',
-    name: 'Клинок',
-    category: 'premium',
-    price: 3990,
-    accent: 'FF4646',
-    secondary: '1B1B22',
-    pick: { minPrice: 890, maxPrice: 128000, count: 9 },
-    target: 0.9,
-  },
-  {
-    slug: 'nulevoy-tirazh',
-    name: 'Нулевой тираж',
-    category: 'limited',
-    price: 990,
-    accent: 'FFD23F',
-    secondary: '2A2D36',
-    pick: { minPrice: 45, maxPrice: 21500, count: 9 },
-    target: 0.92,
-    supply: 300,
-  },
+const CS2_BONUS_CASES: CaseSeed[] = [
   {
     slug: 'ezhednevnyy',
     name: 'Ежедневный',
@@ -200,6 +147,9 @@ export const CS2_CASES: CaseSeed[] = [
     cooldownHours: 24,
   },
 ];
+
+export const SO2_CASES: CaseSeed[] = [...MOCKUP_CASES, ...SO2_BONUS_CASES];
+export const CS2_CASES: CaseSeed[] = [...MOCKUP_CASES, ...CS2_BONUS_CASES];
 
 export const BANNERS = [
   {

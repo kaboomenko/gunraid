@@ -98,7 +98,21 @@ const digits = (v: string) => v.replace(/\D/g, '').slice(0, 9);
  * справа уровень адреналина и ластик (сброс, без контура). Между фреймами 24.
  * Ниже — категории: заголовок DemiBold 36 по центру, в 48px от фильтров и от сетки карточек.
  */
-export function CaseBrowser({ game, categories }: { game: string; categories: CaseCategoryDto[] }) {
+export function CaseBrowser({
+  game,
+  categories: allCategories,
+}: {
+  game: string;
+  categories: CaseCategoryDto[];
+}) {
+  // Бесплатные (бонусные) кейсы на витрине не показываются — их открывают из баннера и бонусов.
+  const categories = useMemo(
+    () =>
+      allCategories
+        .map((c) => ({ ...c, cases: c.cases.filter((k) => k.kind !== 'free') }))
+        .filter((c) => c.cases.length > 0),
+    [allCategories],
+  );
   const t = useTranslations('home.filters');
   const all = useMemo(() => categories.flatMap((c) => c.cases), [categories]);
   const maxPrice = useMemo(() => all.reduce((m, c) => Math.max(m, c.price), 0), [all]);

@@ -8,14 +8,15 @@ import {
   oddsToPercent,
   percentToOdds,
 } from '@gunraid/game-core';
-import type {
-  AdminCaseBody,
-  AdminCaseCategoryDto,
-  AdminCaseDetailDto,
-  AdminCaseRowDto,
-  AdminItemDto,
-  AdminPageDto,
-  ItemDto,
+import {
+  ADRENALINE_LEVELS,
+  type AdminCaseBody,
+  type AdminCaseCategoryDto,
+  type AdminCaseDetailDto,
+  type AdminCaseRowDto,
+  type AdminItemDto,
+  type AdminPageDto,
+  type ItemDto,
 } from '@gunraid/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Plus, Scale, Sparkles, Trash2 } from 'lucide-react';
@@ -170,6 +171,7 @@ const EMPTY: AdminCaseBody = {
   minLevel: null,
   cooldownSeconds: null,
   supplyTotal: null,
+  adrenaline: null,
   availableFrom: null,
   availableUntil: null,
   isActive: false,
@@ -179,6 +181,7 @@ const EMPTY: AdminCaseBody = {
 export function AdminCaseEditor({ id, game }: { id: string | null; game: string }) {
   const t = useTranslations('admin.cases');
   const tc = useTranslations('admin.common');
+  const tf = useTranslations('home.filters');
   const router = useRouter();
   const qc = useQueryClient();
   const errorText = useErrorMessage();
@@ -221,6 +224,7 @@ export function AdminCaseEditor({ id, game }: { id: string | null; game: string 
       minLevel: d.minLevel,
       cooldownSeconds: d.cooldownSeconds,
       supplyTotal: d.supplyTotal,
+      adrenaline: d.adrenaline,
       availableFrom: d.availableFrom,
       availableUntil: d.availableUntil,
       isActive: d.isActive,
@@ -435,6 +439,23 @@ export function AdminCaseEditor({ id, game }: { id: string | null; game: string 
               onChange={(e) => set('supplyTotal', numOrNull(e.target.value))}
               className="h-10"
             />
+          </Field>
+          <Field label={t('fields.adrenaline')} htmlFor="c-adrenaline">
+            <Select
+              id="c-adrenaline"
+              value={form.adrenaline ?? ''}
+              onChange={(e) =>
+                set('adrenaline', (e.target.value || null) as AdminCaseBody['adrenaline'])
+              }
+              className="h-10"
+            >
+              <option value="">{t('adrenalineAuto')}</option>
+              {ADRENALINE_LEVELS.map((l) => (
+                <option key={l} value={l}>
+                  {tf(`levels.${l}`)}
+                </option>
+              ))}
+            </Select>
           </Field>
           <div className="flex items-end pb-2">
             <Switch

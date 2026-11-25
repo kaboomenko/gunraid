@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ADRENALINE_LEVELS, type AdrenalineLevel } from './cases.js';
 import type { ItemDto } from './catalog.js';
 import type { AllSettings } from './settings.js';
 import type { WithdrawalDto } from './withdrawals.js';
@@ -227,6 +228,8 @@ export interface AdminCaseRowDto {
   isActive: boolean;
   supplyTotal: number | null;
   supplyUsed: number;
+  /** Уровень адреналина, заданный вручную; null — считается по составу. */
+  adrenaline: AdrenalineLevel | null;
   minLevel: number | null;
   cooldownSeconds: number | null;
   sortOrder: number;
@@ -262,6 +265,7 @@ export const adminCaseSchema = z
       .nullable()
       .optional(),
     supplyTotal: z.number().int().min(1).max(10_000_000).nullable().optional(),
+    adrenaline: z.enum(ADRENALINE_LEVELS).nullable().optional(),
     availableFrom: optionalDate,
     availableUntil: optionalDate,
     isActive: z.boolean(),

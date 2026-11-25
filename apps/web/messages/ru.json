@@ -711,6 +711,7 @@
         "minLevel": "Мин. уровень",
         "cooldownSeconds": "Кулдаун, сек",
         "supplyTotal": "Тираж",
+        "adrenaline": "Уровень адреналина",
         "availableFrom": "Доступен с",
         "availableUntil": "Доступен до",
         "isActive": "Включён",
@@ -737,7 +738,8 @@
       "saveCase": "Сохранить кейс",
       "noContents": "Добавьте предметы и задайте шансы",
       "remove": "Убрать",
-      "activeHint": "Включить кейс можно после сохранения состава"
+      "activeHint": "Включить кейс можно после сохранения состава",
+      "adrenalineAuto": "Авто — по составу кейса"
     },
     "catalog": {
       "title": "Каталог",

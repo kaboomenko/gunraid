@@ -42,23 +42,23 @@ describe('cases (integration)', () => {
     const c = new TestClient(app);
     const home = await c.get<HomeDto>('/api/v1/games/standoff2/home');
     expect(home.status).toBe(200);
-    expect(home.body.categories.map((x) => x.code)).toContain('popular');
+    expect(home.body.categories.map((x) => x.code)).toContain('snowfall');
     expect(home.body.banners.length).toBeGreaterThan(0);
-    const detail = await c.get<CaseDetailDto>('/api/v1/games/standoff2/cases/lime-rush');
+    const detail = await c.get<CaseDetailDto>('/api/v1/games/standoff2/cases/juicy-drop');
     expect(detail.status).toBe(200);
     expect(detail.body.items.reduce((s, i) => s + i.odds, 0)).toBe(10_000_000);
     expect(detail.body.availability).toMatchObject({ canOpen: false, reason: 'LOGIN' });
-    expect((await c.get('/api/v1/games/cs2/cases/lime-rush')).status).toBe(404);
+    expect((await c.get('/api/v1/games/cs2/cases/no-such-case')).status).toBe(404);
   });
 
   it('opens x3, charges once per case and the result is verifiable after rotating seeds', async () => {
     const { client, me } = await newPlayer(app, 'open');
-    const kase = await caseRow('standoff2', 'lime-rush');
+    const kase = await caseRow('standoff2', 'juicy-drop');
     await grantGems(app, me.id, kase.price * 3);
     const seedBefore = (await client.get<FairSeedDto>('/api/v1/fair/seed')).body;
 
     const res = await client.post<CaseOpenResultDto>(
-      '/api/v1/games/standoff2/cases/lime-rush/open',
+      '/api/v1/games/standoff2/cases/juicy-drop/open',
       { count: 3 },
       IK(),
     );
@@ -100,7 +100,7 @@ describe('cases (integration)', () => {
 
   it('rejects opening without enough gems and leaves inventory unchanged', async () => {
     const { client } = await newPlayer(app, 'poor');
-    const res = await client.post<Err>('/api/v1/games/cs2/cases/raid/open', { count: 1 }, IK());
+    const res = await client.post<Err>('/api/v1/games/cs2/cases/raid-step/open', { count: 1 }, IK());
     expect(res.status).toBe(402);
     expect(res.body.error.code).toBe('INSUFFICIENT_BALANCE');
     const inv = await client.get<InventoryPageDto>('/api/v1/games/cs2/inventory');
@@ -109,12 +109,12 @@ describe('cases (integration)', () => {
 
   it('opens exactly as many cases as the balance allows under parallel requests', async () => {
     const { client, me } = await newPlayer(app, 'par');
-    const kase = await caseRow('cs2', 'novobranets');
+    const kase = await caseRow('cs2', 'stellar-start');
     await grantGems(app, me.id, kase.price * 3);
     const results = await Promise.all(
       Array.from({ length: 10 }, () =>
         client.post<CaseOpenResultDto | Err>(
-          '/api/v1/games/cs2/cases/novobranets/open',
+          '/api/v1/games/cs2/cases/stellar-start/open',
           { count: 1 },
           IK(),
         ),
@@ -127,16 +127,16 @@ describe('cases (integration)', () => {
 
   it('is idempotent for a repeated request key', async () => {
     const { client, me } = await newPlayer(app, 'idem');
-    const kase = await caseRow('cs2', 'novobranets');
+    const kase = await caseRow('cs2', 'stellar-start');
     await grantGems(app, me.id, kase.price * 2);
     const headers = IK();
     const a = await client.post<CaseOpenResultDto>(
-      '/api/v1/games/cs2/cases/novobranets/open',
+      '/api/v1/games/cs2/cases/stellar-start/open',
       { count: 1 },
       headers,
     );
     const b = await client.post<CaseOpenResultDto>(
-      '/api/v1/games/cs2/cases/novobranets/open',
+      '/api/v1/games/cs2/cases/stellar-start/open',
       { count: 1 },
       headers,
     );
@@ -187,7 +187,7 @@ describe('cases (integration)', () => {
   });
 
   it('never sells more than the limited supply', async () => {
-    const kase = await caseRow('standoff2', 'nulevoy-tirazh');
+    const kase = await caseRow('standoff2', 'snow-avalanche');
     await db(app)
       .update(cases)
       .set({ supplyTotal: kase.supplyUsed + 2 })
@@ -200,7 +200,7 @@ describe('cases (integration)', () => {
       const results = await Promise.all(
         players.map((p) =>
           p.client.post<CaseOpenResultDto | Err>(
-            '/api/v1/games/standoff2/cases/nulevoy-tirazh/open',
+            '/api/v1/games/standoff2/cases/snow-avalanche/open',
             { count: 1 },
             IK(),
           ),

@@ -22,6 +22,8 @@ import { userItems } from './inventory.js';
 import { users } from './users.js';
 
 export const caseKindEnum = pgEnum('case_kind', ['paid', 'free']);
+/** Уровень адреналина, заданный вручную (иначе он считается по составу кейса). */
+export const adrenalineLevelEnum = pgEnum('adrenaline_level', ['low', 'normal', 'high', 'extreme']);
 export const fairSeedStatusEnum = pgEnum('fair_seed_status', ['active', 'revealed']);
 
 /** Пары сидов provably fair: server seed хранится зашифрованным, наружу — только SHA-256 хэш до раскрытия. */
@@ -85,6 +87,8 @@ export const cases = pgTable(
     cooldownSeconds: integer(),
     supplyTotal: integer(),
     supplyUsed: integer().notNull().default(0),
+    /** Уровень адреналина для витрины; null — считается по разбросу цен содержимого. */
+    adrenaline: adrenalineLevelEnum(),
     availableFrom: timestamp({ withTimezone: true }),
     availableUntil: timestamp({ withTimezone: true }),
     currentRevisionId: uuid(),

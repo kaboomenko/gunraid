@@ -145,7 +145,7 @@ export class CasesService {
         )
         .orderBy(asc(banners.sortOrder)),
     ]);
-    const adrenaline = await this.adrenalineByCase(rows);
+    const adrenaline = await this.adrenalineByCase(rows.filter((r) => !r.adrenaline));
     return {
       categories: cats
         .map((c) => ({
@@ -153,7 +153,7 @@ export class CasesService {
           name: localize(c.name),
           cases: rows
             .filter((r) => r.categoryId === c.id)
-            .map((r) => this.toCard(r, c.code, adrenaline.get(r.id) ?? 'normal')),
+            .map((r) => this.toCard(r, c.code, r.adrenaline ?? adrenaline.get(r.id) ?? 'normal')),
         }))
         .filter((c) => c.cases.length > 0),
       banners: bannerRows.map((b): BannerDto => ({
@@ -255,10 +255,11 @@ export class CasesService {
       ...this.toCard(
         c,
         categoryCode,
-        caseAdrenaline(
-          items.map((x) => ({ odds: x.odds, price: x.item.price })),
-          c.price,
-        ),
+        c.adrenaline ??
+          caseAdrenaline(
+            items.map((x) => ({ odds: x.odds, price: x.item.price })),
+            c.price,
+          ),
       ),
       description: c.description ? localize(c.description) : null,
       revisionId: rev.id,

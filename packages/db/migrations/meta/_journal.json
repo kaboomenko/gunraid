@@ -78,6 +78,13 @@
       "when": 1795619051195,
       "tag": "0010_demo_chest_images",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795642449161,
+      "tag": "0011_case_adrenaline_mockup_catalog",
+      "breakpoints": true
     }
   ]
 }

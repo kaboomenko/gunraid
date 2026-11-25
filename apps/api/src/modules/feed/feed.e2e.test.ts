@@ -38,7 +38,7 @@ describe('live feed via outbox (integration)', () => {
     await grantGems(app, me.id, 1000);
     const before = (await new TestClient(app).get<SiteStatsDto>('/api/v1/stats')).body.casesOpened;
     const opened = await client.post<CaseOpenResultDto>(
-      '/api/v1/games/cs2/cases/novobranets/open',
+      '/api/v1/games/cs2/cases/stellar-start/open',
       { count: 2 },
       { 'idempotency-key': crypto.randomUUID() },
     );
@@ -52,7 +52,7 @@ describe('live feed via outbox (integration)', () => {
     const mine = feed.body.filter((d) => ids.includes(d.id));
     expect(mine).toHaveLength(2);
     expect(mine[0]?.user.nickname).toBe(me.nickname);
-    expect(mine[0]?.caseSlug).toBe('novobranets');
+    expect(mine[0]?.caseSlug).toBe('stellar-start');
 
     const after = (await new TestClient(app).get<SiteStatsDto>('/api/v1/stats')).body.casesOpened;
     expect(after).toBeGreaterThanOrEqual(before + 2);
