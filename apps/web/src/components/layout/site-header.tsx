@@ -53,8 +53,8 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="hidden px-6 pt-6 lg:block">
-        <div className="relative flex h-[120px] items-center justify-between gap-6 rounded-[36px] bg-surface-1 py-6 pl-9 pr-6">
+      <header className="hidden px-6 pt-[6px] lg:block">
+        <div className="relative flex h-[120px] items-center justify-between gap-6 rounded-b-[36px] rounded-t-[12px] bg-surface-1 py-6 pl-9 pr-6">
           <Link
             href={`/${game}`}
             className="flex shrink-0 items-center text-lime"

@@ -9,7 +9,8 @@ import { useUi } from '@/lib/store';
 import { PromoSnow } from './promo-snow';
 
 /**
- * Промо-полоса над лентой дропов (макет: высота 127, скругление 24).
+ * Промо-полоса над лентой дропов (макет: высота 127; верхние углы — внешние углы верхнего блока, 36,
+ * нижние касаются ряда с лентой — 12).
  * Текст — Bold Italic 36 капителью, через 72px — промокод DemiBold 36 в кнопке «лайм 20% + размытие».
  * Код и процент меняются в админке (настройка promoStrip).
  */
@@ -35,7 +36,7 @@ export function PromoStrip() {
 
   return (
     <section
-      className="promo-strip flex h-[88px] items-center justify-center gap-3 rounded-[16px] px-3 md:h-[127px] md:gap-[72px] md:rounded-[24px]"
+      className="promo-strip flex h-[88px] items-center justify-center gap-3 rounded-b-[12px] rounded-t-[24px] px-3 md:h-[127px] md:gap-[72px] md:rounded-t-[36px]"
       aria-label={t('label', { code: promo.code, percent: promo.bonusPercent })}
       data-testid="promo-strip"
     >

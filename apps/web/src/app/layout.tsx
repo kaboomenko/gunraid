@@ -60,9 +60,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body>
         <NextIntlClientProvider>
           <Providers config={config}>
-            {/* Поля страницы — 24px со всех сторон (макет 1920: контент 1872). */}
+            {/*
+             * Поля страницы — 24px со всех сторон (макет 1920: контент 1872). Промо-полоса, ряд с лентой
+             * и шапка — один блок: между ними 6px, внешние углы блока 36, соприкасающиеся — 12.
+             */}
             <div className="flex min-h-dvh flex-col">
-              <div className="space-y-3 px-3 pt-3 md:space-y-6 md:px-6 md:pt-6">
+              <div className="space-y-[6px] px-3 pt-3 md:px-6 md:pt-6">
                 <PromoStrip />
                 <TopBar />
               </div>
