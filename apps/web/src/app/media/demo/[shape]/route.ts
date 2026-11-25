@@ -1,7 +1,8 @@
 /**
  * Собственные плейсхолдеры для демо-предметов: простые «рубленые» силуэты,
- * окрашенные в цвета скина (c1 — основной, c2 — дополнительный). Никаких изображений правообладателей.
- * Пример: /media/demo/rifle.svg?c1=C6FF00&c2=2A2D36
+ * окрашенные в цвета скина (c1 — основной, c2 — дополнительный), и сундук для демо-кейсов.
+ * Никаких изображений правообладателей.
+ * Пример: /media/demo/rifle.svg?c1=C6FF00&c2=2A2D36, /media/demo/chest.svg?c1=7FD8FF&c2=2A2D36
  */
 const DARK = '#2b2f3a';
 const METAL = '#3d4352';
@@ -106,20 +107,71 @@ const SHAPES: Record<string, Part[]> = {
   ],
 };
 
-/** Кейс — открытый ящик со «стрелочными» гранями (квадратный viewBox 0 0 256 256). */
-const CASE_PARTS: Part[] = [
-  ['M40 112 L216 112 L232 132 L232 220 L216 236 L40 236 L24 220 L24 132 Z', 'c2'],
-  ['M40 112 L216 112 L232 132 L24 132 Z', 'shine'],
-  ['M52 140 L204 140 L204 220 L52 220 Z', 'c1'],
-  ['M52 140 L204 140 L204 152 L52 152 Z', 'shine'],
-  ['M24 132 L232 132 L232 144 L24 144 Z', 'dark'],
-  ['M112 164 L144 164 L150 176 L144 188 L112 188 L106 176 Z', 'c2'],
-  ['M120 170 L136 170 L140 176 L136 182 L120 182 L116 176 Z', 'c1'],
-  ['M30 108 L64 38 L224 26 L234 46 L76 60 L48 112 Z', 'c1'],
-  ['M64 38 L224 26 L230 38 L70 50 Z', 'shine'],
-  ['M48 112 L76 60 L234 46 L214 98 L200 98 L214 60 L84 72 L62 112 Z', 'c2'],
-  ['M96 200 L160 200 L160 210 L96 210 Z', 'dark'],
-];
+/** Смешивает два цвета #RRGGBB: t — доля первого. */
+function mix(a: string, b: string, t: number): string {
+  const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const [x, y] = [rgb(a), rgb(b)];
+  return `#${x
+    .map((v, i) =>
+      Math.round(v * t + y[i]! * (1 - t))
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`;
+}
+
+/**
+ * Кейс — закрытый сундук в духе макета: ручки на крышке, лаймовые защёлки, металлические углы,
+ * эмблема-прицел. c1 — цвет кейса (корпус — его затемнённый вариант), c2 — шов под крышкой.
+ * Квадрат 256×256, сундук занимает середину — сверху остаётся место под название карточки,
+ * снизу плашка с ценой ложится на низ корпуса, как в макете.
+ */
+function chestSvg(c1: string, c2: string): string {
+  const body = mix(c1, '#16181f', 0.58);
+  const bodyDark = mix(c1, '#0b0c10', 0.3);
+  const lidTop = mix(c1, '#ffffff', 0.78);
+  const emblem = mix(c1, '#ffffff', 0.42);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+<defs>
+<linearGradient id="b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${body}"/><stop offset="1" stop-color="${bodyDark}"/></linearGradient>
+<linearGradient id="t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${lidTop}"/><stop offset="1" stop-color="${body}"/></linearGradient>
+<linearGradient id="s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".1"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>
+<linearGradient id="m" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6eaf2"/><stop offset=".5" stop-color="#a3abbb"/><stop offset="1" stop-color="#5d6476"/></linearGradient>
+<linearGradient id="h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef1f7"/><stop offset="1" stop-color="#737b8d"/></linearGradient>
+</defs>
+<ellipse cx="128" cy="228" rx="104" ry="11" fill="#000" opacity=".5"/>
+<path d="M50 52 H206 L228 78 H28 Z" fill="url(#t)"/>
+<path d="M50 52 H206" stroke="#fff" stroke-opacity=".35" stroke-width="2"/>
+<g fill="none" stroke="url(#h)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+<path d="M70 70 V50 Q70 40 80 40 H100 Q110 40 110 50 V70"/>
+<path d="M146 70 V50 Q146 40 156 40 H176 Q186 40 186 50 V70"/>
+</g>
+<rect x="26" y="76" width="204" height="42" rx="8" fill="url(#b)"/>
+<rect x="26" y="76" width="204" height="42" rx="8" fill="url(#s)"/>
+<path d="M32 78 H224" stroke="#fff" stroke-opacity=".3" stroke-width="2"/>
+<rect x="26" y="114" width="204" height="9" fill="${c2}"/>
+<rect x="32" y="121" width="192" height="96" rx="8" fill="url(#b)"/>
+<rect x="32" y="121" width="192" height="96" rx="8" fill="url(#s)"/>
+<path d="M38 124 H218" stroke="#fff" stroke-opacity=".18" stroke-width="2"/>
+<rect x="28" y="206" width="200" height="16" rx="6" fill="${bodyDark}"/>
+<g fill="url(#m)">
+<path d="M26 98 V84 Q26 74 36 74 H50 V86 H38 V98 Z"/>
+<path d="M230 98 V84 Q230 74 220 74 H206 V86 H218 V98 Z"/>
+<path d="M28 196 V212 Q28 224 40 224 H56 V212 H40 V196 Z"/>
+<path d="M228 196 V212 Q228 224 216 224 H200 V212 H216 V196 Z"/>
+</g>
+<g fill="#454b5b"><circle cx="33" cy="81" r="2.5"/><circle cx="223" cy="81" r="2.5"/><circle cx="35" cy="217" r="2.5"/><circle cx="221" cy="217" r="2.5"/></g>
+<g fill="url(#m)"><rect x="70" y="92" width="24" height="9" rx="2"/><rect x="162" y="92" width="24" height="9" rx="2"/></g>
+<g fill="#B7FF00"><rect x="72" y="99" width="20" height="44" rx="4"/><rect x="164" y="99" width="20" height="44" rx="4"/></g>
+<g fill="#26300a"><rect x="77" y="121" width="10" height="16" rx="2"/><rect x="169" y="121" width="10" height="16" rx="2"/></g>
+<g fill="#fff" opacity=".35"><rect x="74" y="101" width="3" height="18" rx="1.5"/><rect x="166" y="101" width="3" height="18" rx="1.5"/></g>
+<g fill="none" stroke="${emblem}" stroke-width="5" stroke-linecap="round" opacity=".9">
+<circle cx="128" cy="170" r="21"/>
+<path d="M128 140 V156 M128 184 V200 M98 170 H114 M142 170 H158"/>
+</g>
+<circle cx="128" cy="170" r="4.5" fill="${emblem}" opacity=".9"/>
+</svg>`;
+}
 
 function color(value: string | null, fallback: string): string {
   return value && /^[0-9A-Fa-f]{6}$/.test(value) ? `#${value}` : fallback;
@@ -128,22 +180,25 @@ function color(value: string | null, fallback: string): string {
 export async function GET(request: Request, { params }: { params: Promise<{ shape: string }> }) {
   const { shape: raw } = await params;
   const shape = raw.replace(/\.svg$/, '');
-  const isCase = shape === 'case';
-  const parts = isCase ? CASE_PARTS : SHAPES[shape];
-  if (!parts) return new Response('Not found', { status: 404 });
   const url = new URL(request.url);
   const c1 = color(url.searchParams.get('c1'), '#C6FF00');
   const c2 = color(url.searchParams.get('c2'), '#2A2D36');
+  // chest — текущий адрес демо-кейсов; case — прежний (на случай непереписанных ссылок).
+  if (shape === 'chest' || shape === 'case') return svgResponse(chestSvg(c1, c2));
+  const parts = SHAPES[shape];
+  if (!parts) return new Response('Not found', { status: 404 });
   const fills = { c1, c2, dark: DARK, metal: METAL, shine: SHINE } as const;
   const body = parts.map(([d, f]) => `<path d="${d}" fill="${fills[f]}"/>`).join('');
   const ring =
     shape === 'charm'
       ? `<circle cx="128" cy="22" r="9" fill="none" stroke="${METAL}" stroke-width="4"/>`
       : '';
-  const size = isCase
-    ? 'viewBox="0 0 256 256" width="256" height="256"'
-    : 'viewBox="0 0 256 128" width="256" height="128"';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" ${size}>${ring}${body}</svg>`;
+  return svgResponse(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 128" width="256" height="128">${ring}${body}</svg>`,
+  );
+}
+
+function svgResponse(svg: string): Response {
   return new Response(svg, {
     headers: {
       'content-type': 'image/svg+xml; charset=utf-8',

@@ -162,7 +162,7 @@ const EMPTY: AdminCaseBody = {
   slug: '',
   name: '',
   description: null,
-  imageUrl: '/media/demo/case.svg?c1=C6FF00&c2=2A2D36',
+  imageUrl: '/media/demo/chest.svg?c1=C6FF00&c2=2A2D36',
   accentColor: '#C6FF00',
   price: 100,
   kind: 'paid',

@@ -163,7 +163,7 @@ async function seedGameCases(db: Db, gameCode: string, seeds: CaseSeed[]): Promi
         categoryId: cats.get(s.category) as number,
         slug: s.slug,
         name: { ru: s.name },
-        imageUrl: `/media/demo/case.svg?c1=${s.accent}&c2=${s.secondary}`,
+        imageUrl: `/media/demo/chest.svg?c1=${s.accent}&c2=${s.secondary}`,
         accentColor: `#${s.accent}`,
         price: s.price,
         kind: isFree ? 'free' : 'paid',

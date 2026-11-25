@@ -71,6 +71,13 @@
       "when": 1795613936949,
       "tag": "0009_first_deposit_50",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795619051195,
+      "tag": "0010_demo_chest_images",
+      "breakpoints": true
     }
   ]
 }
