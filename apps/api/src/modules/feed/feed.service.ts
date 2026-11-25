@@ -6,7 +6,8 @@ import { RealtimeEmitter } from '../../core/realtime-emitter.js';
 import { rkey } from '../../core/redis.js';
 import { ENV, REDIS } from '../../core/tokens.js';
 
-const FEED_LENGTH = 30;
+/** Сколько последних дропов хранить: лента на сайте крутит их по кругу, чем больше — тем реже повторы. */
+const FEED_LENGTH = 60;
 
 /** Лента live-дропов: последние дропы каждой игры в Redis + событие feed:drop в комнату игры. */
 @Injectable()
