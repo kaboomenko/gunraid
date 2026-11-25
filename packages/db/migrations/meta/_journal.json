@@ -57,6 +57,13 @@
       "when": 1794969689052,
       "tag": "0007_withdrawals",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795572516758,
+      "tag": "0008_design_rarity_colors",
+      "breakpoints": true
     }
   ]
 }

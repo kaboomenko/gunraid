@@ -25,11 +25,9 @@ describe('catalog (integration)', () => {
 
     const knives = await c.get<ItemsPageDto>('/api/v1/games/cs2/items?type=knife');
     expect(knives.body.items.every((i) => i.typeCode === 'knife')).toBe(true);
-    const search = await c.get<ItemsPageDto>('/api/v1/games/cs2/items?q=lime%20fury');
+    const search = await c.get<ItemsPageDto>('/api/v1/games/cs2/items?q=redline');
     expect(search.body.items.length).toBeGreaterThan(0);
-    expect(search.body.items.every((i) => i.fullName.toLowerCase().includes('lime fury'))).toBe(
-      true,
-    );
+    expect(search.body.items.every((i) => i.fullName.toLowerCase().includes('redline'))).toBe(true);
     const st = await c.get<ItemsPageDto>('/api/v1/games/cs2/items?stattrak=true');
     expect(st.body.items.every((i) => i.isStattrak)).toBe(true);
     const range = await c.get<ItemsPageDto>(

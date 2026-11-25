@@ -3,6 +3,14 @@ import { z } from 'zod';
 export const ITEM_WEARS = ['FN', 'MW', 'FT', 'WW', 'BS'] as const;
 export type ItemWear = (typeof ITEM_WEARS)[number];
 
+/** Все ножи в интерфейсе — золотые, независимо от редкости (дизайн-макет). */
+export const KNIFE_RARITY_COLOR = '#DCBB2A';
+
+/** Цвет предмета в интерфейсе: у ножей — золотой, у остальных — цвет редкости. */
+export function displayRarityColor(typeCode: string, rarityColor: string): string {
+  return typeCode === 'knife' ? KNIFE_RARITY_COLOR : rarityColor;
+}
+
 export interface RarityDto {
   code: string;
   name: string;

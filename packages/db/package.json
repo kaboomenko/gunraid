@@ -21,7 +21,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "generate": "drizzle-kit generate",
     "migrate": "node dist/migrate.js",
-    "seed": "node dist/seed.js",
+    "seed": "node dist/seed/index.js",
     "lint": "eslint src"
   },
   "dependencies": {

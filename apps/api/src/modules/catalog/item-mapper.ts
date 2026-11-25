@@ -1,5 +1,5 @@
 import { itemModels, itemTypes, items, rarities, type LocalizedText } from '@gunraid/db';
-import type { ItemDto, ItemWear, RarityDto } from '@gunraid/shared';
+import { displayRarityColor, type ItemDto, type ItemWear, type RarityDto } from '@gunraid/shared';
 
 export const DEFAULT_LOCALE = 'ru';
 
@@ -73,7 +73,7 @@ export function toItemDto(row: ItemRow): ItemDto {
     rarity: {
       code: row.rarityCode,
       name: localize(row.rarityName),
-      color: row.rarityColor,
+      color: displayRarityColor(row.typeCode, row.rarityColor),
       sortOrder: row.raritySort,
     },
     imageUrl: row.imageUrl,

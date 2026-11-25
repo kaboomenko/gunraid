@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, like, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
 import {
@@ -11,14 +11,8 @@ import {
   rarities,
 } from '../schema/index.js';
 import {
-  CS2_COLLECTIONS,
-  CS2_ITEMS,
-  CS2_MODELS,
   CS2_RARITIES,
   ITEM_TYPE_ROWS,
-  SO2_COLLECTIONS,
-  SO2_ITEMS,
-  SO2_MODELS,
   SO2_RARITIES,
   TEST_FX_RATES,
   WEAR_FLOATS,
@@ -27,6 +21,17 @@ import {
   type ModelSeed,
   type RaritySeed,
 } from './catalog-data.js';
+import {
+  CS2_COLLECTIONS,
+  CS2_ITEMS,
+  CS2_MODELS,
+  SO2_COLLECTIONS,
+  SO2_ITEMS,
+  SO2_MODELS,
+} from './real-catalog.js';
+
+/** Картинки прежнего демо-каталога (вымышленные скины) — собственные плейсхолдеры. */
+const PLACEHOLDER_PREFIX = '/media/demo/';
 
 export async function seedItemTypes(db: Db): Promise<void> {
   await db.insert(itemTypes).values(ITEM_TYPE_ROWS).onConflictDoNothing({ target: itemTypes.code });
@@ -140,7 +145,9 @@ async function seedGameCatalog(
       skinName: it.skin,
       fullName,
       marketName: fullName,
-      imageUrl: `/media/demo/${seedModel.shape}.svg?c1=${it.colors[0]}&c2=${it.colors[1]}`,
+      imageUrl:
+        it.image ??
+        `${PLACEHOLDER_PREFIX}${seedModel.shape}.svg?c1=${it.colors?.[0] ?? '9AA4B2'}&c2=${it.colors?.[1] ?? '2A2D36'}`,
       price: it.price,
       isStattrak: Boolean(it.stattrak),
       wear: it.wear ?? null,
@@ -150,6 +157,21 @@ async function seedGameCatalog(
     };
   });
   await db.insert(items).values(rows).onConflictDoNothing();
+
+  // Базы, созданные с прежним вымышленным каталогом: его предметы снимаем с витрины
+  // (в инвентарях и истории они остаются), кейсы пересобирает seedCases.
+  if (itemRows.some((it) => it.image)) {
+    await db
+      .update(items)
+      .set({ isActive: false, updatedAt: sql`now()` })
+      .where(
+        and(
+          eq(items.gameId, gameId),
+          eq(items.isActive, true),
+          like(items.imageUrl, `${PLACEHOLDER_PREFIX}%`),
+        ),
+      );
+  }
 }
 
 export async function seedCatalog(db: Db): Promise<void> {
