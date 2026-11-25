@@ -47,7 +47,7 @@ export default async function FaqPage() {
                   className="shrink-0 text-dim transition-transform group-open:rotate-180"
                 />
               </summary>
-              <p className="px-4 pb-4 text-sm leading-relaxed text-muted">{i.a}</p>
+              <p className="px-4 pb-4 text-sm text-muted">{i.a}</p>
             </details>
           </Card>
         ))}

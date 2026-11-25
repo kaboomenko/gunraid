@@ -22,7 +22,7 @@ function spacedShortName(shortName: string): string {
 
 const TILE = 'h-[72px] rounded-[12px] p-6 transition-[filter] duration-150 hover:brightness-125';
 
-/** Выбор игры: 249×72, текст слева, стрелка справа (#B7FF00), градиент #282F1E → #181821. */
+/** Выбор игры: 249×72, текст слева, стрелка справа (#B7FF00), градиент #282F1E → #181821; левый верхний угол — 24. */
 function GameSelect() {
   const t = useTranslations('header');
   const { current, games, select } = useGameSelect();
@@ -32,7 +32,7 @@ function GameSelect() {
       <DropdownTrigger
         className={cn(
           TILE,
-          'flex w-[249px] items-center justify-between bg-[linear-gradient(90deg,#282f1e,#181821)] text-lime',
+          'flex w-[249px] items-center justify-between rounded-tl-[24px] bg-[linear-gradient(90deg,#282f1e,#181821)] text-lime',
         )}
         aria-label={t('selectGame')}
         data-testid="game-select"
@@ -55,7 +55,7 @@ function GameSelect() {
 
 const LANGUAGES = [{ code: 'ru', short: 'RU', flag: '/design/flags/ru.svg' }] as const;
 
-/** Выбор языка: флаг 28×20 + код DemiBold 24 + стрелка, отступы 24 и 12 → 158×72. */
+/** Выбор языка: флаг 28×20 + код DemiBold 24 + стрелка, отступы 24 и 12 → 158×72; левый нижний угол — 24. */
 function LanguageSelect() {
   const t = useTranslations('topBar');
   const locale = useLocale();
@@ -63,7 +63,7 @@ function LanguageSelect() {
   return (
     <Dropdown>
       <DropdownTrigger
-        className={cn(TILE, 'flex items-center gap-3 bg-surface-1 text-text')}
+        className={cn(TILE, 'flex items-center gap-3 rounded-bl-[24px] bg-surface-1 text-text')}
         aria-label={t('language')}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}

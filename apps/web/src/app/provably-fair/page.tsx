@@ -20,7 +20,7 @@ export default async function FairPage() {
         </h1>
         <p className="text-muted">{t('lead')}</p>
       </div>
-      <Card className="space-y-3 p-5 text-sm leading-relaxed text-muted">
+      <Card className="space-y-3 p-5 text-sm text-muted">
         <h2 className="font-display text-lg font-bold uppercase text-text">{t('howTitle')}</h2>
         <ol className="list-decimal space-y-2 pl-5">
           <li>{t('how1')}</li>

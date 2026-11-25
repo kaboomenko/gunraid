@@ -64,7 +64,7 @@ export default async function LegalPage({ params }: { params: Promise<{ slug: st
           <h2 className="font-display text-lg font-bold">
             {i + 1}. {s.title}
           </h2>
-          <p className="text-sm leading-relaxed text-muted">{s.text}</p>
+          <p className="text-sm text-muted">{s.text}</p>
         </section>
       ))}
       <nav className="flex flex-wrap gap-x-4 gap-y-2 border-t border-line pt-4 text-sm">

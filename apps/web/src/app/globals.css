@@ -25,8 +25,21 @@
   --font-display: var(--font-firs), Arial, system-ui, sans-serif;
   --font-sans: var(--font-firs), Arial, system-ui, sans-serif;
 
+  /*
+   * Межстрочный интервал по всему сайту — 100%, без исключений: размеры текста Tailwind
+   * (text-xs … text-4xl) по умолчанию несут свой интервал 1.25–1.5, обнуляем его.
+   */
+  --text-xs--line-height: 1;
+  --text-sm--line-height: 1;
+  --text-base--line-height: 1;
+  --text-lg--line-height: 1;
+  --text-xl--line-height: 1;
+  --text-2xl--line-height: 1;
+  --text-3xl--line-height: 1;
+  --text-4xl--line-height: 1;
+
   --breakpoint-xs: 380px;
-  --breakpoint-3xl: 1720px;
+  --breakpoint-3xl: 107.5rem; /* 1720px; в rem, как и стандартные, — иначе порядок правил ломается */
 
   --animate-shimmer: shimmer 1.6s linear infinite;
   --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
@@ -235,13 +248,29 @@
     overflow: hidden;
     background: url('/design/promo-city.webp') center 58% / max(100%, 1400px) auto no-repeat #142456;
   }
-  /* Сугроб: верх снега всегда на 82px от верха полосы, при широком экране растёт вместе с ней. */
+  /*
+   * Сугроб — всегда одного размера относительно полосы (не растягивается по ширине экрана):
+   * исходная картинка 1872×98 стоит по центру, её верх — в 82px от верха полосы (53px уходят под низ).
+   * Тайл = картинка + её зеркальная копия (3744×98), поэтому на широких экранах повторяется без швов.
+   * На телефоне полоса ниже (88px) — сугроб уменьшен в той же пропорции (--snow-k).
+   */
+  .promo-strip {
+    --snow-k: 0.693;
+  }
+  @media (min-width: 768px) {
+    .promo-strip {
+      --snow-k: 1;
+    }
+  }
   .promo-strip::before {
     content: '';
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: url('/design/promo-snow.webp') center 82px / max(100%, 1872px) auto no-repeat;
+    background-image: url('/design/promo-snow-tile.webp');
+    background-repeat: repeat-x;
+    background-size: calc(3744px * var(--snow-k)) calc(98px * var(--snow-k));
+    background-position: calc(50% + 936px * var(--snow-k)) calc(100% + 53px * var(--snow-k));
     pointer-events: none;
   }
   /* Снежинки: два кадра друг над другом, бесшовно «падают» сверху вниз. */

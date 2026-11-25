@@ -37,9 +37,11 @@ const DESKTOP_NAV: Array<{
 ];
 
 /**
- * Шапка. Десктоп (от 1024px) — плашка #181821 высотой 120 со скруглением 24:
- * логотип слева, меню по центру, справа вход или баланс и профиль.
- * Телефон и планшет — компактная липкая шапка (её макета пока нет).
+ * Шапка. Десктоп (от 1024px) — плашка #181821 высотой 120 со скруглением 24, поля 36 слева и 24
+ * с остальных сторон: логотип высотой 64 слева, справа «Вход» (или баланс и профиль), а меню
+ * (иконка 24 + текст DemiBold 24, внутри пункта 12, между пунктами 48; до 1720px — 32) — ровно по центру всей шапки.
+ * Ниже 1536px подписи меню прячутся (остаются иконки с подсказкой), меню встаёт между логотипом и
+ * кнопками и не может их перекрыть. Телефон и планшет — компактная липкая шапка (макета пока нет).
  */
 export function SiteHeader() {
   const t = useTranslations();
@@ -52,15 +54,18 @@ export function SiteHeader() {
   return (
     <>
       <header className="hidden px-6 pt-6 lg:block">
-        <div className="grid h-[120px] grid-cols-[minmax(max-content,1fr)_auto_minmax(max-content,1fr)] items-center gap-6 rounded-[24px] bg-surface-1 pl-9 pr-6">
+        <div className="relative flex h-[120px] items-center justify-between gap-6 rounded-[24px] bg-surface-1 py-6 pl-9 pr-6">
           <Link
             href={`/${game}`}
-            className="flex w-max items-center text-lime"
+            className="flex shrink-0 items-center text-lime"
             aria-label={t('brand.name')}
           >
-            <span className="logo-mask h-12 3xl:h-16" />
+            <span className="logo-mask h-12 2xl:h-16" />
           </Link>
-          <nav className="flex items-center gap-8 3xl:gap-12" aria-label={t('nav.home')}>
+          <nav
+            className="flex items-center gap-12 2xl:absolute 2xl:left-1/2 2xl:top-1/2 2xl:-translate-x-1/2 2xl:-translate-y-1/2 2xl:gap-8 3xl:gap-12"
+            aria-label={t('nav.home')}
+          >
             {DESKTOP_NAV.map((item) => {
               const active = isActive(pathname, game, item.path);
               return (
@@ -75,7 +80,7 @@ export function SiteHeader() {
                   title={t(`nav.${item.key}`)}
                 >
                   <item.icon />
-                  <span className="sr-only xl:not-sr-only">{t(`nav.${item.key}`)}</span>
+                  <span className="sr-only 2xl:not-sr-only">{t(`nav.${item.key}`)}</span>
                 </Link>
               );
             })}

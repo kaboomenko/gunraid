@@ -29,7 +29,7 @@ function useOnline(): number | null {
 
 /**
  * Плашка онлайна у правого края ленты дропов (макет): иконка 48, отступы 24/24/24 и 36 справа,
- * между иконкой и текстом 24, между числом и словом 6; заливка лайм 20%, размытие фона 20, скругление 6.
+ * между иконкой и текстом 24, между числом и словом 6; заливка лайм 20%, размытие фона 20, скругление 12.
  */
 export function OnlineFrame({ className }: { className?: string }) {
   const t = useTranslations('topBar');
@@ -38,7 +38,7 @@ export function OnlineFrame({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'flex items-center gap-6 rounded-[6px] bg-lime/20 py-6 pl-6 pr-9 text-lime backdrop-blur-[10px]',
+        'flex items-center gap-6 rounded-[12px] bg-lime/20 py-6 pl-6 pr-9 text-lime backdrop-blur-[10px]',
         className,
       )}
       data-testid="online"
