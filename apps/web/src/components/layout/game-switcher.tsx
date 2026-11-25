@@ -62,7 +62,7 @@ export function GameImage({ game, size = 36 }: { game: GameDto; size?: number })
 
 /**
  * Меню выбора игры (макет): панель #181821, поля 12, между строками 6, скругления 24, левый верхний — 6.
- * Строка: поля 6, картинка игры 36×36 (скругление 6), отступ 12, название DemiBold 24 белым капслоком,
+ * Строка: поля 6 (справа 12), картинка игры 36×36 (скругление 6), отступ 12, название DemiBold 24 белым капслоком,
  * скругление 12, фон #26262F, под курсором или клавиатурным фокусом — #3E3E50.
  */
 export function GameMenuContent({
@@ -93,7 +93,7 @@ export function GameMenuContent({
               value={g.code}
               aria-label={g.name}
               className={cn(
-                'flex cursor-pointer select-none items-center gap-3 rounded-[12px] bg-[#26262f] p-[6px] outline-none transition-colors duration-100',
+                'flex cursor-pointer select-none items-center gap-3 rounded-[12px] bg-[#26262f] py-[6px] pl-[6px] pr-3 outline-none transition-colors duration-100',
                 'data-[highlighted]:bg-[#3e3e50]',
               )}
             >
