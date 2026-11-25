@@ -96,7 +96,9 @@ const digits = (v: string) => v.replace(/\D/g, '').slice(0, 9);
  * Кейсы главной с фильтрами (макет): плашка #181821, скругление 36, внутри 24; слева категория,
  * поиск (справа 36) и цена «от–до» (два поля по 191 без зазора, между ними — только линия),
  * справа уровень адреналина и ластик (сброс, без контура). Между фреймами 24.
- * Ниже — категории: заголовок DemiBold 36 по центру, в 48px от фильтров и от сетки карточек.
+ * Ниже — категории: заголовок DemiBold 36 по центру. Отступы — как в макете на глаз: в Figma между
+ * рамками 48, но рамки заголовка и карточек выше текста, поэтому видимый зазор до заголовка и после
+ * него — 120px (на ширине от 1280).
  */
 export function CaseBrowser({
   game,
@@ -159,7 +161,7 @@ export function CaseBrowser({
   ];
 
   return (
-    <div className="flex flex-col gap-6 md:gap-12">
+    <div className="flex flex-col gap-10 md:gap-20 xl:gap-[120px]">
       <section
         className="flex flex-wrap items-center justify-between gap-6 rounded-[24px] bg-surface-1 p-3 max-md:[zoom:0.72] md:rounded-[36px] md:p-6"
         aria-label={t('label')}
@@ -242,7 +244,7 @@ export function CaseBrowser({
         filtered.map((cat) => (
           <section
             key={cat.code}
-            className="flex flex-col gap-6 md:gap-12"
+            className="flex flex-col gap-10 md:gap-20 xl:gap-[120px]"
             aria-labelledby={`case-cat-${cat.code}`}
             data-testid={`case-category-${cat.code}`}
           >
