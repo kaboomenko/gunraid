@@ -95,7 +95,7 @@
     }
   },
   "auth": {
-    "title": "Вход в GunRaid",
+    "title": "Вход в аккаунт GunRaid",
     "subtitle": "К одному аккаунту можно привязать Steam, Google и Telegram",
     "steam": "Войти через Steam",
     "google": "Войти через Google",
@@ -110,12 +110,15 @@
     "devNickname": "Или свой ник",
     "devNicknamePlaceholder": "Например, Tester",
     "devSubmit": "Войти",
-    "terms": "Входя, вы подтверждаете, что вам исполнилось 18 лет и вы принимаете <rules>правила сайта</rules> и <terms>пользовательское соглашение</terms>.",
     "success": "Вы вошли",
     "linked": "{provider} привязан к аккаунту",
     "logoutAllDone": "Вы вышли со всех устройств",
     "loggedOut": "Вы вышли из аккаунта",
-    "sessionExpired": "Сессия истекла — войдите снова"
+    "sessionExpired": "Сессия истекла — войдите снова",
+    "offer": "Я принимаю условия <link>Публичной офёрты</link>",
+    "offerRequired": "Чтобы войти, примите условия публичной оферты",
+    "providerSoon": "Вход через {provider} пока не подключён",
+    "telegramFailed": "Не удалось открыть вход через Telegram — попробуйте ещё раз"
   },
   "providers": {
     "steam": "Steam",

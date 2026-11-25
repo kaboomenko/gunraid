@@ -3,7 +3,8 @@ import type { GameCode, GameDto } from './games.js';
 export interface PublicAuthConfig {
   steam: boolean;
   google: boolean;
-  telegram: { botUsername: string } | null;
+  /** botId — числовой id бота (начало токена, не секрет): нужен окну входа Telegram. */
+  telegram: { botUsername: string; botId: number } | null;
   dev: boolean;
 }
 

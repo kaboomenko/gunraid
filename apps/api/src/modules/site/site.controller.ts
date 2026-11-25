@@ -55,7 +55,10 @@ export class SiteController {
         steam: true,
         google: isGoogleEnabled(this.env),
         telegram: isTelegramEnabled(this.env)
-          ? { botUsername: this.env.TELEGRAM_BOT_USERNAME as string }
+          ? {
+              botUsername: this.env.TELEGRAM_BOT_USERNAME as string,
+              botId: Number((this.env.TELEGRAM_BOT_TOKEN as string).split(':')[0]),
+            }
           : null,
         dev: isDevLoginEnabled(this.env),
       },

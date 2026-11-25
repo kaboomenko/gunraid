@@ -620,6 +620,37 @@
 .gr-pop[data-state='open'] {
   animation: gr-pop-in 0.14s ease-out;
 }
+/*
+ * Окно по центру на любой ширине (вход). Анимируются только прозрачность и масштаб: сдвиг к центру
+ * задан свойством translate (Tailwind 4), и transform в кадрах прибавился бы к нему.
+ */
+@keyframes gr-dialog-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+.gr-dialog[data-state='open'] {
+  animation: gr-dialog-in 0.2s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+/* «Встряхнуть» элемент, на который нужно обратить внимание (например, согласие с офертой). */
+@keyframes gr-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+.gr-shake {
+  animation: gr-shake 0.36s ease-in-out;
+}
 .gr-toast {
   animation: gr-toast-in 0.2s ease-out;
 }

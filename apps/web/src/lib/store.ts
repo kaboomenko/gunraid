@@ -66,6 +66,9 @@ interface PrefsState {
    * Необязательные (аналитика) можно включать только при 'all'.
    */
   cookieConsent: CookieConsent | null;
+  /** Принял условия публичной оферты в окне входа (запоминается). */
+  offerAccepted: boolean;
+  setOfferAccepted: (v: boolean) => void;
   setSound: (v: boolean) => void;
   setFast: (v: boolean) => void;
   setCookieConsent: (v: CookieConsent) => void;
@@ -78,6 +81,8 @@ export const usePrefs = create<PrefsState>()(
       sound: true,
       fast: false,
       cookieConsent: null,
+      offerAccepted: false,
+      setOfferAccepted: (offerAccepted) => set({ offerAccepted }),
       setSound: (sound) => set({ sound }),
       setFast: (fast) => set({ fast }),
       setCookieConsent: (cookieConsent) => set({ cookieConsent }),
