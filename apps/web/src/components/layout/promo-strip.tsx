@@ -6,6 +6,7 @@ import { toast } from '@/components/ui/toast';
 import { useConfig } from '@/lib/config';
 import { useMe } from '@/lib/me';
 import { useUi } from '@/lib/store';
+import { PromoSnow } from './promo-snow';
 
 /**
  * Промо-полоса над лентой дропов (макет: высота 127, скругление 24).
@@ -38,7 +39,7 @@ export function PromoStrip() {
       aria-label={t('label', { code: promo.code, percent: promo.bonusPercent })}
       data-testid="promo-strip"
     >
-      <div className="promo-flakes" aria-hidden="true" />
+      <PromoSnow />
       <p className="text-center text-[16px] font-bold italic [font-variant-caps:all-small-caps] md:text-[36px]">
         {t.rich('title', { percent: promo.bonusPercent, br: () => <br /> })}
       </p>
