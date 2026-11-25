@@ -40,9 +40,7 @@ export async function ModeGrid({ game }: { game: string }) {
             <span className="block font-display text-sm font-bold uppercase tracking-wide">
               {t(`${m.key}.title`)}
             </span>
-            <span className="line-clamp-2 block text-xs leading-snug text-dim">
-              {t(`${m.key}.text`)}
-            </span>
+            <span className="line-clamp-2 block text-xs text-dim">{t(`${m.key}.text`)}</span>
           </span>
         </Link>
       ))}

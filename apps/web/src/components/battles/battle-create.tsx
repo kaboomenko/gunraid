@@ -126,7 +126,7 @@ export function BattleCreate({
                       <img src={c.imageUrl} alt="" className="h-20 w-20 object-contain" />
                     )}
                     {n > 0 && (
-                      <span className="clip-cut absolute right-0 top-0 bg-accent px-1.5 text-xs font-bold leading-5 text-accent-ink [--cut:4px]">
+                      <span className="clip-cut absolute right-0 top-0 bg-accent px-1.5 text-xs font-bold text-accent-ink [--cut:4px]">
                         ×{n}
                       </span>
                     )}

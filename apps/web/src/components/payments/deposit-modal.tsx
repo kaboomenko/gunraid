@@ -60,6 +60,7 @@ export function DepositModal() {
   const t = useTranslations();
   const format = useFormatter();
   const open = useUi((s) => s.depositOpen);
+  const presetPromo = useUi((s) => s.depositPromo);
   const close = useUi((s) => s.closeDeposit);
   const config = useConfig();
   const me = useMe();
@@ -76,6 +77,10 @@ export function DepositModal() {
   const [promo, setPromo] = useState('');
   const [promoBusy, setPromoBusy] = useState(false);
   const [quoteNonce, setQuoteNonce] = useState(0);
+
+  useEffect(() => {
+    if (open && presetPromo) setPromo(presetPromo);
+  }, [open, presetPromo]);
 
   const methodDto: PaymentMethodDto | undefined = useMemo(
     () => methods.data?.methods.find((m) => m.code === method),

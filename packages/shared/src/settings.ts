@@ -61,6 +61,17 @@ export const SETTINGS_SCHEMAS = {
     percent: share,
     maxBonusGems: gems,
   }),
+  /** Промо-полоса над лентой дропов: «+N% к депозиту по промокоду CODE». */
+  promoStrip: z.object({
+    enabled: z.boolean(),
+    code: z
+      .string()
+      .trim()
+      .min(3)
+      .max(32)
+      .regex(/^[A-Za-z0-9_-]+$/),
+    bonusPercent: z.number().int().min(1).max(1000),
+  }),
   wheel: z.object({
     cooldownHours: z
       .number()
@@ -125,6 +136,7 @@ export const DEFAULT_SETTINGS: AllSettings = {
   },
   feed: { minValueGems: 0, delayMs: 6000 },
   firstDeposit: { percent: 0.1, maxBonusGems: 1000 },
+  promoStrip: { enabled: true, code: 'RAID2027', bonusPercent: 20 },
   wheel: { cooldownHours: 24, minAccountAgeHours: 24, requireDepositWithinDays: 30 },
   daily: { rewards: [5, 10, 15, 20, 25, 30, 50], requireDepositWithinDays: null },
   referral: { percent: 0.05 },

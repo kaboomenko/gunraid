@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/toast';
 
 const SWATCHES = [
-  ['bg', '#0B0B0F'],
+  ['bg', '#121117'],
   ['surface-1', '#15151B'],
   ['surface-2', '#1B1B22'],
   ['surface-3', '#24242E'],

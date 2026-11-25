@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, isNull, ne, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
 import {
@@ -281,9 +281,33 @@ export async function seedWheel(db: Db): Promise<void> {
   }
 }
 
+/**
+ * Промокод с промо-полосы главной (+20% к депозиту). Отдельно от демо-набора:
+ * добавляется и на уже заполненной базе; существующий код (в любом регистре) не трогаем.
+ */
+async function seedStripPromo(db: Db): Promise<void> {
+  await db
+    .insert(promoCodes)
+    .values({
+      id: newId(),
+      code: 'RAID2027',
+      type: 'deposit_bonus',
+      percent: 0.2,
+      maxAmount: 10_000,
+      perUserLimit: 1,
+      isActive: true,
+    })
+    .onConflictDoNothing();
+}
+
 /** Демо-промокоды и партнёр-блогер. */
 export async function seedPromos(db: Db): Promise<void> {
-  const [has] = await db.select({ id: promoCodes.id }).from(promoCodes).limit(1);
+  await seedStripPromo(db);
+  const [has] = await db
+    .select({ id: promoCodes.id })
+    .from(promoCodes)
+    .where(ne(promoCodes.code, 'RAID2027'))
+    .limit(1);
   if (has) return;
   const partnerId = newId();
   await db

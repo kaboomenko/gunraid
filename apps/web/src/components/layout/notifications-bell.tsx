@@ -35,7 +35,7 @@ export function useNotificationText() {
 }
 
 /** Колокольчик уведомлений: список, непрочитанные, новые — по WebSocket. */
-export function NotificationsBell() {
+export function NotificationsBell({ large }: { large?: boolean } = {}) {
   const t = useTranslations('notifications');
   const format = useFormatter();
   const qc = useQueryClient();
@@ -88,11 +88,15 @@ export function NotificationsBell() {
       }}
     >
       <Popover.Trigger
-        className="clip-cut relative grid h-10 w-9 shrink-0 place-items-center bg-surface-2 text-muted transition hover:text-text [--cut:6px] sm:w-10"
+        className={
+          large
+            ? 'relative grid h-[72px] w-[72px] shrink-0 place-items-center rounded-[12px] bg-bg text-white/30 transition hover:text-white/60'
+            : 'clip-cut relative grid h-10 w-9 shrink-0 place-items-center bg-surface-2 text-muted transition hover:text-text [--cut:6px] sm:w-10'
+        }
         aria-label={t('open')}
         data-testid="notifications-bell"
       >
-        <Bell size={18} />
+        <Bell size={large ? 24 : 18} />
         {unread > 0 && (
           <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center bg-danger px-1 text-[10px] font-bold leading-none text-bg">
             {unread > 9 ? '9+' : unread}

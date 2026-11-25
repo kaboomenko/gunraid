@@ -37,6 +37,16 @@ export async function SiteFooter({ supportUrl }: { supportUrl: string | null }) 
               </Link>
             </li>
             <li>
+              <Link className="text-muted hover:text-text" href="/bonuses">
+                {t('bonuses')}
+              </Link>
+            </li>
+            <li>
+              <Link className="text-muted hover:text-text" href="/leaderboard">
+                {t('leaderboard')}
+              </Link>
+            </li>
+            <li>
               <Link className="text-muted hover:text-text" href="/provably-fair">
                 {t('fair')}
               </Link>

@@ -37,9 +37,10 @@ export class SiteController {
 
   @Get('config')
   async config(): Promise<PublicConfigDto> {
-    const [currency, site] = await Promise.all([
+    const [currency, site, promoStrip] = await Promise.all([
       this.settings.get('currency'),
       this.settings.get('site'),
+      this.settings.get('promoStrip'),
     ]);
     const games = (await this.games.listActive()).map((g) => this.games.toDto(g));
     return {
@@ -57,6 +58,9 @@ export class SiteController {
           : null,
         dev: isDevLoginEnabled(this.env),
       },
+      promoStrip: promoStrip.enabled
+        ? { code: promoStrip.code.toUpperCase(), bonusPercent: promoStrip.bonusPercent }
+        : null,
     };
   }
 

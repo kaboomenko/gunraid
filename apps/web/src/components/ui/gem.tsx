@@ -2,25 +2,22 @@ import { formatGems, formatGemsCompact } from '@gunraid/shared';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/cn';
 
-/** Иконка гема — гранёный кристалл #C6FF00. Ставится рядом с каждой суммой на сайте. */
+/** Иконка гема — кристалл из макета (16×24), цвет #C6FF00. size — высота; ставится рядом с каждой суммой. */
 export function GemIcon({ size = 16, className }: { size?: number; className?: string }) {
   return (
     <svg
-      width={size}
+      width={Math.round(((size * 2) / 3) * 100) / 100}
       height={size}
-      viewBox="0 0 24 24"
+      viewBox="0 0 16 24"
       aria-hidden="true"
       focusable="false"
+      fill="#C6FF00"
       className={cn('shrink-0', className)}
     >
-      <path d="M2 9 7 3l2.5 6Z" fill="#DFFF66" />
-      <path d="M7 3h5L9.5 9Z" fill="#EBFF99" />
-      <path d="M9.5 9 12 3l2.5 6Z" fill="#F5FFCC" />
-      <path d="M12 3h5l-2.5 6Z" fill="#E1FF73" />
-      <path d="m17 3 5 6h-7.5Z" fill="#C6FF00" />
-      <path d="M2 9h7.5L12 21Z" fill="#B5EB00" />
-      <path d="M9.5 9h5L12 21Z" fill="#C6FF00" />
-      <path d="M14.5 9H22L12 21Z" fill="#8DBA00" />
+      <path d="M8.00001 2.49812L4.74131 12.0006H0.693017L8.00001 2.49812Z" />
+      <path d="M15.7329 12.0006H11.2586L8.00001 2.49812L15.7329 12.0006Z" />
+      <path d="M11.2586 12.0006L8.00001 23.7637L4.74131 12.0006H11.2586Z" />
+      <path d="M8.00001 2.49812L13.991 12L8.00001 21.5025L2.00903 12L8.00001 2.49812ZM9.04705 0.588608C8.55185 -0.196203 7.44816 -0.196203 6.95296 0.588608L0.206332 11.2815C-0.0687772 11.7175 -0.0687772 12.2824 0.206332 12.7185L6.95296 23.4113C7.44816 24.1962 8.55185 24.1962 9.04705 23.4113L15.7937 12.7185C16.0688 12.2824 16.0688 11.7175 15.7937 11.2815L9.04705 0.588608Z" />
     </svg>
   );
 }
@@ -31,6 +28,8 @@ const SIZES = {
   md: { text: 'text-base', icon: 16, gap: 'gap-1' },
   lg: { text: 'text-xl', icon: 20, gap: 'gap-1.5' },
   xl: { text: 'text-3xl', icon: 28, gap: 'gap-2' },
+  /** Шапка десктопа: DemiBold 24, иконка 24. */
+  xxl: { text: 'text-[24px]', icon: 24, gap: 'gap-3' },
 } as const;
 
 export interface GemAmountProps {

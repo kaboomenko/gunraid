@@ -143,7 +143,7 @@ export function CasesThumbs({ cases, max = 5 }: { cases: BattleListCaseDto[]; ma
             <img src={c.imageUrl} alt={c.name} className="h-9 w-9 object-contain" />
           )}
           {c.count > 1 && (
-            <span className="absolute -right-0.5 -top-0.5 bg-accent px-1 text-[10px] font-bold leading-4 text-accent-ink">
+            <span className="absolute -right-0.5 -top-0.5 bg-accent px-1 text-[10px] font-bold text-accent-ink">
               ×{c.count}
             </span>
           )}

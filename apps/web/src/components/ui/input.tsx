@@ -9,7 +9,7 @@ export const Input = forwardRef<
     <input
       ref={ref}
       className={cn(
-        'clip-cut h-11 w-full bg-surface-2 px-3.5 text-sm text-text placeholder:text-dim [--cut:7px]',
+        'clip-cut h-11 w-full bg-surface-2 px-3.5 text-base text-text placeholder:text-dim [--cut:7px] sm:text-sm',
         'shadow-[inset_0_0_0_1px_var(--color-line)] transition focus:shadow-[inset_0_0_0_1.5px_var(--color-accent)] focus:outline-none',
         invalid && 'shadow-[inset_0_0_0_1.5px_var(--color-danger)]',
         className,

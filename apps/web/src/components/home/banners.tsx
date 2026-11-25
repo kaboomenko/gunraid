@@ -13,7 +13,7 @@ export function Banners({ banners }: { banners: BannerDto[] }) {
             style={{ background: `linear-gradient(110deg, ${b.accentColor}2e, transparent 60%)` }}
           >
             <div className="min-w-0">
-              <div className="font-display text-lg font-extrabold uppercase leading-tight sm:text-xl">
+              <div className="font-display text-lg font-extrabold uppercase sm:text-xl">
                 {b.title}
               </div>
               {b.subtitle && (

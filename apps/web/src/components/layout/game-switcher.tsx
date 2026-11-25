@@ -19,8 +19,8 @@ import { getCookie, setCookie } from '@/lib/cookies';
 import { switchGamePath, useGame } from '@/lib/game';
 import { useMe } from '@/lib/me';
 
-export function GameSwitcher() {
-  const t = useTranslations('header');
+/** Текущая игра, список игр и переключение (cookie, профиль, тот же раздел другой игры). */
+export function useGameSelect() {
   const config = useConfig();
   const current = useGame();
   const pathname = usePathname();
@@ -39,6 +39,13 @@ export function GameSwitcher() {
       ),
     );
   };
+  return { current, games: config.games, select };
+}
+
+/** Компактный переключатель игры (мобильная шапка). */
+export function GameSwitcher() {
+  const t = useTranslations('header');
+  const { current, games, select } = useGameSelect();
 
   if (!current) return null;
   return (
@@ -55,7 +62,7 @@ export function GameSwitcher() {
       </DropdownTrigger>
       <DropdownContent align="start">
         <DropdownLabel>{t('games')}</DropdownLabel>
-        {config.games.map((g) => (
+        {games.map((g) => (
           <DropdownItem key={g.code} onSelect={() => select(g.code)}>
             <GameIcon shortName={g.shortName} size="sm" />
             <span className="flex-1 font-semibold text-text">{g.name}</span>

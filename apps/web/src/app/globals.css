@@ -2,28 +2,31 @@
 
 /* ---------- Дизайн-токены GunRaid ---------- */
 @theme {
-  --color-bg: #0b0b0f;
-  --color-surface-1: #15151b;
-  --color-surface-2: #1b1b22;
-  --color-surface-3: #24242e;
-  --color-line: #2c2c38;
-  --color-line-strong: #3a3a48;
+  --color-bg: #121117;
+  --color-surface-1: #181821;
+  --color-surface-2: #1e1e29;
+  --color-surface-3: #272733;
+  --color-line: #2a2a36;
+  --color-line-strong: #383846;
   --color-text: #ffffff;
   --color-muted: #a3a3b2;
-  --color-dim: #6c6c7c;
+  --color-dim: #8b8b9a;
   --color-accent: #c6ff00;
   --color-accent-hover: #d6ff4a;
-  --color-accent-ink: #0b0b0f;
+  --color-accent-ink: #121117;
+  /* Акцент второго уровня из макета: выбор игры, онлайн. */
+  --color-lime: #b7ff00;
   --color-accent-soft: rgb(198 255 0 / 0.12);
   --color-danger: #ff3d5e;
   --color-warning: #ffb21e;
   --color-info: #4fa8ff;
   --color-success: #c6ff00;
 
-  --font-display: 'Tektur Variable', 'Russo One', system-ui, sans-serif;
-  --font-sans: 'Golos Text Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: var(--font-firs), Arial, system-ui, sans-serif;
+  --font-sans: var(--font-firs), Arial, system-ui, sans-serif;
 
   --breakpoint-xs: 380px;
+  --breakpoint-3xl: 1720px;
 
   --animate-shimmer: shimmer 1.6s linear infinite;
   --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
@@ -77,20 +80,29 @@
   html {
     background: var(--color-bg);
     -webkit-text-size-adjust: 100%;
-    scroll-behavior: smooth;
   }
   body {
     min-height: 100dvh;
-    background:
-      radial-gradient(900px 500px at 0% -10%, rgb(198 255 0 / 0.07), transparent 60%),
-      radial-gradient(700px 400px at 100% 0%, rgb(120 90 255 / 0.05), transparent 60%),
-      var(--color-bg);
+    background: var(--color-bg);
     color: var(--color-text);
     font-family: var(--font-sans);
-    font-size: 15px;
-    line-height: 1.5;
+    font-size: 16px;
+    /* Межстрочный интервал по всему сайту — 100%. */
+    line-height: 1;
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
+  }
+  /*
+   * Обрезка лишнего вертикального пространства шрифта, как «Vertical trim» в Figma:
+   * блок текста начинается по высоте прописных и заканчивается по базовой линии,
+   * поэтому отступы из макета совпадают один в один.
+   */
+  @supports (text-box: trim-both cap alphabetic) {
+    *,
+    ::before,
+    ::after {
+      text-box: trim-both cap alphabetic;
+    }
   }
   ::selection {
     background: var(--color-accent);
@@ -171,6 +183,131 @@
     --cut: 24px;
   }
 
+  /*
+   * Фигурная кнопка по шаблону из макета (307×72): левый верхний и правый нижний углы
+   * срезаны под 45°, два других скруглены; все сопряжения — радиус 16 при высоте 72.
+   * Высота задаётся через --h (по правилу макета: самый крупный элемент + 24 сверху и снизу),
+   * ширина любая — форма масштабируется вместе с высотой и обрезает в том числе backdrop-filter.
+   */
+  .shape {
+    --h: 72px;
+    --u: calc(var(--h) / 72);
+    height: var(--h);
+    clip-path: polygon(
+      calc(var(--u) * 40.794) 0,
+      calc(100% - var(--u) * 16) 0,
+      calc(100% - var(--u) * 11.859) calc(var(--u) * 0.545),
+      calc(100% - var(--u) * 8) calc(var(--u) * 2.144),
+      calc(100% - var(--u) * 4.686) calc(var(--u) * 4.686),
+      calc(100% - var(--u) * 2.144) calc(var(--u) * 8),
+      calc(100% - var(--u) * 0.545) calc(var(--u) * 11.859),
+      100% calc(var(--u) * 16),
+      100% calc(var(--u) * 31.206),
+      calc(100% - var(--u) * 0.545) calc(var(--u) * 35.347),
+      calc(100% - var(--u) * 2.144) calc(var(--u) * 39.206),
+      calc(100% - var(--u) * 4.686) calc(var(--u) * 42.52),
+      calc(100% - var(--u) * 29.48) calc(var(--u) * 67.314),
+      calc(100% - var(--u) * 32.794) calc(var(--u) * 69.856),
+      calc(100% - var(--u) * 36.653) calc(var(--u) * 71.455),
+      calc(100% - var(--u) * 40.794) 100%,
+      calc(var(--u) * 16) 100%,
+      calc(var(--u) * 11.859) calc(var(--u) * 71.455),
+      calc(var(--u) * 8) calc(var(--u) * 69.856),
+      calc(var(--u) * 4.686) calc(var(--u) * 67.314),
+      calc(var(--u) * 2.144) calc(var(--u) * 64),
+      calc(var(--u) * 0.545) calc(var(--u) * 60.141),
+      0 calc(var(--u) * 56),
+      0 calc(var(--u) * 40.794),
+      calc(var(--u) * 0.545) calc(var(--u) * 36.653),
+      calc(var(--u) * 2.144) calc(var(--u) * 32.794),
+      calc(var(--u) * 4.686) calc(var(--u) * 29.48),
+      calc(var(--u) * 29.48) calc(var(--u) * 4.686),
+      calc(var(--u) * 32.794) calc(var(--u) * 2.144),
+      calc(var(--u) * 36.653) calc(var(--u) * 0.545),
+      calc(var(--u) * 40.794) 0
+    );
+  }
+
+  /* ---------- Промо-полоса над лентой дропов ---------- */
+  .promo-strip {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: url('/design/promo-city.webp') center 58% / max(100%, 1400px) auto no-repeat #142456;
+  }
+  /* Сугроб: верх снега всегда на 82px от верха полосы, при широком экране растёт вместе с ней. */
+  .promo-strip::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: url('/design/promo-snow.webp') center 82px / max(100%, 1872px) auto no-repeat;
+    pointer-events: none;
+  }
+  /* Снежинки: два кадра друг над другом, бесшовно «падают» сверху вниз. */
+  .promo-flakes {
+    position: absolute;
+    inset: auto 0 0;
+    z-index: -1;
+    aspect-ratio: 1125 / 1500;
+    background: url('/design/promo-flakes.webp') center top / 100% 50% repeat-y;
+    transform: translateY(0);
+    animation: promo-snowfall 40s linear infinite;
+    pointer-events: none;
+    will-change: transform;
+  }
+  @keyframes promo-snowfall {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(50%);
+    }
+  }
+
+  /* ---------- Карточка дропа в ленте (свечение цвета редкости --rc) ---------- */
+  .drop-card__glow-a,
+  .drop-card__glow-b,
+  .drop-card__brush {
+    position: absolute;
+    pointer-events: none;
+  }
+  .drop-card__glow-a,
+  .drop-card__glow-b {
+    border-radius: 50%;
+    background: var(--rc);
+  }
+  /* Эллипс 192×138, отступы 24 слева/справа и 6 сверху/снизу; Figma layer blur 100. */
+  .drop-card__glow-a {
+    left: 24px;
+    top: 6px;
+    width: 192px;
+    height: 138px;
+    opacity: 0.17;
+    filter: blur(50px);
+  }
+  /* Эллипс 240×88: начинается в 106px от верха и уходит на 44px ниже карточки; blur 60. */
+  .drop-card__glow-b {
+    left: 0;
+    top: 106px;
+    width: 240px;
+    height: 88px;
+    opacity: 0.55;
+    filter: blur(30px);
+  }
+  .drop-card__brush {
+    inset: 0;
+    background: url('/design/drop-brush.svg') center / 100% 100% no-repeat;
+  }
+
+  /* Логотип GUNRAID одним цветом (currentColor) через маску — файл кешируется, HTML не раздувается. */
+  .logo-mask {
+    display: inline-block;
+    aspect-ratio: 306 / 64;
+    background-color: currentColor;
+    mask: url('/brand/logo.svg') center / contain no-repeat;
+  }
+
   /* Сплошной срез без обводки (кнопки, бейджи) */
   .clip-cut {
     --cut: 8px;
@@ -186,8 +323,7 @@
 
   .font-display-oblique {
     font-family: var(--font-display);
-    font-style: oblique 10deg;
-    font-synthesis: style;
+    font-style: italic;
   }
 
   .skeleton {
@@ -225,6 +361,20 @@
 }
 
 @layer utilities {
+  /*
+   * После обрезки строки нижние выносные (у, р, g) и диакритика (Й, Ё) выходят за блок текста,
+   * поэтому обрезаем только по горизонтали — многоточие работает, буквы не срезаются.
+   */
+  .truncate {
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+  .line-clamp-1,
+  .line-clamp-2,
+  .line-clamp-3 {
+    overflow: clip;
+    overflow-clip-margin: 0.22em;
+  }
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }

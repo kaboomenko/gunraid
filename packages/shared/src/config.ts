@@ -14,6 +14,8 @@ export interface PublicConfigDto {
   games: GameDto[];
   supportTelegramUrl: string | null;
   auth: PublicAuthConfig;
+  /** Промо-полоса над лентой дропов; null — выключена в админке. */
+  promoStrip: { code: string; bonusPercent: number } | null;
 }
 
 export interface SiteStatsDto {

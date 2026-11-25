@@ -42,6 +42,7 @@ const FALLBACK_CONFIG: PublicConfigDto = {
   games: [],
   supportTelegramUrl: null,
   auth: { steam: false, google: false, telegram: null, dev: false },
+  promoStrip: null,
 };
 
 export async function getPublicConfig(): Promise<PublicConfigDto> {

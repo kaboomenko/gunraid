@@ -1,5 +1,3 @@
-import '@fontsource-variable/tektur';
-import '@fontsource-variable/golos-text';
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
@@ -9,14 +7,16 @@ import { AdultGate } from '@/components/auth/adult-gate';
 import { AuthEffects } from '@/components/auth/auth-effects';
 import { LoginModal } from '@/components/auth/login-modal';
 import { CookieBanner } from '@/components/layout/cookie-banner';
-import { LiveFeedBar } from '@/components/layout/live-feed';
+import { PromoStrip } from '@/components/layout/promo-strip';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { SiteHeader } from '@/components/layout/site-header';
 import { MobileTabBar } from '@/components/layout/tab-bar';
+import { TopBar } from '@/components/layout/top-bar';
 import { DepositModal } from '@/components/payments/deposit-modal';
 import { getPublicConfig } from '@/lib/server-api';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import { siteUrl } from '@/lib/site';
+import { firsNeue } from './fonts';
 import { Providers } from './providers';
 
 export const dynamic = 'force-dynamic';
@@ -47,7 +47,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0B0B0F',
+  themeColor: '#121117',
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
@@ -56,16 +56,20 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const [config, locale] = await Promise.all([getPublicConfig(), getLocale()]);
   return (
-    <html lang={locale}>
+    <html lang={locale} className={firsNeue.variable}>
       <body>
         <NextIntlClientProvider>
           <Providers config={config}>
-            <LiveFeedBar />
-            <SiteHeader />
-            <main className="mx-auto min-h-[60vh] max-w-[1440px] px-3 pt-4 sm:px-5 sm:pt-6">
-              {children}
-            </main>
-            <SiteFooter supportUrl={config.supportTelegramUrl} />
+            {/* Поля страницы — 24px со всех сторон (макет 1920: контент 1872). */}
+            <div className="flex min-h-dvh flex-col">
+              <div className="space-y-3 px-3 pt-3 md:space-y-6 md:px-6 md:pt-6">
+                <PromoStrip />
+                <TopBar />
+              </div>
+              <SiteHeader />
+              <main className="min-h-[60vh] flex-1 px-3 pt-4 md:px-6 md:pt-6">{children}</main>
+              <SiteFooter supportUrl={config.supportTelegramUrl} />
+            </div>
             <MobileTabBar />
             <LoginModal />
             <AdultGate />

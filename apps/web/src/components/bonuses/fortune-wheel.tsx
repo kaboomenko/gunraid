@@ -29,7 +29,7 @@ function ink(hex: string): string {
   const r = parseInt(v.slice(0, 2), 16);
   const g = parseInt(v.slice(2, 4), 16);
   const b = parseInt(v.slice(4, 6), 16);
-  return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? '#0B0B0F' : '#FFFFFF';
+  return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? '#121117' : '#FFFFFF';
 }
 
 export interface FortuneWheelProps {
@@ -120,7 +120,7 @@ export function FortuneWheel({ prizes, target, durationMs = 5200, onDone }: Fort
             const [tx, ty] = polar(mid, R * 0.64);
             return (
               <g key={p.id}>
-                <path d={segmentPath(a0, a1)} fill={p.color} stroke="#0B0B0F" strokeWidth="2" />
+                <path d={segmentPath(a0, a1)} fill={p.color} stroke="#121117" strokeWidth="2" />
                 <text
                   x={tx}
                   y={ty}
@@ -142,7 +142,7 @@ export function FortuneWheel({ prizes, target, durationMs = 5200, onDone }: Fort
           const [x, y] = polar(i * seg, R + 4);
           return <circle key={i} cx={x} cy={y} r={3} fill="#C6FF00" />;
         })}
-        <circle cx={C} cy={C} r={44} fill="#0B0B0F" stroke="#C6FF00" strokeWidth="3" />
+        <circle cx={C} cy={C} r={44} fill="#121117" stroke="#C6FF00" strokeWidth="3" />
         <path
           d={`M ${C - 14} ${C - 6} L ${C} ${C - 22} L ${C + 14} ${C - 6} L ${C + 8} ${C - 6} L ${C + 8} ${C + 16} L ${C - 8} ${C + 16} L ${C - 8} ${C - 6} Z`}
           fill="#C6FF00"
@@ -154,7 +154,7 @@ export function FortuneWheel({ prizes, target, durationMs = 5200, onDone }: Fort
         className="absolute left-1/2 top-0 h-12 w-10 -translate-x-1/2 -translate-y-2 drop-shadow-[0_4px_10px_rgba(0,0,0,0.6)]"
         aria-hidden="true"
       >
-        <path d="M4 2 H36 L20 44 Z" fill="#C6FF00" stroke="#0B0B0F" strokeWidth="3" />
+        <path d="M4 2 H36 L20 44 Z" fill="#C6FF00" stroke="#121117" strokeWidth="3" />
       </svg>
     </div>
   );

@@ -34,7 +34,10 @@ interface UiState {
   openLogin: () => void;
   closeLogin: () => void;
   depositOpen: boolean;
-  openDeposit: () => void;
+  /** Промокод, который подставится в окно пополнения (например, с промо-полосы). */
+  depositPromo: string | null;
+  /** Аргумент — только строка: функцию передают прямо в onClick, и туда приходит событие. */
+  openDeposit: (promo?: unknown) => void;
   closeDeposit: () => void;
   online: number | null;
   setOnline: (n: number) => void;
@@ -45,8 +48,10 @@ export const useUi = create<UiState>()((set) => ({
   openLogin: () => set({ loginOpen: true }),
   closeLogin: () => set({ loginOpen: false }),
   depositOpen: false,
-  openDeposit: () => set({ depositOpen: true }),
-  closeDeposit: () => set({ depositOpen: false }),
+  depositPromo: null,
+  openDeposit: (promo) =>
+    set({ depositOpen: true, depositPromo: typeof promo === 'string' ? promo : null }),
+  closeDeposit: () => set({ depositOpen: false, depositPromo: null }),
   online: null,
   setOnline: (online) => set({ online }),
 }));

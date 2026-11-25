@@ -15,7 +15,7 @@ import { useErrorMessage } from '@/lib/errors';
 import { AdminSection, AdminTable, Select, Switch, fmtDate } from './ui';
 
 type Value = string | number | boolean | null | number[];
-const STRING_FIELDS = new Set(['supportTelegramUrl', 'defaultGame']);
+const STRING_FIELDS = new Set(['supportTelegramUrl', 'defaultGame', 'code']);
 
 function SettingsGroup({
   name,

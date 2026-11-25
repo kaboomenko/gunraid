@@ -141,12 +141,6 @@ importers:
 
   apps/web:
     dependencies:
-      '@fontsource-variable/golos-text':
-        specifier: ^5.3.0
-        version: 5.3.0
-      '@fontsource-variable/tektur':
-        specifier: ^5.3.0
-        version: 5.3.0
       '@gunraid/game-core':
         specifier: workspace:*
         version: link:../../packages/game-core
@@ -956,12 +950,6 @@ packages:
 
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
-
-  '@fontsource-variable/golos-text@5.3.0':
-    resolution: {integrity: sha512-D+Evz5yqXYh6tsalc537FS+cPDWn2FTdO8j/K1ZZuFAvA7ib6WnusTiihciq7mMnm6GBo6XTlh0JXPrhBsam2g==}
-
-  '@fontsource-variable/tektur@5.3.0':
-    resolution: {integrity: sha512-aTiP3FWurF3A7kIr3PyHib27A9PLurrkHfu6UwCv1eCHyi7k9AyPBhIspGH8n6fDWrpqFXqpWZ+zev/MbPZ/4A==}
 
   '@formatjs/fast-memoize@3.1.7':
     resolution: {integrity: sha512-zXfhLpvA6T7+efdt9JLbBwZ00tT7NsBMDVnDu8rpHeNNv8KfRZAMo2gkG0k9lK/Nzc//3kJ9pImsfuJxk3KhUA==}
@@ -5371,10 +5359,6 @@ snapshots:
       react-dom: 19.3.1(react@19.3.1)
 
   '@floating-ui/utils@0.2.12': {}
-
-  '@fontsource-variable/golos-text@5.3.0': {}
-
-  '@fontsource-variable/tektur@5.3.0': {}
 
   '@formatjs/fast-memoize@3.1.7': {}
 

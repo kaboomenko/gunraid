@@ -2,7 +2,7 @@
 
 import type { MeDto } from '@gunraid/shared';
 import { useQueryClient } from '@tanstack/react-query';
-import { Backpack, LogOut, Settings, Shield, User } from 'lucide-react';
+import { Backpack, Gift, LogOut, Settings, Shield, Trophy, User } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -20,7 +20,7 @@ import { useGameCode } from '@/lib/game';
 import { ME_KEY } from '@/lib/me';
 import { reconnectSocket } from '@/lib/socket';
 
-export function UserMenu({ me }: { me: MeDto }) {
+export function UserMenu({ me, large }: { me: MeDto; large?: boolean }) {
   const t = useTranslations();
   const game = useGameCode();
   const qc = useQueryClient();
@@ -42,7 +42,12 @@ export function UserMenu({ me }: { me: MeDto }) {
         aria-label={t('header.profile')}
         data-testid="user-menu"
       >
-        <Avatar src={me.avatarUrl} name={me.nickname} size="md" />
+        <Avatar
+          src={me.avatarUrl}
+          name={me.nickname}
+          size="md"
+          className={large ? 'h-[72px] w-[72px] text-[24px] [--cut:12px]' : undefined}
+        />
       </DropdownTrigger>
       <DropdownContent align="end">
         <div className="flex items-center gap-3 px-3 pb-3 pt-2">
@@ -63,6 +68,16 @@ export function UserMenu({ me }: { me: MeDto }) {
         <DropdownItem asChild>
           <Link href={`/${game}/profile?tab=inventory`}>
             <Backpack size={16} /> {t('header.inventory')}
+          </Link>
+        </DropdownItem>
+        <DropdownItem asChild>
+          <Link href={`/${game}/bonuses`}>
+            <Gift size={16} /> {t('nav.bonuses')}
+          </Link>
+        </DropdownItem>
+        <DropdownItem asChild>
+          <Link href={`/${game}/leaderboard`}>
+            <Trophy size={16} /> {t('nav.leaderboard')}
           </Link>
         </DropdownItem>
         <DropdownItem asChild>

@@ -246,6 +246,9 @@ export { expect };
 
 /** Баланс в шапке (число без пробелов-разделителей). */
 export async function headerBalance(page: Page): Promise<number> {
-  const text = (await page.getByTestId('balance').innerText()).replace(/\D/g, '');
+  const text = (await page.getByTestId('balance').filter({ visible: true }).innerText()).replace(
+    /\D/g,
+    '',
+  );
   return Number(text);
 }

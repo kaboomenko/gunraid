@@ -4,7 +4,7 @@ import { expect, headerBalance, test, uniqueNick } from '../fixtures';
 test.describe('Игрок: вход, пополнение, кейсы', () => {
   test('вход через окно входа и выход', async ({ page, api }) => {
     await page.goto('/cs2');
-    await page.getByTestId('login-button').click();
+    await page.getByTestId('login-button').filter({ visible: true }).click();
     // После входа сайт перезапрашивает профиль; по нему видно, нужно ли окно 18+
     // (на чистой базе демо-игрок его ещё не подтверждал).
     const meLoaded = page.waitForResponse(
@@ -19,12 +19,12 @@ test.describe('Игрок: вход, пополнение, кейсы', () => {
       await gate.click();
       await expect(gate).toBeHidden();
     }
-    await expect(page.getByTestId('user-menu')).toBeVisible();
+    await expect(page.getByTestId('user-menu').filter({ visible: true })).toBeVisible();
     expect((await api.me()).nickname).toBeTruthy();
 
-    await page.getByTestId('user-menu').click();
+    await page.getByTestId('user-menu').filter({ visible: true }).click();
     await page.getByRole('menuitem', { name: 'Выйти' }).click();
-    await expect(page.getByTestId('login-button')).toBeVisible();
+    await expect(page.getByTestId('login-button').filter({ visible: true })).toBeVisible();
     expect((await api.get('/me')).status).toBe(401);
   });
 
@@ -43,7 +43,7 @@ test.describe('Игрок: вход, пополнение, кейсы', () => {
   test('тестовое пополнение через окно оплаты @mobile', async ({ page, api, player }) => {
     expect(player.balance).toBe(0);
     await page.goto('/cs2');
-    await page.getByTestId('deposit-open').click();
+    await page.getByTestId('deposit-open').filter({ visible: true }).click();
     const dialog = page.getByRole('dialog');
     // Курс всегда на виду, гемы показываются до оплаты.
     await expect(dialog).toContainText('100 гемов = $1');

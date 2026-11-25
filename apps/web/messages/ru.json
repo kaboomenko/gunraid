@@ -55,7 +55,7 @@
     "fair": "Честная игра"
   },
   "header": {
-    "login": "Войти",
+    "login": "Вход",
     "logout": "Выйти",
     "profile": "Профиль",
     "inventory": "Инвентарь",
@@ -67,8 +67,32 @@
     "level": "Ур. {level}"
   },
   "feed": {
-    "title": "Live",
+    "title": "Последние дропы",
     "empty": "Здесь появятся дропы игроков в реальном времени"
+  },
+  "promoStrip": {
+    "title": "+{percent}% к депозиту<br></br>по промокоду",
+    "label": "Промокод {code}: +{percent}% к депозиту",
+    "apply": "Применить промокод при пополнении",
+    "copied": "Промокод {code} скопирован — войдите и пополните баланс"
+  },
+  "topBar": {
+    "language": "Язык сайта",
+    "languages": {
+      "ru": "Русский"
+    },
+    "soundOn": "Выключить звуки",
+    "soundOff": "Включить звуки",
+    "online": "Онлайн",
+    "onlineLabel": "{count, plural, one {# игрок онлайн} few {# игрока онлайн} many {# игроков онлайн} other {# игрока онлайн}}",
+    "dropFrom": "Выпал из кейса «{name}»",
+    "sources": {
+      "case": "Кейс",
+      "upgrade": "Апгрейд",
+      "contract": "Контракт",
+      "battle": "Баттл",
+      "wheel": "Колесо фортуны"
+    }
   },
   "auth": {
     "title": "Вход в GunRaid",
@@ -211,7 +235,9 @@
       "docs": "Документы",
       "help": "Помощь"
     },
-    "items": "Все предметы"
+    "items": "Все предметы",
+    "bonuses": "Бонусы",
+    "leaderboard": "Топ игроков"
   },
   "legal": {
     "terms": "Пользовательское соглашение (оферта)",
@@ -822,6 +848,7 @@
         "battle": "Баттлы",
         "feed": "Лента дропов",
         "firstDeposit": "Бонус за первое пополнение",
+        "promoStrip": "Промо-полоса на главной",
         "wheel": "Колесо фортуны",
         "daily": "Ежедневный бонус",
         "referral": "Рефералы",
@@ -866,7 +893,10 @@
         "minDepositsForWithdrawGems": "Для вывода нужно пополнить минимум, гемы",
         "so2ListingTimeoutMinutes": "Standoff 2: время на выставление лота, мин",
         "so2GemsPerGold": "Standoff 2: гемов за 1 золото",
-        "cs2TradeProtectionDays": "CS2: период защиты сделки, дней"
+        "cs2TradeProtectionDays": "CS2: период защиты сделки, дней",
+        "enabled": "Показывать",
+        "code": "Промокод",
+        "bonusPercent": "Бонус к депозиту, % (для текста)"
       }
     }
   },

@@ -141,7 +141,7 @@ export function LoginModal() {
           </div>
         )}
 
-        <p className="mt-1 text-center text-xs leading-relaxed text-dim">
+        <p className="mt-1 text-center text-xs text-dim">
           {t.rich('terms', {
             rules: (chunks) => (
               <Link

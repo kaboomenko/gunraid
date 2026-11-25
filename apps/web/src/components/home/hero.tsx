@@ -27,7 +27,7 @@ export async function Hero({
             <GameIcon shortName={shortName} size="sm" />
             {t('heroKicker', { game: gameName })}
           </div>
-          <h1 className="font-display-oblique text-2xl font-extrabold uppercase leading-[1.05] sm:text-5xl">
+          <h1 className="font-display-oblique text-2xl font-extrabold uppercase sm:text-5xl">
             {t('heroTitle')}
           </h1>
           <p className="hidden max-w-xl text-sm text-muted sm:block sm:text-base">
