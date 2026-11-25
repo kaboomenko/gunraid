@@ -135,7 +135,7 @@ export const DEFAULT_SETTINGS: AllSettings = {
     allowBots: true,
   },
   feed: { minValueGems: 0, delayMs: 6000 },
-  firstDeposit: { percent: 0.1, maxBonusGems: 1000 },
+  firstDeposit: { percent: 0.5, maxBonusGems: 1000 },
   promoStrip: { enabled: true, code: 'RAID2027', bonusPercent: 20 },
   wheel: { cooldownHours: 24, minAccountAgeHours: 24, requireDepositWithinDays: 30 },
   daily: { rewards: [5, 10, 15, 20, 25, 30, 50], requireDepositWithinDays: null },

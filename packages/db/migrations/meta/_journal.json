@@ -64,6 +64,13 @@
       "when": 1795572516758,
       "tag": "0008_design_rarity_colors",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795613936949,
+      "tag": "0009_first_deposit_50",
+      "breakpoints": true
     }
   ]
 }

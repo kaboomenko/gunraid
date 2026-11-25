@@ -5,6 +5,7 @@ import {
   caseOpenings,
   caseRevisions,
   cases,
+  items,
   newId,
   userCooldowns,
   users,
@@ -13,16 +14,18 @@ import {
   type RevisionEntry,
 } from '@gunraid/db';
 import { oddsToPercent, pickByTicket, rollFloat, ticketFromFloat } from '@gunraid/game-core';
-import type {
-  BannerDto,
-  CaseAvailabilityDto,
-  CaseCardDto,
-  CaseDetailDto,
-  CaseOpenResultDto,
-  CaseOpeningProofDto,
-  HomeDto,
+import {
+  caseAdrenaline,
+  type AdrenalineLevel,
+  type BannerDto,
+  type CaseAvailabilityDto,
+  type CaseCardDto,
+  type CaseDetailDto,
+  type CaseOpenResultDto,
+  type CaseOpeningProofDto,
+  type HomeDto,
 } from '@gunraid/shared';
-import { and, asc, eq, gt, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import { DB } from '../../core/tokens.js';
 import { AppError, notFound } from '../../common/app-error.js';
 import { CatalogService } from '../catalog/catalog.service.js';
@@ -56,7 +59,7 @@ export class CasesService {
     private readonly entitlements: EntitlementsService,
   ) {}
 
-  private toCard(row: CaseRow, categoryCode: string): CaseCardDto {
+  private toCard(row: CaseRow, categoryCode: string, adrenaline: AdrenalineLevel): CaseCardDto {
     return {
       id: row.id,
       slug: row.slug,
@@ -70,7 +73,43 @@ export class CasesService {
       supplyTotal: row.supplyTotal,
       supplyUsed: row.supplyUsed,
       categoryCode,
+      adrenaline,
     };
+  }
+
+  /** «Уровень адреналина» кейсов по текущим ревизиям состава (цены предметов — актуальные). */
+  private async adrenalineByCase(rows: CaseRow[]): Promise<Map<string, AdrenalineLevel>> {
+    const revIds = rows.map((r) => r.currentRevisionId).filter((id): id is string => Boolean(id));
+    const out = new Map<string, AdrenalineLevel>();
+    if (!revIds.length) return out;
+    const revs = await this.db
+      .select({
+        id: caseRevisions.id,
+        caseId: caseRevisions.caseId,
+        contents: caseRevisions.contents,
+      })
+      .from(caseRevisions)
+      .where(inArray(caseRevisions.id, revIds));
+    const itemIds = [...new Set(revs.flatMap((r) => r.contents.map((e) => e.itemId)))];
+    const prices = new Map(
+      itemIds.length
+        ? (
+            await this.db
+              .select({ id: items.id, price: items.price })
+              .from(items)
+              .where(inArray(items.id, itemIds))
+          ).map((r) => [r.id, r.price])
+        : [],
+    );
+    const priceOf = new Map(rows.map((r) => [r.id, r.price]));
+    for (const rev of revs) {
+      const contents = rev.contents.map((e) => ({
+        odds: e.odds,
+        price: prices.get(e.itemId) ?? 0,
+      }));
+      out.set(rev.caseId, caseAdrenaline(contents, priceOf.get(rev.caseId) ?? 0));
+    }
+    return out;
   }
 
   private visibleNow() {
@@ -106,12 +145,15 @@ export class CasesService {
         )
         .orderBy(asc(banners.sortOrder)),
     ]);
+    const adrenaline = await this.adrenalineByCase(rows);
     return {
       categories: cats
         .map((c) => ({
           code: c.code,
           name: localize(c.name),
-          cases: rows.filter((r) => r.categoryId === c.id).map((r) => this.toCard(r, c.code)),
+          cases: rows
+            .filter((r) => r.categoryId === c.id)
+            .map((r) => this.toCard(r, c.code, adrenaline.get(r.id) ?? 'normal')),
         }))
         .filter((c) => c.cases.length > 0),
       banners: bannerRows.map((b): BannerDto => ({
@@ -210,7 +252,14 @@ export class CasesService {
       .filter((x): x is NonNullable<typeof x> => Boolean(x))
       .sort((a, b) => b.item.price - a.item.price);
     return {
-      ...this.toCard(c, categoryCode),
+      ...this.toCard(
+        c,
+        categoryCode,
+        caseAdrenaline(
+          items.map((x) => ({ odds: x.odds, price: x.item.price })),
+          c.price,
+        ),
+      ),
       description: c.description ? localize(c.description) : null,
       revisionId: rev.id,
       items,

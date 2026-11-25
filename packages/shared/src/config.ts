@@ -16,6 +16,8 @@ export interface PublicConfigDto {
   auth: PublicAuthConfig;
   /** Промо-полоса над лентой дропов; null — выключена в админке. */
   promoStrip: { code: string; bonusPercent: number } | null;
+  /** Бонус к первому пополнению, % (0 — выключен) — для баннера на главной. */
+  firstDepositPercent: number;
 }
 
 export interface SiteStatsDto {

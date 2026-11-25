@@ -3,6 +3,38 @@ import type { ItemDto } from './catalog.js';
 
 export type CaseKind = 'paid' | 'free';
 
+/** «Уровень адреналина» кейса — насколько рискованно его открытие (фильтр на главной). */
+export const ADRENALINE_LEVELS = ['low', 'normal', 'high', 'extreme'] as const;
+export type AdrenalineLevel = (typeof ADRENALINE_LEVELS)[number];
+
+/**
+ * Пороги волатильности кейса: стандартное отклонение стоимости дропа, делённое на цену кейса
+ * (у бесплатного — на ожидаемую стоимость). Чем больше разброс — тем реже окупается открытие
+ * и тем крупнее возможный выигрыш.
+ */
+export const ADRENALINE_CV_THRESHOLDS = [1.5, 2.25, 2.75] as const;
+
+export function caseAdrenaline(
+  contents: ReadonlyArray<{ price: number; odds: number }>,
+  casePrice: number,
+): AdrenalineLevel {
+  const total = contents.reduce((sum, c) => sum + Math.max(0, c.odds), 0);
+  if (total <= 0) return 'normal';
+  const ev = contents.reduce((sum, c) => sum + (Math.max(0, c.odds) / total) * c.price, 0);
+  const reference = casePrice > 0 ? casePrice : ev;
+  if (reference <= 0) return 'low';
+  const variance = contents.reduce(
+    (sum, c) => sum + (Math.max(0, c.odds) / total) * (c.price - ev) ** 2,
+    0,
+  );
+  const cv = Math.sqrt(variance) / reference;
+  const [low, normal, high] = ADRENALINE_CV_THRESHOLDS;
+  if (cv < low) return 'low';
+  if (cv < normal) return 'normal';
+  if (cv < high) return 'high';
+  return 'extreme';
+}
+
 export interface CaseCardDto {
   id: string;
   slug: string;
@@ -17,6 +49,7 @@ export interface CaseCardDto {
   supplyTotal: number | null;
   supplyUsed: number;
   categoryCode: string;
+  adrenaline: AdrenalineLevel;
 }
 
 export interface CaseCategoryDto {

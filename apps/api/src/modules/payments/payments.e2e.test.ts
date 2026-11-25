@@ -1,5 +1,11 @@
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
-import type { DepositDto, DepositQuoteDto, MeDto, PaymentMethodsDto } from '@gunraid/shared';
+import {
+  DEFAULT_SETTINGS,
+  type DepositDto,
+  type DepositQuoteDto,
+  type MeDto,
+  type PaymentMethodsDto,
+} from '@gunraid/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { TestClient, createTestApp } from '../../test/app.js';
 import { newPlayer, userBalance } from '../../test/fixtures.js';
@@ -59,7 +65,8 @@ describe('payments (integration)', () => {
     // 1000 ₽ × 0.0125 $ × 100 = 1250 гемов
     expect(rub.body.gems).toBe(1250);
     expect(rub.body.bonusSource).toBe('first_deposit');
-    expect(rub.body.bonusGems).toBe(125);
+    const { percent, maxBonusGems } = DEFAULT_SETTINGS.firstDeposit;
+    expect(rub.body.bonusGems).toBe(Math.min(Math.floor(1250 * percent), maxBonusGems));
     const low = await client.post<Err>('/api/v1/deposits/quote', {
       method: 'card',
       currency: 'USD',
@@ -76,6 +83,8 @@ describe('payments (integration)', () => {
 
   it('credits gems + first deposit bonus exactly once', async () => {
     const { client, me } = await newPlayer(app, 'dep');
+    const { percent, maxBonusGems } = DEFAULT_SETTINGS.firstDeposit;
+    const first = 1000 + Math.min(Math.floor(1000 * percent), maxBonusGems);
     const { deposit: d1 } = await deposit(client, 'USD', '10');
     expect(d1.status).toBe('pending');
     expect(d1.paymentUrl).toBe(`/pay/mock/${d1.id}`);
@@ -83,7 +92,7 @@ describe('payments (integration)', () => {
       result: 'success',
     });
     expect(done.body.status).toBe('succeeded');
-    expect(await userBalance(app, me.id)).toBe(1000 + 100);
+    expect(await userBalance(app, me.id)).toBe(first);
 
     // Повторный вебхук того же события не начисляет второй раз.
     const mock = app.get(MockPaymentProvider);
@@ -96,15 +105,15 @@ describe('payments (integration)', () => {
     });
     expect(dup.statusCode).toBe(200);
     expect(JSON.parse(dup.body).duplicate).toBe(true);
-    expect(await userBalance(app, me.id)).toBe(1100);
+    expect(await userBalance(app, me.id)).toBe(first);
 
     // Второе пополнение — без бонуса за первое.
     const { quote: q2, deposit: d2 } = await deposit(client, 'USDT', '5', 'crypto');
     expect(q2.bonusGems).toBe(0);
     await client.post(`/api/v1/payments/mock/${d2.id}/complete`, { result: 'success' });
-    expect(await userBalance(app, me.id)).toBe(1600);
+    expect(await userBalance(app, me.id)).toBe(first + 500);
     const meRes = await client.get<MeDto>('/api/v1/me');
-    expect(meRes.body.balance).toBe(1600);
+    expect(meRes.body.balance).toBe(first + 500);
     expect(await app.get(LedgerService).reconcile()).toEqual([]);
   });
 
