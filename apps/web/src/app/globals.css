@@ -105,6 +105,15 @@
     ::after {
       text-box: trim-both cap alphabetic;
     }
+    /*
+     * Поле ввода обрезает текст по своему блоку: с обрезкой по прописным у цифр и букв срезался
+     * верх (0, 3, 9, Й). Положение текста в поле от этого не меняется — его центрирует рамка поля.
+     */
+    input,
+    textarea,
+    select {
+      text-box: normal;
+    }
   }
   ::selection {
     background: var(--color-accent);
@@ -380,6 +389,182 @@
       rgb(255 255 255 / 0.03) 0 2px,
       transparent 2px 12px
     );
+  }
+
+  /*
+   * ---------- Баннер главной ----------
+   * Картинка 1872×750. На экранах шире макета (баннер шире 1872px) она не растягивается: стоит
+   * в исходном размере у правого края — солдат целиком и резкий, — а её левый край плавно
+   * растворяется в цветах самого этого края (небо, тёмные стены, снег — фон баннера ниже).
+   * Ширина перехода растёт вместе с пустым местом слева, так что до 1920px всё как в макете.
+   */
+  .bonus-banner {
+    container-type: inline-size;
+    background: linear-gradient(
+      180deg,
+      #49608a 0%,
+      #455c85 10%,
+      #414e6b 20%,
+      #302e35 30%,
+      #3b373c 40%,
+      #39353c 50%,
+      #313441 60%,
+      #2a2a31 70%,
+      #28282f 80%,
+      #292a31 90%,
+      #3e5072 100%
+    );
+  }
+  @media (min-width: 1280px) {
+    .bonus-banner__image {
+      --fade: clamp(0px, (100cqw - 1872px) * 3, 900px);
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--fade));
+      mask-image: linear-gradient(90deg, transparent, #000 var(--fade));
+    }
+  }
+
+  /*
+   * ---------- Кейсы на главной ----------
+   * Сетка (макет): карточки 317×317, между ними 48, в строке не больше пяти; неполная строка —
+   * по центру. На экранах уже 1825px карточки уменьшаются пропорционально (всё внутри задано
+   * в долях карточки через --case-u = ширина / 317), на телефоне — по две в строке.
+   */
+  .case-grid {
+    --cols: 2;
+    --gap: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--gap);
+    width: 100%;
+    max-width: calc(317px * 5 + 48px * 4);
+    margin-inline: auto;
+  }
+  @media (min-width: 640px) {
+    .case-grid {
+      --cols: 3;
+      --gap: 24px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .case-grid {
+      --cols: 4;
+    }
+  }
+  @media (min-width: 1280px) {
+    .case-grid {
+      --cols: 5;
+      --gap: 48px;
+    }
+  }
+  .case-grid > * {
+    flex: 0 0 min(317px, (100% - (var(--cols) - 1) * var(--gap)) / var(--cols));
+  }
+
+  /*
+   * Карточка кейса 317×317: картинка 317×317 на всю карточку, сверху по центру — название
+   * (DemiBold 24), снизу по центру — уровень адреналина, в 12px над ним — плашка с ценой
+   * (DemiBold 24, #121117 на #B7FF00, фигурная, 160×48, ширина одна для любой цены).
+   */
+  .case-tile {
+    --case-u: calc(100cqw / 317);
+    position: relative;
+    display: block;
+    aspect-ratio: 1;
+    container-type: inline-size;
+    color: #fff;
+  }
+  .case-tile__image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.25s ease;
+  }
+  .case-tile:hover .case-tile__image {
+    transform: translateY(calc(-6 * var(--case-u))) scale(1.03);
+  }
+  .case-tile__name {
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    font-size: max(13px, calc(24 * var(--case-u)));
+    font-weight: 600;
+    text-align: center;
+  }
+  /* Ограничения кейса (тираж, уровень, кулдаун) — мелко под названием; в макете таких кейсов нет. */
+  .case-tile__note {
+    position: absolute;
+    inset-inline: 0;
+    top: calc(36 * var(--case-u));
+    font-size: max(11px, calc(16 * var(--case-u)));
+    font-weight: 500;
+    text-align: center;
+    color: rgb(255 255 255 / 0.6);
+    text-shadow: 0 1px 3px rgb(0 0 0 / 0.8);
+  }
+  .case-tile__price {
+    position: absolute;
+    left: 50%;
+    bottom: calc(26 * var(--case-u));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(12 * var(--case-u));
+    min-width: calc(160 * var(--case-u));
+    padding-inline: calc(20 * var(--case-u));
+    transform: translateX(-50%);
+    background: var(--color-lime);
+    color: #121117;
+    font-size: max(13px, calc(24 * var(--case-u)));
+    font-weight: 600;
+    white-space: nowrap;
+    transition: filter 0.15s ease;
+  }
+  .case-tile:hover .case-tile__price {
+    filter: brightness(1.08);
+  }
+  .case-tile__gem {
+    flex: none;
+    width: auto;
+    height: max(13px, calc(24 * var(--case-u)));
+  }
+  .case-tile__bar {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .case-tile__image {
+      transition: none;
+    }
+    .case-tile:hover .case-tile__image {
+      transform: none;
+    }
+  }
+
+  /*
+   * Уровень адреналина (макет): фрейм 268×14 #181821, внутри 4, между шагами 4, шаги 62×6:
+   * низкий #0DFF8A, средний #FFD900, высокий #FF5D00, экстремальный #FF0000; уровень кейса —
+   * 100%, остальные — 30%. Вне карточки кейса — в натуральную величину.
+   */
+  .adrenaline-bar {
+    display: flex;
+    gap: calc(4 * var(--case-u, 1px));
+    width: calc(268 * var(--case-u, 1px));
+    height: calc(14 * var(--case-u, 1px));
+    padding: calc(4 * var(--case-u, 1px));
+    background: #181821;
+  }
+  .adrenaline-bar__step {
+    flex: 1 1 0;
+    background: var(--step);
+    opacity: 0.3;
+  }
+  .adrenaline-bar__step[data-active] {
+    opacity: 1;
   }
 }
 

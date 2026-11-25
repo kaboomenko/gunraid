@@ -1,14 +1,8 @@
 'use client';
 
-import {
-  ADRENALINE_LEVELS,
-  type AdrenalineLevel,
-  type CaseCardDto,
-  type CaseCategoryDto,
-} from '@gunraid/shared';
-import { Clock, Crown, Flame, Package } from 'lucide-react';
+import { ADRENALINE_LEVELS, type AdrenalineLevel, type CaseCategoryDto } from '@gunraid/shared';
+import { Package } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 import { DropdownMenu } from 'radix-ui';
 import { useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import {
@@ -22,12 +16,9 @@ import {
   GemIcon,
   SearchIcon,
 } from '@/components/icons/design-icons';
-import { Badge } from '@/components/ui/badge';
-import { SectionTitle } from '@/components/ui/card';
-import { CaseCard } from '@/components/ui/case-card';
 import { EmptyState } from '@/components/ui/empty-state';
-import { GemAmount } from '@/components/ui/gem';
 import { cn } from '@/lib/cn';
+import { CaseTile } from './case-tile';
 
 const LEVEL_ICONS: Record<AdrenalineLevel, ComponentType<{ size?: number }>> = {
   low: AdrenalineLowIcon,
@@ -99,52 +90,13 @@ function Select<T extends string>({
   );
 }
 
-function CaseLink({ game, c }: { game: string; c: CaseCardDto }) {
-  const t = useTranslations('case');
-  const badge =
-    c.supplyTotal !== null ? (
-      <Badge tone="warning">
-        <Flame size={11} /> {c.supplyTotal - c.supplyUsed}/{c.supplyTotal}
-      </Badge>
-    ) : c.minLevel ? (
-      <Badge tone="info">
-        <Crown size={11} /> {t('fromLevel', { level: c.minLevel })}
-      </Badge>
-    ) : c.cooldownSeconds ? (
-      <Badge>
-        <Clock size={11} /> {t('everyHours', { hours: Math.round(c.cooldownSeconds / 3600) })}
-      </Badge>
-    ) : null;
-  return (
-    <Link href={`/${game}/case/${c.slug}`} className="block" data-testid={`case-card-${c.slug}`}>
-      <CaseCard
-        name={c.name}
-        imageUrl={c.imageUrl}
-        price={c.price}
-        accentColor={c.accentColor}
-        badge={badge}
-        priceSlot={
-          <div className="clip-cut bg-surface-3 px-3 py-1.5 [--cut:6px]">
-            {c.kind === 'free' ? (
-              <span className="font-display text-sm font-bold uppercase text-accent">
-                {t('free')}
-              </span>
-            ) : (
-              <GemAmount value={c.price} size="sm" />
-            )}
-          </div>
-        }
-      />
-    </Link>
-  );
-}
-
 const digits = (v: string) => v.replace(/\D/g, '').slice(0, 9);
 
 /**
  * Кейсы главной с фильтрами (макет): плашка #181821, скругление 36, внутри 24; слева категория,
  * поиск (справа 36) и цена «от–до» (два поля по 191 без зазора, между ними — только линия),
  * справа уровень адреналина и ластик (сброс, без контура). Между фреймами 24.
+ * Ниже — категории: заголовок DemiBold 36 по центру, в 48px от фильтров и от сетки карточек.
  */
 export function CaseBrowser({ game, categories }: { game: string; categories: CaseCategoryDto[] }) {
   const t = useTranslations('home.filters');
@@ -193,7 +145,7 @@ export function CaseBrowser({ game, categories }: { game: string; categories: Ca
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6 md:gap-12">
       <section
         className="flex flex-wrap items-center justify-between gap-6 rounded-[24px] bg-surface-1 p-3 max-md:[zoom:0.72] md:rounded-[36px] md:p-6"
         aria-label={t('label')}
@@ -273,18 +225,26 @@ export function CaseBrowser({ game, categories }: { game: string; categories: Ca
       </section>
 
       {filtered.length ? (
-        <div className="space-y-8">
-          {filtered.map((cat) => (
-            <section key={cat.code}>
-              <SectionTitle>{cat.name}</SectionTitle>
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 xl:grid-cols-6">
-                {cat.cases.map((c) => (
-                  <CaseLink key={c.id} game={game} c={c} />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+        filtered.map((cat) => (
+          <section
+            key={cat.code}
+            className="flex flex-col gap-6 md:gap-12"
+            aria-labelledby={`case-cat-${cat.code}`}
+            data-testid={`case-category-${cat.code}`}
+          >
+            <h2
+              id={`case-cat-${cat.code}`}
+              className="text-center text-[24px] font-semibold md:text-[36px]"
+            >
+              {cat.name}
+            </h2>
+            <div className="case-grid">
+              {cat.cases.map((c) => (
+                <CaseTile key={c.id} game={game} c={c} />
+              ))}
+            </div>
+          </section>
+        ))
       ) : (
         <EmptyState icon={<Package size={40} />} text={t('empty')} />
       )}
