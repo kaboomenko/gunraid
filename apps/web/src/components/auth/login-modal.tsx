@@ -85,7 +85,7 @@ const PROVIDERS: Array<{
  * Окно входа (макет): 622×457, #181821, скругление 36, поля 48 сверху и 24 по бокам и снизу.
  * Заголовок DemiBold 36 по центру; через 48 — согласие с публичной офертой (переключатель 36×24
  * #26262F, скругление 6, внутри квадрат 16×16 #B7FF00, скругление 2; через 24 — Medium 24);
- * через 48 — кнопки Google, Telegram, Steam: поля 24, иконка 24, Medium 24, скругление 6, между
+ * через 48 — кнопки Google, Telegram, Steam: поля 24, иконка 24, Medium 24, скругление 12, между
  * кнопками 12. Без согласия войти нельзя: строка согласия встряхивается и появляется подсказка.
  * Способ, который не подключён на сервере, сообщает об этом. Тестовый вход — ниже, только если
  * он включён (тестовый стенд). На телефоне окно уменьшено целиком.
@@ -228,7 +228,7 @@ export function LoginModal() {
                 const props = {
                   onClick: (e: MouseEvent) => onProvider(e, key, name),
                   className:
-                    'flex w-full items-center gap-6 rounded-[6px] p-6 text-left text-[24px] font-medium text-white transition hover:brightness-125',
+                    'flex w-full items-center gap-6 rounded-[12px] p-6 text-left text-[24px] font-medium text-white transition hover:brightness-125',
                   style: { backgroundImage: `linear-gradient(90deg, ${from}, #181821)` },
                   'data-testid': `login-${key}`,
                 };
