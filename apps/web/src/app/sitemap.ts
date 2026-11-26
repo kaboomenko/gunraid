@@ -1,23 +1,13 @@
 import type { HomeDto, ItemsPageDto } from '@gunraid/shared';
 import type { MetadataRoute } from 'next';
+import { LEGAL_SLUGS } from '@/lib/legal';
 import { getPublicConfig, serverGet } from '@/lib/server-api';
 import { siteUrl } from '@/lib/site';
 
 // Собираем при запросе: каталог и кейсы живут в БД и меняются из админки.
 export const dynamic = 'force-dynamic';
 
-const LEGAL = [
-  'terms',
-  'privacy',
-  'payments',
-  'refunds',
-  'cookies',
-  'bonuses',
-  'giveaways',
-  'rules',
-  'age',
-  'responsible',
-];
+const LEGAL = LEGAL_SLUGS;
 const GAME_PAGES = ['', '/upgrade', '/contract', '/battles', '/bonuses', '/leaderboard', '/items'];
 const MAX_ITEM_PAGES = 10;
 

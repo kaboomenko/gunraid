@@ -3,23 +3,11 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card } from '@/components/ui/card';
+import { isLegalSlug, LEGAL_SLUGS } from '@/lib/legal';
 import { pageMeta } from '@/lib/seo';
 
-// Порядок — как в футере; «Правила сайта», «18+» и «Ответственная игра» — в общем списке внизу страницы.
-const SLUGS = [
-  'terms',
-  'privacy',
-  'payments',
-  'refunds',
-  'cookies',
-  'bonuses',
-  'giveaways',
-  'rules',
-  'age',
-  'responsible',
-] as const;
-type Slug = (typeof SLUGS)[number];
-const isSlug = (s: string): s is Slug => (SLUGS as readonly string[]).includes(s);
+const SLUGS = LEGAL_SLUGS;
+const isSlug = isLegalSlug;
 
 interface Section {
   title: string;
@@ -85,6 +73,10 @@ export default async function LegalPage({ params }: { params: Promise<{ slug: st
             {t(x)}
           </Link>
         ))}
+        {/* FAQ (там же контакт поддержки, если он задан) — в футере макета его нет. */}
+        <Link href="/faq" className="text-muted hover:text-accent">
+          {t('faq')}
+        </Link>
       </nav>
     </article>
   );

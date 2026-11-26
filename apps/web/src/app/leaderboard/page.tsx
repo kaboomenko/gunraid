@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getPublicConfig } from '@/lib/server-api';
 
-/** /leaderboard → раздел выбранной игры (ссылка из футера). */
+/** /leaderboard → раздел выбранной игры (прямые ссылки и закладки). */
 export default async function LeaderboardRedirect() {
   const [config, jar] = await Promise.all([getPublicConfig(), cookies()]);
   const fromCookie = jar.get(COOKIES.game)?.value;

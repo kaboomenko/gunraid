@@ -37,14 +37,15 @@ test.describe('Публичная часть', () => {
   });
 
   test('футер: разделы ведут в текущую игру, документы открываются @mobile', async ({ page }) => {
-    await page.goto('/standoff2');
+    // Не игра по умолчанию (standoff2) — иначе ссылки «в текущую игру» не отличить от ссылок в игру по умолчанию.
+    await page.goto('/cs2');
     // Баннер cookie на телефоне закрывает низ страницы — сначала отвечаем на него.
     await page.getByTestId('cookie-banner').getByRole('button', { name: 'Принять все' }).click();
     const footer = page.getByTestId('site-footer');
     await footer.scrollIntoViewIfNeeded();
     await expect(footer.getByRole('link', { name: 'Апгрейд' })).toHaveAttribute(
       'href',
-      '/standoff2/upgrade',
+      '/cs2/upgrade',
     );
     await expect(footer.getByRole('link')).toHaveCount(12);
     await expect(footer).toContainText(
@@ -89,6 +90,7 @@ test.describe('Публичная часть', () => {
     expect(sitemap).toMatch(/\/cs2\/case\//);
     expect(sitemap).toMatch(/\/standoff2\/items\//);
     expect(sitemap).toContain('/legal/terms');
+    expect(sitemap).toContain('/legal/giveaways');
 
     const res = await page.goto('/standoff2');
     const csp = res?.headers()['content-security-policy'] ?? '';

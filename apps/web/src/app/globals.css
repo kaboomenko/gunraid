@@ -82,6 +82,8 @@
   html {
     background: var(--color-bg);
     -webkit-text-size-adjust: 100%;
+    /* Элемент в фокусе (и прокрутка к нему) не уходит под нижнее меню телефона. */
+    scroll-padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 16px);
   }
   body {
     min-height: 100dvh;
@@ -478,6 +480,13 @@
     aspect-ratio: 306 / 64;
     background-color: currentColor;
     mask: url('/brand/logo.svg') center / contain no-repeat;
+  }
+  /* В режиме высокой контрастности фон элемента подменяется цветом окна — логотип пропадал. */
+  @media (forced-colors: active) {
+    .logo-mask {
+      forced-color-adjust: none;
+      background-color: CanvasText;
+    }
   }
 
   /* Сплошной срез без обводки (кнопки, бейджи) */
@@ -1464,17 +1473,16 @@
   /*
    * ---------- Футер (макет 1920) ----------
    * Фон — вертикальный градиент #121117 → #0E0D11. Поля внутрь: сверху 48, слева и справа 72 (планшет —
-   * 48, телефон — 24), снизу 24 (на телефоне — ещё место под нижнее меню). Логотип высотой 40, белый →
-   * 24 → описание и ссылки (Medium 18, белый 30%) → 24 → разделитель 1px → 24 → копирайт по центру.
-   * От 1660px — как в макете: описание у левого поля; разделы сайта и первый столбец документов — два
-   * столбца равной ширины ровно по центру футера; второй столбец документов — у правого поля (строки в нём
-   * по левому краю). Уже середина не помещается между краями: 1280–1659 — описание и три столбца ссылок
-   * в ряд с равными промежутками, планшет — столбцы под описанием, телефон — всё одним столбцом.
+   * 48, телефон — 24), снизу 24 (на телефоне — ещё нижнее меню и безопасная зона экрана). Логотип высотой
+   * 40, белый → 24 → описание и ссылки (Medium 18, белый 30%) → 24 → разделитель 1px → 24 → копирайт.
+   * Ряд под логотипом в макете — Auto layout «Space between» (скрин выравнивания): описание (блок 435),
+   * разделы сайта (по ширине текста) и два столбца документов (блоки по 350) с равными промежутками — так
+   * от 1660px. 1280–1659 — тот же ряд, но описание уже (340), а столбцы — по ширине текста; планшет —
+   * столбцы под описанием, тоже с равными промежутками; телефон — всё одним столбцом, текст 16.
    */
-  /* На телефоне текст 16 — копирайт и длинные названия документов помещаются в строку. */
   .site-footer {
     margin-top: 64px;
-    padding: 48px 24px calc(var(--tabbar-h) + 24px);
+    padding: 48px 24px calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 24px);
     background: linear-gradient(180deg, #121117, #0e0d11);
     font-size: 16px;
     font-weight: 500;
@@ -1491,7 +1499,7 @@
     justify-self: start;
     color: #fff;
   }
-  /* 440 — ширина текстового блока макета: строки переносятся там же, где в макете (предлоги — с неразрывным пробелом). */
+  /* Не шире 440: строки описания переносятся там же, где в макете (предлоги — с неразрывным пробелом). */
   .site-footer__about {
     max-width: 440px;
   }
@@ -1505,7 +1513,18 @@
     flex-direction: column;
     gap: 12.4px;
   }
+  /* Браузер без обрезки строк (text-box) даёт строку 18 — промежуток 7, шаг тот же. */
+  @supports not (text-box: trim-both cap alphabetic) {
+    .site-footer__list {
+      gap: 7px;
+    }
+  }
+  /*
+   * Поля по 6 сверху и снизу — область нажатия больше, а строки не раздвигаются (ссылка — строчный
+   * элемент); рамка фокуса из-за них не задевает хвосты букв.
+   */
   .site-footer__link {
+    padding-block: 6px;
     color: inherit;
     transition: color 0.15s ease;
   }
@@ -1527,13 +1546,15 @@
     margin-top: 24px;
     text-align: center;
   }
+  /* Описание во всю ширину, под ним три столбца ссылок с равными промежутками. */
   @media (min-width: 640px) {
     .site-footer {
       font-size: 18px;
     }
     .site-footer__top {
-      grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
-      column-gap: 48px;
+      grid-template-columns: repeat(3, auto);
+      justify-content: space-between;
+      column-gap: 32px;
     }
     .site-footer__logo,
     .site-footer__about {
@@ -1548,14 +1569,13 @@
       padding: 48px 48px 24px;
     }
   }
-  /* Описание и три столбца ссылок — во второй строке сетки, в порядке разметки. */
+  /* Описание и три столбца ссылок — в одной строке сетки, в порядке разметки. */
   @media (min-width: 1280px) {
     .site-footer {
       padding-inline: 72px;
     }
     .site-footer__top {
       grid-template-columns: minmax(0, 340px) auto auto auto;
-      justify-content: space-between;
       column-gap: 24px;
     }
     .site-footer__logo {
@@ -1569,25 +1589,14 @@
       grid-row: 2;
     }
   }
+  /*
+   * Как в макете: описание — блок 435, столбцы документов — блоки по 350, разделы сайта — по ширине
+   * текста, между четырьмя блоками равные промежутки (на 1920 — 187); не меньше 48 при длинных названиях.
+   */
   @media (min-width: 1660px) {
     .site-footer__top {
-      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-      justify-content: normal;
-      column-gap: 0;
-    }
-    /* Два столбца равной ширины (по самому широкому), середина группы — ровно по центру футера. */
-    .site-footer__mid {
-      grid-area: 2 / 2;
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0;
-    }
-    .site-footer__mid > * {
-      grid-row: auto;
-    }
-    .site-footer__end {
-      grid-area: 2 / 3;
-      justify-self: end;
+      grid-template-columns: 435px auto 350px 350px;
+      column-gap: 48px;
     }
   }
   @media (prefers-reduced-motion: reduce) {
