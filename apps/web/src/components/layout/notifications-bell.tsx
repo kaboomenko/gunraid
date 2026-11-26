@@ -34,7 +34,32 @@ export function useNotificationText() {
   };
 }
 
-/** Колокольчик уведомлений: список, непрочитанные, новые — по WebSocket. */
+/**
+ * Новые уведомления по WebSocket: в список колокольчика, всплывающее сообщение и обновление
+ * бонусов. Подписка одна на страницу (AuthEffects): колокольчиков в шапке два (компьютер и
+ * телефон), и подписка в каждом показывала бы каждое уведомление дважды и считала его за два.
+ */
+export function useNotificationsLive() {
+  const qc = useQueryClient();
+  const text = useNotificationText();
+  useSocketEvent<NotificationDto>(WS_EVENTS.notificationNew, (n) => {
+    let added = false;
+    qc.setQueryData<NotificationsDto>(bonusKeys.notifications, (old) => {
+      if (!old || old.items.some((x) => x.id === n.id)) return old;
+      added = true;
+      return { items: [n, ...old.items].slice(0, 30), unread: old.unread + 1 };
+    });
+    // Уже есть в списке (доставлено повторно) — второй раз не показываем. Списка ещё нет —
+    // сообщение показываем, а счётчик придёт с сервера, когда список загрузится.
+    if (!added && qc.getQueryData(bonusKeys.notifications)) return;
+    toast.info(text(n));
+    // Бонусы могли измениться (уровень, приз лидерборда) — обновим связанные данные.
+    void qc.invalidateQueries({ queryKey: bonusKeys.level });
+    void qc.invalidateQueries({ queryKey: bonusKeys.entitlements });
+  });
+}
+
+/** Колокольчик уведомлений: список и непрочитанные (новые приходят через useNotificationsLive). */
 export function NotificationsBell({ large }: { large?: boolean } = {}) {
   const t = useTranslations('notifications');
   const format = useFormatter();
@@ -45,21 +70,6 @@ export function NotificationsBell({ large }: { large?: boolean } = {}) {
     queryKey: bonusKeys.notifications,
     queryFn: () => api.get<NotificationsDto>('/notifications'),
     staleTime: 60_000,
-  });
-
-  useSocketEvent<NotificationDto>(WS_EVENTS.notificationNew, (n) => {
-    qc.setQueryData<NotificationsDto>(bonusKeys.notifications, (old) =>
-      old
-        ? {
-            items: [n, ...old.items.filter((x) => x.id !== n.id)].slice(0, 30),
-            unread: old.unread + 1,
-          }
-        : old,
-    );
-    toast.info(text(n));
-    // Бонусы могли измениться (уровень, приз лидерборда) — обновим связанные данные.
-    void qc.invalidateQueries({ queryKey: bonusKeys.level });
-    void qc.invalidateQueries({ queryKey: bonusKeys.entitlements });
   });
 
   const markAll = async () => {

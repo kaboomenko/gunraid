@@ -4,6 +4,7 @@ import type { ErrorCode } from '@gunraid/shared';
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
+import { useNotificationsLive } from '@/components/layout/notifications-bell';
 import { toast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import { useErrorMessage } from '@/lib/errors';
@@ -12,8 +13,9 @@ import { useBalanceSync } from '@/lib/queries';
 import { usePrefs } from '@/lib/store';
 
 /**
- * Обработка результата OAuth-редиректа (?auth=ok, ?linked=steam, ?authError=CODE)
- * и синхронизация локальных настроек звука/быстрого режима с профилем.
+ * Обработка результата OAuth-редиректа (?auth=ok, ?linked=steam, ?authError=CODE),
+ * синхронизация локальных настроек звука/быстрого режима с профилем и общие подписки
+ * WebSocket (баланс, уведомления) — по одной на страницу.
  */
 export function AuthEffects() {
   const t = useTranslations();
@@ -25,6 +27,7 @@ export function AuthEffects() {
   const setSound = usePrefs((s) => s.setSound);
   const setFast = usePrefs((s) => s.setFast);
   useBalanceSync();
+  useNotificationsLive();
 
   useEffect(() => {
     const auth = params.get('auth');
