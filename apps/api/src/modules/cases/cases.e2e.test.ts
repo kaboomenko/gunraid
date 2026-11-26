@@ -100,7 +100,11 @@ describe('cases (integration)', () => {
 
   it('rejects opening without enough gems and leaves inventory unchanged', async () => {
     const { client } = await newPlayer(app, 'poor');
-    const res = await client.post<Err>('/api/v1/games/cs2/cases/raid-step/open', { count: 1 }, IK());
+    const res = await client.post<Err>(
+      '/api/v1/games/cs2/cases/raid-step/open',
+      { count: 1 },
+      IK(),
+    );
     expect(res.status).toBe(402);
     expect(res.body.error.code).toBe('INSUFFICIENT_BALANCE');
     const inv = await client.get<InventoryPageDto>('/api/v1/games/cs2/inventory');
