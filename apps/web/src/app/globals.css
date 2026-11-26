@@ -664,15 +664,15 @@
     font-weight: 500;
   }
   /*
-   * Цена: гем 12×18, через 6 — число DemiBold 18. Цвет — #C6FF00, как в макетах карточки и ленты
-   * (пиксель в пиксель; лайм кнопок #B7FF00 — другой, в макетах их два).
+   * Цена: гем 12×18, через 6 — число DemiBold 18, #B7FF00 — по тексту спецификации (на картинках
+   * макета цена чуть светлее, #C6FF00; спецификация главнее).
    */
   .skin-card__price {
     display: flex;
     align-items: center;
     gap: calc(6 * var(--u));
     font-weight: 600;
-    color: var(--color-accent);
+    color: var(--color-lime);
     white-space: nowrap;
   }
   .skin-card__gem {
