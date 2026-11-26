@@ -5,7 +5,8 @@ import { startSnow } from '@/lib/snow';
 
 /**
  * Падающий снег промо-полосы: частицы на Canvas 2D (lib/snow.ts). Холст лежит над сугробом
- * (.promo-strip::before) и под текстом и кнопкой; первый кадр плавно проявляется.
+ * (PromoDrift, до его готовности — CSS-заглушка .promo-strip::before) и под текстом и кнопкой;
+ * первый кадр плавно проявляется.
  */
 export function PromoSnow() {
   const ref = useRef<HTMLCanvasElement>(null);

@@ -6,6 +6,7 @@ import { toast } from '@/components/ui/toast';
 import { useConfig } from '@/lib/config';
 import { useMe } from '@/lib/me';
 import { useUi } from '@/lib/store';
+import { PromoDrift } from './promo-drift';
 import { PromoSnow } from './promo-snow';
 
 /**
@@ -40,8 +41,12 @@ export function PromoStrip() {
       aria-label={t('label', { code: promo.code, percent: promo.bonusPercent })}
       data-testid="promo-strip"
     >
+      <PromoDrift />
       <PromoSnow />
-      <p className="text-center text-[16px] font-bold italic [font-variant-caps:all-small-caps] md:text-[36px]">
+      <p
+        data-drift-avoid="lines"
+        className="text-center text-[16px] font-bold italic [font-variant-caps:all-small-caps] md:text-[36px]"
+      >
         {t.rich('title', { percent: promo.bonusPercent, br: () => <br /> })}
       </p>
       <ShapedButton
@@ -51,6 +56,7 @@ export function PromoStrip() {
         onClick={apply}
         title={t('apply')}
         data-testid="promo-strip-code"
+        data-drift-avoid=""
       >
         {promo.code}
       </ShapedButton>
@@ -60,6 +66,7 @@ export function PromoStrip() {
         className="text-[16px] md:hidden"
         onClick={apply}
         title={t('apply')}
+        data-drift-avoid=""
       >
         {promo.code}
       </ShapedButton>

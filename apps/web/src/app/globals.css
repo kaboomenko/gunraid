@@ -249,13 +249,16 @@
     background: url('/design/promo-city.webp') center 58% / max(100%, 1400px) auto no-repeat #142456;
   }
   /*
-   * Сугроб — всегда одного размера относительно полосы (не растягивается по ширине экрана):
-   * исходная картинка 1872×98 стоит по центру, её верх — в 82px от верха полосы (53px уходят под низ).
-   * Тайл = картинка + её зеркальная копия (3744×98), поэтому на широких экранах повторяется без швов.
-   * На телефоне полоса ниже (88px) — сугроб уменьшен в той же пропорции (--snow-k).
+   * Сугроб до готового холста и без JS — тот же силуэт векторами (SVG в фоне ::before): часть под фонарём —
+   * от левого края, холм под текстом и низина под кнопкой — от середины, сугроб под куполом — от правого
+   * края (на узкой полосе отъезжает вправо), холмы в щелях на широком экране, тонкая подложка; цвет по
+   * глубине — копии силуэта, сдвинутые вниз, с голубовато-серым. Где текст или кнопка близко к сугробу
+   * (текст в 3–4 строки, узкая полоса), заглушка обрезана по тем же тихим зонам, что и холст: clip-path по
+   * ширине полосы (container queries). На телефоне полоса ниже (88px) — всё в той же пропорции (--snow-k).
    */
   .promo-strip {
     --snow-k: 0.693;
+    container-type: inline-size;
   }
   @media (min-width: 768px) {
     .promo-strip {
@@ -267,13 +270,148 @@
     position: absolute;
     inset: 0;
     z-index: -1;
-    background-image: url('/design/promo-snow-tile.webp');
-    background-repeat: repeat-x;
-    background-size: calc(3744px * var(--snow-k)) calc(98px * var(--snow-k));
-    background-position: calc(50% + 936px * var(--snow-k)) calc(100% + 53px * var(--snow-k));
     pointer-events: none;
   }
-  /* Падающий снег — холст с частицами (components/layout/promo-snow.tsx), над сугробом и под текстом. */
+  /* <drift-placeholder> — сгенерировано src/lib/snow-drift-css.ts из данных snow-drift.ts, не править руками */
+  .promo-strip::before {
+    background:
+      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9' viewBox='0 0 366 40'%3e%3cg id='a'%3e%3cpath d='M0 40V30.25l7-.5 10-1.75 38-15.25 9-2.25 9-.75 20 .25 5 .75 10 2 11 3.75 9 2 10 4.5 4 1 9 .25 11 1.5 9 .5 9 1.75 9 .5 10 2.25 26 .5 20-3.25 12-3 12 .75 12-.75 21 2.75 31 8.25 21 3.25 12 .75V40z'/%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3cuse href='%23a' y='22'/%3e%3cuse href='%23a' y='30'/%3e%3c/g%3e%3c/svg%3e")
+        left bottom / calc(366px * var(--snow-k)) calc(40px * var(--snow-k)) no-repeat,
+      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9' viewBox='-12 0 745 40'%3e%3cg id='a'%3e%3cpath d='M-12 40V40l12-.75 14-1.75 15-3.75 19-2.25 8 0 13 2 12-2.5 4 0 15 2.5 7 0 10-2.5 25-11.75 18-2.5 17 .5 17-1.5 20 1 30-2 19 3.25 11 3.75 10 2 12 6 4 1.25 6-.25 19-5 10-.75 30 5.5 12 3.5 7 1 16-1 11 1.25 6-.25 7-1.5 11-3.75 19-4.75 9-1 20 .75 17 7.5 25 5.5 14 .75 15-.75 14 2.5 15-1.25 15 2.25 26-3.25 18 .5 13 1.25 36-6.25 15-1.5 15 2.5 12 5.5V40z'/%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3cuse href='%23a' y='22'/%3e%3cuse href='%23a' y='30'/%3e%3c/g%3e%3c/svg%3e")
+        calc(50% + 31.5px * var(--snow-k)) bottom / calc(745px * var(--snow-k))
+        calc(40px * var(--snow-k)) no-repeat,
+      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9' viewBox='-12 0 303 40'%3e%3cg id='a'%3e%3cpath d='M-12 40V40l12-5.5 6-.25 7-2 15-6.25 20-10.75 14-4.75 11-1 27 2.5 27-5.5 7-.75 13 .75 17 2.75 27 11.75 14 1.75 22 8 12 2.5 7-1 18-5 12-2 6-.25 9 2V40z'/%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3cuse href='%23a' y='22'/%3e%3cuse href='%23a' y='30'/%3e%3c/g%3e%3c/svg%3e")
+        calc(100% + max(0px, (917px * var(--snow-k) - 100%) / 2)) bottom /
+        calc(303px * var(--snow-k)) calc(40px * var(--snow-k)) no-repeat,
+      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9'%3e%3cg id='a'%3e%3csvg viewBox='0 0 250 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M15 40c35 0 70-22 105-22c42 0 84 22 126 22zM169 40c12 0 24-9 36-9c13 0 26 9 39 9z'/%3e%3c/svg%3e%3csvg width='50%25' viewBox='0 0 230 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M14 40c32 0 64-15 96-15c38 0 76 15 114 15z'/%3e%3c/svg%3e%3csvg x='50%25' width='50%25' viewBox='0 0 300 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M14 40c42 0 84-30 126-30c52 0 104 30 156 30zM10 40c15 0 30-12 45-12c13 0 26 12 39 12z'/%3e%3c/svg%3e%3csvg width='25%25' viewBox='0 0 190 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M11 40c28 0 56-12 84-12c30 0 60 12 90 12z'/%3e%3c/svg%3e%3csvg x='25%25' width='25%25' viewBox='0 0 200 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M5 40c30 0 60-13 90-13c33 0 66 13 99 13z'/%3e%3c/svg%3e%3csvg x='75%25' width='25%25' viewBox='0 0 200 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M9 40c32 0 64-17 96-17c30 0 60 17 90 17z'/%3e%3c/svg%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3cuse href='%23a' y='22'/%3e%3cuse href='%23a' y='30'/%3e%3c/g%3e%3c/svg%3e")
+        left calc(354px * var(--snow-k)) bottom / max(0px, 50% - 683px * var(--snow-k))
+        calc(40px * var(--snow-k)) no-repeat,
+      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9'%3e%3cg id='a'%3e%3csvg viewBox='0 0 270 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M21 40c43 0 86-24 129-24c38 0 76 24 114 24zM21 40c13 0 26-10 39-10c15 0 30 10 45 10z'/%3e%3c/svg%3e%3csvg width='50%25' viewBox='0 0 300 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M19 40c47 0 94-28 141-28c45 0 90 28 135 28zM211 40c13 0 26-11 39-11c15 0 30 11 45 11z'/%3e%3c/svg%3e%3csvg x='50%25' width='50%25' viewBox='0 0 220 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M10 40c30 0 60-15 90-15c38 0 76 15 114 15z'/%3e%3c/svg%3e%3csvg width='20%25' viewBox='0 0 170 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M5 40c25 0 50-11 75-11c28 0 56 11 84 11z'/%3e%3c/svg%3e%3csvg x='45%25' width='30%25' viewBox='0 0 210 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M11 40c33 0 66-18 99-18c32 0 64 18 96 18z'/%3e%3c/svg%3e%3csvg x='78%25' width='22%25' viewBox='0 0 180 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M4 40c27 0 54-12 81-12c30 0 60 12 90 12z'/%3e%3c/svg%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3cuse href='%23a' y='22'/%3e%3cuse href='%23a' y='30'/%3e%3c/g%3e%3c/svg%3e")
+        right calc(291px * var(--snow-k)) bottom / max(0px, 50% - 683px * var(--snow-k))
+        calc(40px * var(--snow-k)) no-repeat,
+      linear-gradient(#eef3f9, #eef3f9) bottom / 100% calc(3.5px * var(--snow-k)) no-repeat;
+  }
+  @container (width < 273px) {
+    .promo-strip::before {
+      clip-path: polygon(
+        0 100%,
+        0 0,
+        -138px 0,
+        6px 79px,
+        calc(100% - 6px) 79px,
+        calc(100% + 138px) 0,
+        100% 0,
+        100% 100%
+      );
+    }
+  }
+  @container (273px <= width < 292px) {
+    .promo-strip::before {
+      clip-path: polygon(
+        0 100%,
+        0 0,
+        -123px 0,
+        6px 71px,
+        calc(100% - 160px) 71px,
+        calc(100% - 145px) 79px,
+        calc(100% - 6px) 79px,
+        calc(100% + 138px) 0,
+        100% 0,
+        100% 100%
+      );
+    }
+  }
+  @container (width >= 292px) {
+    .promo-strip::before {
+      clip-path: polygon(
+        0 100%,
+        0 0,
+        calc(50% - 132px) 0,
+        calc(50% + 12px) 79px,
+        calc(50% + 152px) 79px,
+        calc(50% + 296px) 0,
+        100% 0,
+        100% 100%
+      );
+    }
+  }
+  @media (min-width: 768px) {
+    @container (width < 721px) {
+      .promo-strip::before {
+        clip-path: polygon(
+          0 100%,
+          0 0,
+          -212px 0,
+          6px 120px,
+          calc(100% - 385px) 120px,
+          calc(100% - 344px) 97px,
+          calc(100% - 6px) 108px,
+          calc(100% + 190px) 0,
+          100% 0,
+          100% 100%
+        );
+      }
+    }
+    @container (width >= 721px) {
+      .promo-strip::before {
+        clip-path: polygon(
+          0 100%,
+          0 0,
+          calc(50% - 551px) 0,
+          calc(50% - 366px) 102px,
+          calc(50% - 13px) 102px,
+          calc(50% + 366px) 108px,
+          calc(50% + 562px) 0,
+          100% 0,
+          100% 100%
+        );
+      }
+    }
+  }
+  /* </drift-placeholder> */
+  /*
+   * Холст готов (PromoDrift ставит полосе data-drift="ready"): он проявляется поверх заглушки (силуэты
+   * совпадают), а заглушка убирается одним шагом, когда холст уже непрозрачен. На медленном устройстве
+   * (кадр строился дольше секунды) компонент ставит --drift-fade: 0s — смена мгновенная, без кадров
+   * проявления поверх анимации падающего снега.
+   */
+  .promo-strip[data-drift='ready']::before {
+    opacity: 0;
+    transition: opacity 0s linear var(--drift-fade, 0.3s);
+  }
+
+  /*
+   * Сугроб — холст с комьями снега (components/layout/promo-drift.tsx): полоса внизу промо-полосы высотой
+   * DRIFT_LAYOUT.band (46px) в масштабе узора — над заглушкой, под падающим снегом и текстом.
+   */
+  .promo-drift {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: -1;
+    display: block;
+    width: 100%;
+    height: calc(46px * var(--snow-k));
+    pointer-events: none;
+    opacity: 0;
+  }
+  .promo-drift.is-ready {
+    opacity: 1;
+    transition: opacity var(--drift-fade, 0.3s) ease-out;
+  }
+  /*
+   * Без анимации — мгновенная смена. !important перекрывает общее правило «transition-duration: 0.01ms
+   * !important» для всех элементов: с ним каждая смена прозрачности стартует переход, и кадр отстаёт —
+   * при смене масштаба (переход через 768px) был кадр без сугроба или со старым холстом.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .promo-drift,
+    .promo-strip::before {
+      transition: none !important;
+    }
+  }
+  /* Падающий снег — холст с частицами (components/layout/promo-snow.tsx), над сугробом (.promo-drift) и под текстом. */
   .promo-snow {
     position: absolute;
     inset: 0;
