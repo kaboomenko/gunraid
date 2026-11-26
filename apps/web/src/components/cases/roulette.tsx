@@ -1,98 +1,145 @@
 'use client';
 
 import type { CaseContentItemDto, ItemDto } from '@gunraid/shared';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { cn } from '@/lib/cn';
-import { sound } from '@/lib/sound';
+import { useEffect, useMemo, useRef, type CSSProperties } from 'react';
+import { SkinCard } from '@/components/items/skin-card';
 import { prefersReducedMotion } from '@/lib/motion';
+import { sound } from '@/lib/sound';
 
 const STRIP_LENGTH = 54;
 const WIN_INDEX = 46;
+/** Плавное торможение прокрутки (как и раньше). */
+const SPIN_EASING = 'cubic-bezier(0.06, 0.62, 0.1, 1)';
+/** Последние 350 мс лента доезжает от случайной точки внутри выигрышной карточки ровно до её центра. */
+const SETTLE_MS = 350;
 
-/** Косметическая лента: наполнители по шансам кейса, выигрыш (решённый сервером) — на позиции WIN_INDEX. */
-function buildStrip(pool: CaseContentItemDto[], winner: ItemDto | null, seed: number): ItemDto[] {
+/**
+ * Косметическая лента: наполнители по шансам кейса, выигрыш (решённый сервером) — на позиции
+ * WIN_INDEX. У каждой дорожки свой seed, чтобы при x2…x5 ленты не повторяли друг друга.
+ */
+function buildStrip(
+  pool: CaseContentItemDto[],
+  winner: ItemDto | null,
+  seed: number,
+): CaseContentItemDto[] {
   if (!pool.length) return [];
-  let x = seed || 1;
+  let x = seed % 2147483647 || 1;
   const rand = () => {
     x = (x * 16807) % 2147483647;
     return x / 2147483647;
   };
   const total = pool.reduce((s, p) => s + p.odds, 0);
   const pick = () => {
-    // Чуть чаще показываем редкие предметы, чтобы лента выглядела живой.
     let r = rand() * total;
     for (const p of pool) {
       r -= p.odds;
-      if (r <= 0) return p.item;
+      if (r <= 0) return p;
     }
-    return (pool[pool.length - 1] as CaseContentItemDto).item;
+    return pool[pool.length - 1] as CaseContentItemDto;
   };
   const strip = Array.from({ length: STRIP_LENGTH }, (_, i) => {
+    // Чуть чаще показываем самые ценные предметы (они первые в составе), чтобы лента выглядела живой.
     if (i % 7 === 3)
-      return (pool[Math.floor(rand() * Math.min(3, pool.length))] as CaseContentItemDto).item;
+      return pool[Math.floor(rand() * Math.min(3, pool.length))] as CaseContentItemDto;
     return pick();
   });
-  if (winner) strip[WIN_INDEX] = winner;
+  if (winner) {
+    const entry = pool.find((p) => p.item.id === winner.id);
+    strip[WIN_INDEX] = { item: winner, odds: entry?.odds ?? 0, chance: entry?.chance ?? '' };
+  }
   return strip;
 }
 
-export interface RouletteProps {
+type Axis = 'x' | 'y';
+
+interface ReelProps {
+  axis: Axis;
   pool: CaseContentItemDto[];
   winner: ItemDto | null;
   spinId: number;
+  seed: number;
   fast: boolean;
-  compact?: boolean;
-  durationMs?: number;
-  onDone?: () => void;
+  durationMs: number;
+  onDone: () => void;
 }
 
-export function Roulette({
-  pool,
-  winner,
-  spinId,
-  fast,
-  compact,
-  durationMs = 5800,
-  onDone,
-}: RouletteProps) {
-  const viewport = useRef<HTMLDivElement>(null);
-  const track = useRef<HTMLDivElement>(null);
-  const [done, setDone] = useState(false);
-  const strip = useMemo(
-    () => buildStrip(pool, winner, spinId * 9301 + 49297),
-    [pool, winner, spinId],
-  );
-  const cardW = compact ? 104 : 148;
+/**
+ * Одна лента. x — едет влево (сдвиг отрицательный); y — дорожка привязана к низу окна
+ * (карточки снизу вверх) и едет вниз, как барабан (сдвиг положительный).
+ */
+function Reel({ axis, pool, winner, spinId, seed, fast, durationMs, onDone }: ReelProps) {
+  const windowRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const strip = useMemo(() => buildStrip(pool, winner, seed), [pool, winner, seed]);
+  const horizontal = axis === 'x';
 
   useEffect(() => {
-    const vp = viewport.current;
-    const tr = track.current;
-    if (!vp || !tr || !winner) return;
-    setDone(false);
-    const width = vp.clientWidth;
-    const jitter = (Math.random() - 0.5) * cardW * 0.7;
-    const target = -(WIN_INDEX * cardW) + width / 2 - cardW / 2 + jitter;
-    tr.getAnimations().forEach((a) => a.cancel());
-    tr.style.transform = 'translateX(0px)';
+    const win = windowRef.current;
+    const track = trackRef.current;
+    const first = track?.children[0];
+    const second = track?.children[1];
+    if (!win || !track || !first || !second || !winner) return;
+
+    // Геометрия берётся из вёрстки: размер карточки зависит от ширины экрана (container queries).
+    // Дробные размеры (getBoundingClientRect): округление offsetWidth на уменьшенной карточке
+    // за 46 карточек набегает в заметный сдвиг. Шаг — расстояние между соседними карточками.
+    const measure = () => {
+      const a = first.getBoundingClientRect();
+      const b = second.getBoundingClientRect();
+      const v = win.getBoundingClientRect();
+      return horizontal
+        ? { card: a.width, pitch: Math.abs(b.left - a.left), view: v.width }
+        : { card: a.height, pitch: Math.abs(b.top - a.top), view: v.height };
+    };
+    /** Сдвиг ленты, при котором карточка i стоит ровно под меткой (по центру окна). */
+    const centred = (i: number, g = measure()) =>
+      horizontal ? g.view / 2 - (i * g.pitch + g.card / 2) : i * g.pitch + g.card / 2 - g.view / 2;
+    const tf = (v: number) => (horizontal ? `translateX(${v}px)` : `translateY(${v}px)`);
+    /**
+     * Итоговое положение — инлайн-стилем и по свежим замерам: пока лента ехала или стояла
+     * под окном результата, экран могли повернуть или сузить — выигрыш всё равно ровно под меткой.
+     */
+    const settle = () => {
+      track.getAnimations().forEach((a) => a.cancel());
+      track.style.transform = tf(centred(WIN_INDEX));
+    };
+    let finished = false;
+    const ro = new ResizeObserver(() => {
+      if (finished) settle();
+    });
+    ro.observe(win);
+
+    track.getAnimations().forEach((a) => a.cancel());
     if (fast || prefersReducedMotion()) {
-      tr.style.transform = `translateX(${target}px)`;
-      setDone(true);
-      onDone?.();
-      return;
+      finished = true;
+      settle();
+      onDone();
+      return () => ro.disconnect();
     }
-    const anim = tr.animate(
-      [{ transform: 'translateX(0px)' }, { transform: `translateX(${target}px)` }],
-      {
-        duration: durationMs,
-        easing: 'cubic-bezier(0.06, 0.62, 0.1, 1)',
-        fill: 'forwards',
-      },
+
+    const g = measure();
+    const target = centred(WIN_INDEX, g);
+    const jitter = (Math.random() - 0.5) * g.card * 0.7;
+    track.style.transform = tf(0);
+    const anim = track.animate(
+      [
+        { transform: tf(0), easing: SPIN_EASING },
+        {
+          transform: tf(target + jitter),
+          offset: Math.max(0, 1 - SETTLE_MS / durationMs),
+          easing: 'ease-in-out',
+        },
+        { transform: tf(target) },
+      ],
+      { duration: durationMs, fill: 'forwards' },
     );
+    // Щелчок на каждой карточке, проходящей под меткой.
     let last = -1;
     let raf = 0;
     const loop = () => {
-      const m = new DOMMatrixReadOnly(getComputedStyle(tr).transform);
-      const idx = Math.floor((-m.m41 + width / 2) / cardW);
+      const m = new DOMMatrixReadOnly(getComputedStyle(track).transform);
+      const offset = horizontal ? m.m41 : m.m42;
+      const idx = Math.floor((g.view / 2 + (horizontal ? -offset : offset)) / g.pitch);
       if (idx !== last) {
         last = idx;
         sound.tick();
@@ -102,69 +149,86 @@ export function Roulette({
     raf = requestAnimationFrame(loop);
     anim.onfinish = () => {
       cancelAnimationFrame(raf);
-      setDone(true);
-      onDone?.();
+      finished = true;
+      settle();
+      onDone();
     };
     return () => {
       cancelAnimationFrame(raf);
       anim.onfinish = null;
+      ro.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spinId, winner]);
 
   return (
-    <div
-      ref={viewport}
-      className={cn(
-        'cut relative overflow-hidden [--cut-bg:var(--color-surface-1)]',
-        compact ? 'h-[118px]' : 'h-[172px]',
-      )}
-    >
-      <div
-        className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-0.5 -translate-x-1/2 bg-accent shadow-[0_0_14px_rgba(198,255,0,0.9)]"
-        aria-hidden="true"
-      />
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-surface-1 to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-surface-1 to-transparent" />
-      <div
-        ref={track}
-        className="flex h-full items-center will-change-transform"
-        style={{ transform: 'translateX(0px)' }}
-      >
-        {strip.map((it, i) => (
-          <div key={`${spinId}-${i}`} className="shrink-0 px-1" style={{ width: cardW }}>
-            <div
-              className={cn(
-                'relative flex flex-col items-center justify-center overflow-hidden bg-surface-2 transition',
-                compact ? 'h-[96px]' : 'h-[146px]',
-                done && i === WIN_INDEX && 'ring-2 ring-accent',
-              )}
-              style={{
-                background: `radial-gradient(90% 70% at 50% 100%, ${it.rarity.color}45, var(--color-surface-2) 70%)`,
-              }}
-            >
-              {it.imageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={it.imageUrl}
-                  alt=""
-                  className={cn('object-contain', compact ? 'h-12 w-20' : 'h-20 w-32')}
-                  draggable={false}
-                />
-              )}
-              {!compact && (
-                <div className="mt-1 w-full truncate px-2 text-center text-[11px] font-semibold">
-                  {it.skinName}
-                </div>
-              )}
-              <div
-                className="absolute inset-x-0 bottom-0 h-[3px]"
-                style={{ background: it.rarity.color }}
-              />
-            </div>
-          </div>
+    <div ref={windowRef} className={horizontal ? 'case-reel__window' : 'case-lane__window'}>
+      <div ref={trackRef} className={horizontal ? 'case-reel__track' : 'case-lane__track'}>
+        {strip.map((entry, i) => (
+          <SkinCard key={`${spinId}-${i}`} item={entry.item} chance={entry.chance} eager />
         ))}
       </div>
+    </div>
+  );
+}
+
+export interface CaseRouletteProps {
+  pool: CaseContentItemDto[];
+  /** Выигрыши по дорожкам (решены сервером); их число — число дорожек. */
+  winners: ItemDto[];
+  spinId: number;
+  fast: boolean;
+  onLaneDone: (lane: number) => void;
+}
+
+/**
+ * Рулетка на месте сцены кейса: x1 — горизонтальная лента на всю ширину экрана с лаймовой меткой
+ * сверху; x2…x5 — вертикальные дорожки там, где стояли копии кейса, с меткой слева от каждой.
+ * Дорожки останавливаются по очереди (каждая следующая на 250 мс позже).
+ */
+export function CaseRoulette({ pool, winners, spinId, fast, onLaneDone }: CaseRouletteProps) {
+  const n = winners.length;
+  const seed = spinId * 9301 + 49297;
+  if (n <= 1) {
+    return (
+      <div className="case-reel" aria-hidden="true" data-testid="case-roulette" data-lanes={1}>
+        <Reel
+          axis="x"
+          pool={pool}
+          winner={winners[0] ?? null}
+          spinId={spinId}
+          seed={seed}
+          fast={fast}
+          durationMs={5600}
+          onDone={() => onLaneDone(0)}
+        />
+        <span className="case-reel__marker case-reel__marker--x" />
+      </div>
+    );
+  }
+  return (
+    <div
+      className="case-band__row"
+      style={{ '--n': n } as CSSProperties}
+      aria-hidden="true"
+      data-testid="case-roulette"
+      data-lanes={n}
+    >
+      {winners.map((winner, i) => (
+        <div key={i} className="case-lane" data-testid="case-lane">
+          <Reel
+            axis="y"
+            pool={pool}
+            winner={winner}
+            spinId={spinId}
+            seed={seed + i * 7919}
+            fast={fast}
+            durationMs={5600 + i * 250}
+            onDone={() => onLaneDone(i)}
+          />
+          <span className="case-reel__marker case-reel__marker--y" />
+        </div>
+      ))}
     </div>
   );
 }

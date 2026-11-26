@@ -48,11 +48,18 @@ export function AuthEffects() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params]);
 
+  // Настройки из профиля — один раз на вход (загрузка страницы, вход, смена пользователя), а не на
+  // каждое обновление профиля: баланс по WebSocket и перезапрос после открытия кейса заменяют
+  // me.data целиком, и выбор, сделанный на странице, сбрасывался бы к профилю. Переключатели
+  // у вошедшего сами сохраняют выбор в профиль (usePrefToggles).
+  const userId = me.data?.id;
   useEffect(() => {
-    if (!me.data) return;
-    setSound(me.data.settings.soundEnabled);
-    setFast(me.data.settings.fastModeDefault);
-  }, [me.data, setSound, setFast]);
+    const settings = me.data?.settings;
+    if (!settings) return;
+    setSound(settings.soundEnabled);
+    setFast(settings.fastModeDefault);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, setSound, setFast]);
 
   return null;
 }

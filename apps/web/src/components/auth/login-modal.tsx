@@ -23,6 +23,7 @@ import { cn } from '@/lib/cn';
 import { useConfig } from '@/lib/config';
 import { useErrorMessage } from '@/lib/errors';
 import { ME_KEY } from '@/lib/me';
+import { useReturnFocus } from '@/lib/return-focus';
 import { reconnectSocket } from '@/lib/socket';
 import { usePrefs, useUi } from '@/lib/store';
 
@@ -102,6 +103,8 @@ export function LoginModal() {
   const qc = useQueryClient();
   const errorText = useErrorMessage();
   const consentRef = useRef<HTMLLabelElement>(null);
+  // Окно открывается кодом (без Dialog.Trigger) — фокус после закрытия возвращаем сами.
+  const focus = useReturnFocus();
   const [busy, setBusy] = useState<string | null>(null);
   const [nickname, setNickname] = useState('');
 
@@ -176,6 +179,8 @@ export function LoginModal() {
       <Dialog.Portal>
         <Dialog.Overlay className="gr-overlay fixed inset-0 z-50 bg-black/70 backdrop-blur-[2px]" />
         <Dialog.Content
+          onOpenAutoFocus={focus.onOpenAutoFocus}
+          onCloseAutoFocus={focus.onCloseAutoFocus}
           className="gr-dialog fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 outline-none"
           data-testid="login-modal"
         >

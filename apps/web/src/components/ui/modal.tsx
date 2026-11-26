@@ -3,8 +3,9 @@
 import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Dialog } from 'radix-ui';
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { cn } from '@/lib/cn';
+import { useReturnFocus } from '@/lib/return-focus';
 
 const WIDTHS = {
   sm: 'sm:max-w-sm',
@@ -25,6 +26,11 @@ export interface ModalProps {
   persistent?: boolean;
   hideTitle?: boolean;
   className?: string;
+  /**
+   * Куда вернуть фокус после закрытия, если элемента, с которого окно открыли, уже нет (или фокуса
+   * не было). Обычно фокус возвращается туда, где был при открытии.
+   */
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 /** Модалка: на телефоне выезжает снизу (bottom sheet), на компьютере — по центру. */
@@ -39,13 +45,17 @@ export function Modal({
   persistent,
   hideTitle,
   className,
+  returnFocusRef,
 }: ModalProps) {
   const t = useTranslations('common');
+  const focus = useReturnFocus(returnFocusRef);
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="gr-overlay fixed inset-0 z-50 bg-black/70 backdrop-blur-[2px]" />
         <Dialog.Content
+          onOpenAutoFocus={focus.onOpenAutoFocus}
+          onCloseAutoFocus={focus.onCloseAutoFocus}
           onPointerDownOutside={persistent ? (e) => e.preventDefault() : undefined}
           onEscapeKeyDown={persistent ? (e) => e.preventDefault() : undefined}
           className={cn(

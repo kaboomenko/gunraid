@@ -130,7 +130,9 @@
   button {
     cursor: pointer;
   }
-  button:disabled {
+  /* aria-disabled — кнопка недоступна, но держит фокус (например, «Открыть» во время прокрутки). */
+  button:disabled,
+  button[aria-disabled='true'] {
     cursor: not-allowed;
   }
 }
@@ -541,6 +543,797 @@
   .adrenaline-bar__step[data-active] {
     opacity: 1;
   }
+
+  /*
+   * ---------- Карточка предмета 286×185 (содержимое кейса, лента рулетки) ----------
+   * Вид — как у карточки дропа в ленте: фон #181821, скругление 12, всё лишнее обрезается; мазки
+   * drop-styled-bg 280×170 от левого верхнего угла (белый 4%), свечение цвета редкости --rc, полоса
+   * редкости внизу по центру. Все размеры — в долях ширины карточки (--u = ширина / 286), поэтому
+   * на телефоне карточка уменьшается целиком; в натуральную величину она 286×185.
+   */
+  .skin-card {
+    --u: calc(100cqw / 286);
+    position: relative;
+    display: block;
+    container: skin-card / inline-size;
+    aspect-ratio: 286 / 185;
+    border-radius: 12px;
+    color: #fff;
+  }
+  .skin-card__body {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: calc(12 * var(--u));
+    background: #181821;
+  }
+  .skin-card__glow-a,
+  .skin-card__glow-b,
+  .skin-card__brush,
+  .skin-card__image,
+  .skin-card__bar {
+    position: absolute;
+    pointer-events: none;
+  }
+  .skin-card__glow-a,
+  .skin-card__glow-b {
+    border-radius: 50%;
+    background: var(--rc);
+  }
+  /* Эллипс A 220×160: 33 от левого и правого края, 15 сверху, 10 снизу; Figma layer blur 115 → 57,5px. */
+  .skin-card__glow-a {
+    left: calc(33 * var(--u));
+    top: calc(15 * var(--u));
+    width: calc(220 * var(--u));
+    height: calc(160 * var(--u));
+    opacity: 0.17;
+    filter: blur(calc(57.5 * var(--u)));
+  }
+  /* Эллипс B 276×100: 5 от краёв, верх в 125 — уходит на 40 ниже карточки; blur 70 → 35px. */
+  .skin-card__glow-b {
+    left: calc(5 * var(--u));
+    top: calc(125 * var(--u));
+    width: calc(276 * var(--u));
+    height: calc(100 * var(--u));
+    opacity: 0.55;
+    filter: blur(calc(35 * var(--u)));
+  }
+  .skin-card__brush {
+    left: 0;
+    top: 0;
+    width: calc(280 * var(--u));
+    height: calc(170 * var(--u));
+    background: url('/design/drop-styled-bg.svg') 0 0 / 100% 100% no-repeat;
+    opacity: 0.04;
+  }
+  /*
+   * Картинка скина: рамка 230×115 в 20 от верха, по центру. Сам скин в макете занимает около 70%
+   * рамки (≈160 в ширину — у картинки из макета прозрачные поля), а наши картинки обрезаны почти
+   * по краю (≈95% холста 400×200), поэтому рисуем их во внутреннем поле рамки 170×85: по 30
+   * с боков, по 15 сверху и снизу (object-fit работает внутри полей). Скин не наезжает на «Шанс»
+   * и на тип оружия, как и в макете.
+   */
+  .skin-card__image {
+    left: calc(28 * var(--u));
+    top: calc(20 * var(--u));
+    width: calc(230 * var(--u));
+    height: calc(115 * var(--u));
+    padding: calc(15 * var(--u)) calc(30 * var(--u));
+    object-fit: contain;
+    transition: transform 0.25s ease;
+  }
+  a.skin-card:hover .skin-card__image,
+  a.skin-card:focus-visible .skin-card__image {
+    transform: translateY(calc(-4 * var(--u))) scale(1.04);
+  }
+  /* Слева снизу, в 18 от краёв: тип оружия, название скина и цена, строки через 6. */
+  .skin-card__info {
+    position: absolute;
+    left: calc(18 * var(--u));
+    right: calc(18 * var(--u));
+    bottom: calc(18 * var(--u));
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: calc(6 * var(--u));
+    font-size: calc(18 * var(--u));
+  }
+  .skin-card__info > .truncate {
+    max-width: 100%;
+  }
+  /* Справа сверху, в 18 от краёв: «Шанс» и шанс, по правому краю, через 6. */
+  .skin-card__chance {
+    position: absolute;
+    top: calc(18 * var(--u));
+    right: calc(18 * var(--u));
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: calc(6 * var(--u));
+    font-size: calc(18 * var(--u));
+    white-space: nowrap;
+  }
+  /* «Шанс» и тип оружия — Regular 18, белый 50%. */
+  .skin-card__muted {
+    font-weight: 400;
+    color: rgb(255 255 255 / 0.5);
+  }
+  .skin-card__skin,
+  .skin-card__chance-value {
+    font-weight: 500;
+  }
+  /*
+   * Цена: гем 12×18, через 6 — число DemiBold 18. Цвет — #C6FF00, как в макетах карточки и ленты
+   * (пиксель в пиксель; лайм кнопок #B7FF00 — другой, в макетах их два).
+   */
+  .skin-card__price {
+    display: flex;
+    align-items: center;
+    gap: calc(6 * var(--u));
+    font-weight: 600;
+    color: var(--color-accent);
+    white-space: nowrap;
+  }
+  .skin-card__gem {
+    flex: none;
+    width: calc(12 * var(--u));
+    height: calc(18 * var(--u));
+  }
+  /* Полоса редкости 176×2 со скруглением 2 — внизу по центру. */
+  .skin-card__bar {
+    left: 50%;
+    bottom: 0;
+    width: calc(176 * var(--u));
+    height: max(1px, calc(2 * var(--u)));
+    translate: -50% 0;
+    border-radius: calc(2 * var(--u));
+    background: var(--rc);
+  }
+  /*
+   * Совсем маленькая карточка (дорожки рулетки x3…x5 на телефоне, x5 на планшете): текст вышел бы
+   * в 4–8px и не читался. Остаётся плитка скина — картинка во всю рамку по центру по высоте,
+   * свечение и полоса редкости.
+   */
+  @container skin-card (max-width: 130px) {
+    .skin-card__info,
+    .skin-card__chance {
+      display: none;
+    }
+    .skin-card__image {
+      top: calc(35 * var(--u));
+      padding: 0;
+    }
+  }
+
+  /*
+   * ---------- Содержимое кейса ----------
+   * Сетка карточек 286×185 с промежутками 12 по горизонтали и вертикали, в строке не больше шести
+   * (6×286 + 5×12 = 1776); блок сетки по центру, неполная последняя строка — слева (как в макете).
+   * Колонок меньше на узких экранах (сколько целых карточек 286 помещается); от двух колонок
+   * меньше не бывает — на телефоне карточки уменьшаются, чтобы две влезли в 360.
+   */
+  .case-contents {
+    container-type: inline-size;
+  }
+  .skin-grid {
+    --cols: 2;
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 286px));
+    justify-content: center;
+    gap: 12px;
+  }
+  @container (min-width: 882px) {
+    .skin-grid {
+      --cols: 3;
+    }
+  }
+  @container (min-width: 1180px) {
+    .skin-grid {
+      --cols: 4;
+    }
+  }
+  @container (min-width: 1478px) {
+    .skin-grid {
+      --cols: 5;
+    }
+  }
+  @container (min-width: 1776px) {
+    .skin-grid {
+      --cols: 6;
+    }
+  }
+
+  /*
+   * ---------- Страница кейса ----------
+   * Отступ над названием кейса — ритм главной: вместе с полем страницы (16 / 24) — 40 / 80 / 120
+   * на телефоне / планшете / от 1280. На низком окне он сжимается вплоть до поля страницы, чтобы
+   * кейс, кнопка открытия и строка под ней поместились на первом экране: 1920×1080 в браузере —
+   * это окно высотой около 950, и при полных 120 кнопка уходила под край. Вычитаемое — высота
+   * верхнего блока, сцены и кнопок до строки под кнопкой открытия, плюс 24 воздуха (на телефоне —
+   * ещё нижняя панель вкладок; на планшете кнопки в три ряда, как на 768).
+   */
+  .case-page {
+    padding-top: clamp(0px, 100svh - 893px, 24px);
+  }
+  @media (min-width: 768px) {
+    .case-page {
+      padding-top: clamp(0px, 100svh - 1047px, 56px);
+    }
+  }
+  @media (min-width: 1280px) {
+    .case-page {
+      padding-top: clamp(0px, 100svh - 941px, 96px);
+    }
+  }
+
+  /*
+   * ---------- Сцена страницы кейса ----------
+   * Контейнер — вся ширина контента (на 1920 — 1872), раскладка зависит от неё (container queries).
+   * Сверху название (DemiBold 36), в 24 под ним — полоса высотой 286: выбранный кейс 286×286 по центру,
+   * при x1 — стрелки 72×72 в 163 от кейса и соседние кейсы 234×286 в 24 от краёв контента (их верх —
+   * на уровне верха кейса); при x2…x5 — копии кейса 286×286 через 48 по центру. Полоса одной высоты
+   * в любом состоянии, поэтому кнопки под ней (в 12) не прыгают при смене количества.
+   */
+  .case-stage {
+    container: case-stage / inline-size;
+  }
+  .case-stage__name {
+    font-size: 36px;
+    font-weight: 600;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+  .case-band {
+    --arrow: 72px;
+    --arrow-gap: 163px;
+    --copy-gap: 48px;
+    --case-size: 286px;
+    position: relative;
+    height: var(--case-size);
+    margin-top: 24px;
+  }
+  /* Копии кейса (и дорожки рулетки x2…x5): размер — чтобы N штук через --copy-gap влезли в ширину. */
+  .case-band__row {
+    --copy-size: min(var(--case-size), (100cqw - (var(--n) - 1) * var(--copy-gap)) / var(--n));
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--copy-gap);
+  }
+  .case-band__copy {
+    flex: none;
+    width: var(--copy-size);
+    height: var(--copy-size);
+    object-fit: contain;
+    transition:
+      width 0.2s ease,
+      height 0.2s ease;
+    animation: gr-fade-in 0.2s ease-out;
+  }
+  /* Стрелки: 72×72 (иконка 24 + поля 24), скругление 12; покой — #26262F и иконка белая 30%. */
+  .case-arrow {
+    position: absolute;
+    top: calc((var(--case-size) - var(--arrow)) / 2);
+    display: grid;
+    place-items: center;
+    width: var(--arrow);
+    height: var(--arrow);
+    border-radius: 12px;
+    background: #26262f;
+    color: rgb(255 255 255 / 0.3);
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+  }
+  /* Наведение, фокус с клавиатуры, нажатие — #3E3E50 и иконка белая 100%. */
+  .case-arrow:hover,
+  .case-arrow:focus-visible,
+  .case-arrow:active {
+    background: #3e3e50;
+    color: #fff;
+  }
+  /* Левая — [центр − 378, центр − 306], правая — [центр + 306, центр + 378]. */
+  .case-arrow--prev {
+    right: calc(50% + var(--case-size) / 2 + var(--arrow-gap));
+  }
+  .case-arrow--next {
+    left: calc(50% + var(--case-size) / 2 + var(--arrow-gap));
+  }
+  /*
+   * Соседний кейс 234×286: вертикальный auto layout, поля сверху 9, по бокам 24, снизу 50, между
+   * элементами 24; название Medium 24 и картинка 186×186 — обе с прозрачностью 50%.
+   * Показываются, только пока помещаются, не касаясь стрелок (контент от 1296: 24 + 234 + 12 до стрелки).
+   */
+  .case-neighbour {
+    position: absolute;
+    top: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    width: 234px;
+    height: 286px;
+    padding: 9px 24px 50px;
+    border-radius: 12px;
+  }
+  /* В 24 от краёв контента (на 1920 — в 48 от краёв экрана); на экранах шире — там же, где на 1920: центр ∓ 912. */
+  .case-neighbour--prev {
+    left: max(24px, 50% - 912px);
+  }
+  .case-neighbour--next {
+    right: max(24px, 50% - 912px);
+  }
+  /* Название может занять всю ширину карточки (в Figma карточка «обнимает» содержимое), дальше — многоточие. */
+  .case-neighbour__name {
+    width: calc(100% + 48px);
+    margin-inline: -24px;
+    font-size: 24px;
+    font-weight: 500;
+    text-align: center;
+  }
+  .case-neighbour__name,
+  .case-neighbour__image {
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
+  }
+  .case-neighbour__image {
+    flex: none;
+    width: 186px;
+    height: 186px;
+    object-fit: contain;
+  }
+  .case-neighbour:hover .case-neighbour__name,
+  .case-neighbour:hover .case-neighbour__image,
+  .case-neighbour:focus-visible .case-neighbour__name,
+  .case-neighbour:focus-visible .case-neighbour__image {
+    opacity: 0.8;
+  }
+  @container case-stage (min-width: 1296px) {
+    .case-neighbour {
+      display: flex;
+    }
+  }
+  /* Планшет: стрелки 48×48 в 24 от кейса, копии через 24; кейс уменьшается, если не помещается. */
+  @container case-stage (max-width: 799.98px) {
+    .case-band {
+      --arrow: 48px;
+      --arrow-gap: 24px;
+      --copy-gap: 24px;
+      --case-size: min(286px, 100cqw - 2 * (48px + 24px));
+    }
+  }
+  /* Телефон: название 24, стрелки в 12 от кейса, копии через 12. */
+  @container case-stage (max-width: 479.98px) {
+    .case-stage__name {
+      font-size: 24px;
+    }
+    .case-band {
+      --arrow-gap: 12px;
+      --copy-gap: 12px;
+      --case-size: min(286px, 100cqw - 2 * (48px + 12px));
+      margin-top: 16px;
+    }
+  }
+
+  /*
+   * ---------- Рулетка ----------
+   * x1 — горизонтальная лента тех же карточек 286×185 через 12 на всю ширину экрана (поверх полей
+   * страницы), края плавно уходят в фон; над лентой — лаймовая метка: линия 574×6 (прозрачный →
+   * #C6FF00 → прозрачный, цвет — пиксель в пиксель из макета) в 10 над карточками и шип 12×35 вниз
+   * по центру, заходящий на карточку на 25.
+   * x2…x5 — вертикальные дорожки ровно там, где стояли копии кейса (ширина — карточка, высота —
+   * полоса 286), верх и низ уходят в фон; та же метка, повёрнутая на 90°, — слева от дорожки.
+   * Всё в долях карточки (--u), поэтому на телефоне лента и дорожки уменьшаются вместе с ней.
+   */
+  .case-reel {
+    --reel-card: min(286px, (100cqw - 24px) / 2);
+    --u: calc(var(--reel-card) / 286);
+    --card-h: calc(185 * var(--u));
+    position: absolute;
+    inset-block: 0;
+    left: -12px;
+    right: -12px;
+    animation: gr-fade-in 0.2s ease-out;
+  }
+  @media (min-width: 768px) {
+    .case-reel {
+      left: -24px;
+      right: -24px;
+    }
+  }
+  .case-reel__window {
+    position: absolute;
+    inset-inline: 0;
+    top: calc(50% - var(--card-h) / 2);
+    height: var(--card-h);
+    overflow: hidden;
+    /* Края ленты уходят в фон: в макете крайние карточки почти не видны (≈26% ширины с каждой стороны). */
+    mask-image: linear-gradient(90deg, transparent, #000 26%, #000 74%, transparent);
+  }
+  .case-reel__track {
+    display: flex;
+    gap: calc(12 * var(--u));
+    width: max-content;
+    height: 100%;
+    will-change: transform;
+  }
+  .case-reel__track > .skin-card {
+    flex: none;
+    width: var(--reel-card);
+  }
+  .case-reel__marker {
+    position: absolute;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .case-reel__marker::after {
+    content: '';
+    position: absolute;
+    background: var(--color-accent);
+  }
+  .case-reel__marker--x {
+    left: 50%;
+    top: calc(50% - var(--card-h) / 2 - 16 * var(--u));
+    width: calc(574 * var(--u));
+    height: calc(6 * var(--u));
+    translate: -50% 0;
+    background: linear-gradient(90deg, transparent, var(--color-accent) 50%, transparent);
+  }
+  .case-reel__marker--x::after {
+    left: 50%;
+    top: 100%;
+    width: calc(12 * var(--u));
+    height: calc(35 * var(--u));
+    translate: -50% 0;
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+  }
+  /* Окно дорожки — ровно квадрат копии кейса (на 1920 — 286×286, во всю высоту полосы). */
+  .case-lane {
+    --u: calc(var(--copy-size) / 286);
+    --card-h: calc(185 * var(--u));
+    position: relative;
+    flex: none;
+    width: var(--copy-size);
+    height: var(--copy-size);
+    animation: gr-fade-in 0.2s ease-out;
+  }
+  .case-lane__window {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    mask-image: linear-gradient(
+      180deg,
+      transparent,
+      #000 calc(50% - var(--card-h) / 2),
+      #000 calc(50% + var(--card-h) / 2),
+      transparent
+    );
+  }
+  /* Дорожка привязана к низу окна и крутится вниз, как барабан: карточки идут снизу вверх (column-reverse). */
+  .case-lane__track {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: calc(12 * var(--u));
+    will-change: transform;
+  }
+  .case-lane__track > .skin-card {
+    flex: none;
+    width: 100%;
+  }
+  /* На узких дорожках (телефон, x3…x5) метка не тоньше 2px и шип не меньше 8×4 — иначе её не видно. */
+  .case-reel__marker--y {
+    top: 50%;
+    left: calc(-16 * var(--u));
+    width: max(2px, calc(6 * var(--u)));
+    height: min(100%, calc(574 * var(--u)));
+    translate: 0 -50%;
+    background: linear-gradient(180deg, transparent, var(--color-accent) 50%, transparent);
+  }
+  .case-reel__marker--y::after {
+    top: 50%;
+    left: 100%;
+    width: max(8px, calc(35 * var(--u)));
+    height: max(4px, calc(12 * var(--u)));
+    translate: 0 -50%;
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+  }
+
+  /*
+   * ---------- Кнопки под сценой (в 12 под полосой) ----------
+   * В разметке: количество → «Быстро» (подарок, звук) → кнопка открытия со строкой под ней; это и
+   * порядок фокуса, поэтому ниже десктопа ряды идут в том же порядке, без перестановки через CSS.
+   * Десктоп: сетка «1fr 470 1fr» с промежутками 72 — слева кнопки количества (прижаты вправо: x5
+   * ровно под левой стрелкой), по центру кнопка открытия 470×72 (под кейсом), справа «Быстро» (ровно
+   * под правой стрелкой). Когда не помещается, промежутки сжимаются до 24, затем кнопка открытия —
+   * до 400; ещё уже — два ряда (количество слева от центра, «Быстро» справа, под ними кнопка
+   * открытия), затем три ряда по центру, на телефоне — столбик во всю ширину.
+   */
+  .case-controls {
+    --controls-gap: clamp(24px, (100cqw - 470px - 2 * 384px) / 2, 72px);
+    --open-w: clamp(400px, 100cqw - 2 * 384px - 2 * var(--controls-gap), 470px);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--open-w) minmax(0, 1fr);
+    column-gap: var(--controls-gap);
+    /* В разметке кнопка открытия последняя — dense ставит её в свободную среднюю колонку того же ряда. */
+    grid-auto-flow: row dense;
+    /* Строка под кнопкой открытия делает её колонку выше — остальные кнопки ровняются по верху. */
+    align-items: start;
+    margin-top: 12px;
+    transition: opacity 0.2s ease;
+  }
+  .case-controls[data-spinning] {
+    opacity: 0.5;
+  }
+  .case-controls__counts {
+    grid-column: 1;
+    justify-self: end;
+    display: flex;
+    gap: 6px;
+  }
+  .case-controls__main {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .case-controls__extra {
+    grid-column: 3;
+    justify-self: start;
+    display: flex;
+    gap: 6px;
+  }
+  .case-controls__more {
+    display: flex;
+    gap: 6px;
+  }
+  /* Кнопка выбора количества — как стрелка: 72×72, поля 24, скругление 12, текст Medium 24. */
+  .case-count {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 12px;
+    background: #181821;
+    color: rgb(255 255 255 / 0.3);
+    font-size: 24px;
+    font-weight: 500;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+  }
+  .case-count:not(:disabled, [aria-pressed='true']):hover {
+    color: rgb(255 255 255 / 0.6);
+  }
+  .case-count[aria-pressed='true'] {
+    background: #26262f;
+    color: #fff;
+  }
+  /*
+   * Кнопка открытия: 470, поля 24 сверху и снизу (72), иконка 24, через 24 — текст DemiBold 24
+   * «Открыть за N» с подчёркнутой суммой; иконка и текст #121117, скругление 12. Хватает баланса —
+   * #B7FF00, не хватает — #FF2529, кейс недоступен — #26262F и белый 30%. Пока неизвестно, вошёл ли
+   * пользователь и хватает ли ему, — приглушена (как во время прокрутки), а цвет меняется один раз,
+   * сразу на итоговый.
+   */
+  .case-open {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    width: 100%;
+    height: 72px;
+    padding-inline: 24px;
+    border-radius: 12px;
+    background: var(--color-lime);
+    color: #121117;
+    font-size: 24px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition:
+      filter 0.15s ease,
+      opacity 0.15s ease,
+      background-color 0.15s ease;
+  }
+  .case-open:not([aria-disabled='true']):hover {
+    filter: brightness(1.08);
+  }
+  .case-open[data-state='loading'] {
+    opacity: 0.5;
+  }
+  .case-open[data-state='insufficient'] {
+    background: #ff2529;
+  }
+  .case-open[data-state='blocked'] {
+    background: #26262f;
+    color: rgb(255 255 255 / 0.3);
+  }
+  .case-open__sum {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 5px;
+  }
+  /*
+   * «Быстро»: скругление 12, поля 24 и 36 справа, иконка 24, через 24 — DemiBold 24; выключено —
+   * #181821 и белый 30%, включено — #26262F и белый 100%. Тем же видом «включено» — бонусное открытие.
+   */
+  .case-toggle {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    height: 72px;
+    padding: 0 36px 0 24px;
+    border-radius: 12px;
+    background: #181821;
+    color: rgb(255 255 255 / 0.3);
+    font-size: 24px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+  }
+  .case-toggle:not(:disabled, [aria-pressed='true'], .case-toggle--on):hover {
+    color: rgb(255 255 255 / 0.6);
+  }
+  .case-toggle[aria-pressed='true'],
+  .case-toggle--on {
+    background: #26262f;
+    color: #fff;
+  }
+  .case-toggle--icon {
+    justify-content: center;
+    width: 72px;
+    padding: 0;
+  }
+  /*
+   * Строка под кнопкой открытия (в 24): ошибка (#FF2529) или пояснение (белый 50%), Medium 24; место
+   * держит всегда. В одну строку по центру кнопки — длинная выходит за её края, а не переносится.
+   */
+  .case-info {
+    min-height: 1cap;
+    margin-top: 24px;
+    font-size: 24px;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+    color: rgb(255 255 255 / 0.5);
+  }
+  .case-info[data-tone='error'] {
+    color: #ff2529;
+  }
+  /*
+   * Два ряда: количество слева от центра, «Быстро» (и подарок) справа — как колонки десктопа, только
+   * сложенные; под ними кнопка открытия 470. Ряд делится ровно по центру, поэтому подарок, который
+   * появляется после загрузки, ничего не сдвигает. Ряд вмещает 384 + 24 + 384 (до 792).
+   */
+  @container case-stage (max-width: 1215.98px) {
+    .case-controls {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 12px 24px;
+    }
+    .case-controls__main {
+      grid-column: 1 / -1;
+    }
+    .case-controls__extra {
+      grid-column: 2;
+    }
+    /* Без кнопок количества (бесплатный кейс) «Быстро» — по центру над кнопкой открытия. */
+    .case-controls__extra:first-child {
+      grid-column: 1 / -1;
+      justify-self: center;
+    }
+    .case-open {
+      max-width: 470px;
+    }
+  }
+  /*
+   * Три ряда по центру: количество, «Быстро», кнопка открытия. «Быстро» стоит по центру, подарок
+   * и звук — справа от него (появление подарка его не сдвигает).
+   */
+  @container case-stage (max-width: 791.98px) {
+    .case-controls {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .case-controls__counts {
+      grid-column: 1;
+      justify-self: center;
+    }
+    .case-controls__extra,
+    .case-controls__extra:first-child {
+      grid-column: 1;
+      justify-self: stretch;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    }
+    .case-controls__extra > .case-toggle {
+      grid-column: 2;
+    }
+    .case-controls__more {
+      grid-column: 3;
+    }
+  }
+  /* Телефон: всё во всю ширину — количество (пять равных кнопок), «Быстро» со звуком, кнопка открытия. */
+  @container case-stage (max-width: 599.98px) {
+    .case-controls {
+      gap: 8px;
+    }
+    .case-controls__counts {
+      justify-self: stretch;
+      display: grid;
+      grid-auto-columns: minmax(0, 1fr);
+      grid-auto-flow: column;
+    }
+    .case-controls__extra,
+    .case-controls__extra:first-child {
+      display: flex;
+    }
+    .case-controls__extra > .case-toggle {
+      flex: 1 1 auto;
+      justify-content: center;
+    }
+    .case-controls__main {
+      align-items: stretch;
+    }
+    .case-count,
+    .case-toggle {
+      width: auto;
+      height: 48px;
+      font-size: 20px;
+    }
+    .case-toggle {
+      gap: 12px;
+      padding: 0 16px;
+    }
+    .case-toggle--icon {
+      width: 48px;
+      padding: 0;
+    }
+    .case-open {
+      max-width: none;
+      height: 56px;
+      gap: 16px;
+      font-size: 20px;
+    }
+    .case-info {
+      margin-top: 16px;
+      font-size: 18px;
+      white-space: normal;
+      text-wrap: balance;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .skin-card__image,
+    .case-band__copy {
+      transition: none;
+    }
+    a.skin-card:hover .skin-card__image,
+    a.skin-card:focus-visible .skin-card__image {
+      transform: none;
+    }
+  }
+}
+
+/* Размеры сцены считаются в px там, где объявлены (cqw — от ширины сцены), и наследуются как готовые. */
+@property --case-size {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 286px;
+}
+@property --copy-size {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 286px;
+}
+@property --reel-card {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 286px;
 }
 
 @layer utilities {

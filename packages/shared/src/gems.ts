@@ -2,7 +2,14 @@
  * Внутренняя валюта — гемы. 1 гем — минимальная единица, дробных гемов нет.
  * Курс к доллару — настройка currency.gemsPerUsd, не константа.
  */
-const groupFormatter = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
+/**
+ * Разряды — по правилам русской типографики и как в макетах («1450», «15 999»): четырёхзначные
+ * числа пишутся слитно, от пяти знаков — с разделителями.
+ */
+const groupFormatter = new Intl.NumberFormat('ru-RU', {
+  maximumFractionDigits: 0,
+  useGrouping: 'min2',
+});
 
 export function isGemAmount(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value);
@@ -15,7 +22,7 @@ export function assertGemAmount(value: number, label = 'amount'): number {
   return value;
 }
 
-/** «12 345» — число гемов с разделителями разрядов (без слова «гем»; склонение — через i18n). */
+/** «12 345», «1450» — число гемов с разделителями разрядов от пяти знаков (без слова «гем»; склонение — через i18n). */
 export function formatGems(value: number): string {
   return groupFormatter.format(value);
 }

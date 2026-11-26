@@ -1258,11 +1258,14 @@
     "notFound": "Платёж не найден"
   },
   "case": {
-    "back": "Все кейсы",
     "contents": "Содержимое кейса",
     "chance": "{chance}%",
     "open": "Открыть",
     "openFor": "Открыть за",
+    "insufficient": "Недостаточно средств",
+    "chanceLabel": "Шанс",
+    "prevCase": "Предыдущий кейс: {name}",
+    "nextCase": "Следующий кейс: {name}",
     "openFree": "Открыть бесплатно",
     "fast": "Быстро",
     "sound": "Звук",
@@ -1278,7 +1281,6 @@
     "free": "Бесплатно",
     "everyHours": "Раз в {hours} ч",
     "fromLevel": "С {level} ур.",
-    "limited": "Тираж",
     "resultTitle": "{count, plural, one {Ваш дроп} few {Ваши дропы} many {Ваши дропы} other {Ваши дропы}}",
     "total": "Стоимость дропа",
     "sellAll": "Продать всё за",

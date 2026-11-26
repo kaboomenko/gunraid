@@ -24,6 +24,7 @@ import { api, newIdempotencyKey } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { useErrorMessage } from '@/lib/errors';
 import { useMe } from '@/lib/me';
+import { usePrefToggles } from '@/lib/prefs';
 import { useInventory, useInvalidateWallet } from '@/lib/queries';
 import { sound } from '@/lib/sound';
 import { usePrefs, useUi } from '@/lib/store';
@@ -36,7 +37,7 @@ export function ContractView({ game }: { game: string }) {
   const invalidate = useInvalidateWallet();
   const openLogin = useUi((s) => s.openLogin);
   const fast = usePrefs((s) => s.fast);
-  const setFast = usePrefs((s) => s.setFast);
+  const { setFast } = usePrefToggles();
   const config = useQuery({
     queryKey: ['contract-config', game],
     queryFn: () => api.get<ContractConfigDto>(`/games/${game}/contract/config`),

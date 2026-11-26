@@ -7,6 +7,12 @@ describe('gems', () => {
     expect(formatGems(5)).toBe('5');
   });
 
+  it('keeps four-digit numbers whole, as in the mockups', () => {
+    expect(formatGems(1450)).toBe('1450');
+    expect(formatGems(15999).replace(/\s/g, ' ')).toBe('15 999');
+    expect(formatGems(293200).replace(/\s/g, ' ')).toBe('293 200');
+  });
+
   it('parses and formats decimals exactly', () => {
     expect(formatDecimal(parseDecimal('0.000123'))).toBe('0.000123');
     expect(formatDecimal(parseDecimal('100'))).toBe('100');

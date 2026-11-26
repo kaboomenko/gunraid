@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown';
 import { ChevronDownIcon, SoundOffIcon, SoundOnIcon } from '@/components/icons/design-icons';
 import { cn } from '@/lib/cn';
+import { usePrefToggles } from '@/lib/prefs';
 import { usePrefs, usePrefsHydrated } from '@/lib/store';
 import { GameMenuContent, useGameSelect } from './game-switcher';
 import { LiveFeed } from './live-feed';
@@ -93,7 +94,7 @@ function SoundToggle() {
   const t = useTranslations('topBar');
   const hydrated = usePrefsHydrated();
   const sound = usePrefs((s) => s.sound);
-  const setSound = usePrefs((s) => s.setSound);
+  const { setSound } = usePrefToggles();
   const on = !hydrated || sound;
   return (
     <button

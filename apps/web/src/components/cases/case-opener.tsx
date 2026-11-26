@@ -3,32 +3,42 @@
 import {
   WS_EVENTS,
   WS_ROOMS,
+  formatGems,
   type CaseDetailDto,
   type CaseOpenResultDto,
   type CaseSupplyPayload,
   type SellResultDto,
 } from '@gunraid/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Coins, Gift, Lock, RotateCcw, ShieldCheck, Volume2, VolumeX, Zap } from 'lucide-react';
+import { Coins, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useId, useRef, useState, type ReactNode } from 'react';
+import {
+  FastIcon,
+  GiftIcon,
+  OpenIcon,
+  SoundOffIcon,
+  SoundOnIcon,
+} from '@/components/icons/design-icons';
 import { ItemTile } from '@/components/items/item-tile';
 import { Button } from '@/components/ui/button';
 import { Countdown } from '@/components/ui/countdown';
-import { GemAmount, GemPill } from '@/components/ui/gem';
+import { GemAmount } from '@/components/ui/gem';
 import { Modal } from '@/components/ui/modal';
-import { Progress } from '@/components/ui/progress';
 import { toast } from '@/components/ui/toast';
 import { ApiError, api, newIdempotencyKey } from '@/lib/api';
+import type { CaseNeighbours } from '@/lib/case-page';
 import { cn } from '@/lib/cn';
 import { useErrorMessage } from '@/lib/errors';
 import { useMe } from '@/lib/me';
+import { usePrefToggles } from '@/lib/prefs';
 import { useInvalidateWallet } from '@/lib/queries';
 import { useRoom, useSocketEvent } from '@/lib/socket';
 import { sound } from '@/lib/sound';
-import { usePrefs, useUi } from '@/lib/store';
-import { Roulette } from './roulette';
+import { usePrefs, usePrefsHydrated, useUi } from '@/lib/store';
+import { CaseStageIdle } from './case-stage';
+import { CaseRoulette } from './roulette';
 
 function tierOf(price: number, casePrice: number): number {
   const base = Math.max(casePrice, 1);
@@ -38,7 +48,31 @@ function tierOf(price: number, casePrice: number): number {
   return 0;
 }
 
-export function CaseOpener({ game, initial }: { game: string; initial: CaseDetailDto }) {
+/** Сцена: покой (кейс, копии, соседи) → прокрутка → окно результата → снова покой. */
+type Phase = 'idle' | 'spinning' | 'result';
+
+/**
+ * Состояние кнопки открытия: ready — #B7FF00 (хватает баланса, гость — откроется вход),
+ * insufficient — #FF2529 (не хватает — откроется пополнение), blocked — #26262F (кейс недоступен),
+ * loading — пока неизвестно, вошёл ли пользователь и что ему доступно: приглушена, как во время
+ * прокрутки, чтобы не обещать «готово» тому, кому потом окажется красной или серой.
+ */
+type OpenState = 'ready' | 'insufficient' | 'blocked' | 'loading';
+
+/**
+ * Страница кейса (макет «сцена»): название, полоса 286 с кейсом / копиями / рулеткой, под ней
+ * кнопки количества, открытия (под ней — строка ошибки или пояснения) и «Быстро». Сервер решает
+ * выигрыш; рулетка только показывает его.
+ */
+export function CaseOpener({
+  game,
+  initial,
+  neighbours,
+}: {
+  game: string;
+  initial: CaseDetailDto;
+  neighbours: CaseNeighbours | null;
+}) {
   const t = useTranslations();
   const me = useMe();
   const qc = useQueryClient();
@@ -46,66 +80,112 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
   const invalidate = useInvalidateWallet();
   const openLogin = useUi((s) => s.openLogin);
   const openDeposit = useUi((s) => s.openDeposit);
+  const prefsHydrated = usePrefsHydrated();
   const fast = usePrefs((s) => s.fast);
-  const setFast = usePrefs((s) => s.setFast);
   const soundOn = usePrefs((s) => s.sound);
-  const setSound = usePrefs((s) => s.setSound);
+  const { setFast, setSound } = usePrefToggles();
+  const infoId = useId();
+  /** Кнопка открытия: на неё возвращается фокус после окна результата. */
+  const openRef = useRef<HTMLButtonElement>(null);
 
   const detail = useQuery({
     queryKey: ['case', game, initial.slug, me.data?.id ?? 'guest'],
     queryFn: () => api.get<CaseDetailDto>(`/games/${game}/cases/${initial.slug}`),
+    // Гостю сразу показываем данные страницы, но они из кэша страницы (до 15 с и дольше, пока
+    // она пересобирается) — при открытии перечитываем: тираж мог закончиться.
     initialData: me.data ? undefined : initial,
+    initialDataUpdatedAt: 0,
     enabled: !me.isLoading,
   });
   const c = detail.data ?? initial;
   const [count, setCount] = useState(1);
   const [busy, setBusy] = useState(false);
+  const [phase, setPhase] = useState<Phase>('idle');
   const [result, setResult] = useState<CaseOpenResultDto | null>(null);
   const [spinId, setSpinId] = useState(0);
-  const [showResult, setShowResult] = useState(false);
   const [sold, setSold] = useState<Set<string>>(new Set());
-  const [supply, setSupply] = useState<{ used: number; total: number } | null>(
-    c.supplyTotal !== null ? { used: c.supplyUsed, total: c.supplyTotal } : null,
-  );
-  const finished = useRef(0);
+  /** Остановившиеся дорожки текущей прокрутки (Set — повторный вызов в StrictMode не считается). */
+  const finished = useRef<Set<number>>(new Set());
+  const resultRef = useRef<CaseOpenResultDto | null>(null);
 
+  /** Остаток тиража — в данных кейса (у гостя и у вошедшего): из сокета и из ответа на открытие. */
+  const setSupply = useCallback(
+    (used: number, total: number) =>
+      qc.setQueriesData<CaseDetailDto>({ queryKey: ['case', game, initial.slug] }, (d) =>
+        d ? { ...d, supplyUsed: used, supplyTotal: total } : d,
+      ),
+    [qc, game, initial.slug],
+  );
   useRoom(c.supplyTotal !== null ? WS_ROOMS.case(c.id) : null);
   useSocketEvent<CaseSupplyPayload>(WS_EVENTS.caseSupply, (p) => {
-    if (p.caseId === c.id) setSupply({ used: p.supplyUsed, total: p.supplyTotal });
+    if (p.caseId === c.id) setSupply(p.supplyUsed, p.supplyTotal);
   });
+  const supply = c.supplyTotal !== null ? { used: c.supplyUsed, total: c.supplyTotal } : null;
+  const soldOut = supply !== null && supply.used >= supply.total;
 
-  const pool = useMemo(() => c.items, [c.items]);
-  const winners = result?.results.map((r) => r.item) ?? [];
-  const lanes = result ? result.results.length : count;
-
-  const onLaneDone = useCallback(() => {
-    finished.current += 1;
-    if (result && finished.current >= result.results.length) {
-      const best = Math.max(...result.results.map((r) => tierOf(r.item.price, c.price)));
+  const casePrice = c.price;
+  const onLaneDone = useCallback(
+    (lane: number) => {
+      const res = resultRef.current;
+      if (!res || finished.current.has(lane)) return;
+      finished.current.add(lane);
+      if (finished.current.size < res.results.length) return;
+      const best = Math.max(...res.results.map((r) => tierOf(r.item.price, casePrice)));
       sound.win(best);
-      setShowResult(true);
-    }
-  }, [result, c.price]);
+      setPhase('result');
+    },
+    [casePrice],
+  );
+
+  const a = c.availability;
+  // Тираж закончился (в том числе по сокету, пока страница открыта) — недоступен всем.
+  const reason = soldOut ? 'SOLD_OUT' : a.reason;
+  const free = c.kind === 'free';
+  const signedIn = Boolean(me.data);
+  const spinning = phase === 'spinning';
+  // Вошёл, но доступность для него ещё не пришла (на руках гостевая) — ждём, а не пугаем «недоступен».
+  // Не пришла совсем (ошибка запроса) — не ждём и не запрещаем: при открытии всё равно решит сервер.
+  const loading = me.isLoading || (signedIn && a.reason === 'LOGIN' && !detail.isError);
+  // Закончившийся тираж и снятый с витрины кейс недоступны и гостю; остальное решает сервер для вошедшего.
+  const blocked = signedIn
+    ? !loading && (soldOut || (!a.canOpen && a.reason !== 'LOGIN'))
+    : reason === 'SOLD_OUT' || reason === 'UNAVAILABLE';
+  const openCount = free ? 1 : count;
+  const total = c.price * openCount;
+  const insufficient = Boolean(me.data && !loading && !blocked && !free && me.data.balance < total);
+  const openState: OpenState = loading
+    ? 'loading'
+    : blocked
+      ? 'blocked'
+      : insufficient
+        ? 'insufficient'
+        : 'ready';
+  // Нажать нельзя, но кнопка остаётся в фокусе (aria-disabled, а не disabled): иначе на время
+  // прокрутки фокус падает на <body>, и с клавиатуры не вернуться к кнопке.
+  const openInactive = openState === 'loading' || openState === 'blocked' || spinning || busy;
 
   const open = async (useBonus = false) => {
     if (!me.data) return openLogin();
+    if (!useBonus && insufficient) return openDeposit();
+    if (busy || spinning || loading) return;
     setBusy(true);
     try {
       const res = await api.post<CaseOpenResultDto>(
         `/games/${game}/cases/${c.slug}/open`,
-        useBonus ? { count: 1, useBonus: true } : { count },
+        useBonus ? { count: 1, useBonus: true } : { count: openCount },
         { idempotencyKey: newIdempotencyKey() },
       );
       if (useBonus) setCount(1);
       void qc.invalidateQueries({ queryKey: ['entitlements'] });
-      finished.current = 0;
+      finished.current = new Set();
+      resultRef.current = res;
       setSold(new Set());
-      setShowResult(false);
       setResult(res);
       setSpinId((x) => x + 1);
+      setPhase('spinning');
       if (!fast) sound.open();
       if (res.supplyUsed !== null && res.supplyTotal !== null)
-        setSupply({ used: res.supplyUsed, total: res.supplyTotal });
+        setSupply(res.supplyUsed, res.supplyTotal);
       invalidate();
       void qc.invalidateQueries({ queryKey: ['case', game, c.slug] });
     } catch (err) {
@@ -116,6 +196,13 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
     } finally {
       setBusy(false);
     }
+  };
+
+  /** Окно результата закрыто — сцена возвращается в покой. */
+  const closeResult = () => {
+    setPhase('idle');
+    setResult(null);
+    resultRef.current = null;
   };
 
   const sell = async (userItemIds: string[]) => {
@@ -138,165 +225,226 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
     }
   };
 
-  const a = c.availability;
-  const blocked = me.data ? !a.canOpen && a.reason !== 'LOGIN' : false;
-  const total = c.price * count;
-  const spinning =
-    Boolean(result) && !showResult && finished.current < (result?.results.length ?? 0);
   const unsoldIds =
     result?.results.filter((r) => !sold.has(r.userItemId)).map((r) => r.userItemId) ?? [];
   const resultValue =
     result?.results.filter((r) => !sold.has(r.userItemId)).reduce((s, r) => s + r.item.price, 0) ??
     0;
 
-  let action: React.ReactNode;
-  if (!me.data) {
-    action = (
-      <Button size="lg" onClick={openLogin} className="min-w-56">
-        {t('case.loginToOpen')}
-      </Button>
-    );
-  } else if (blocked) {
-    const label =
-      a.reason === 'LEVEL'
+  // Строка под кнопкой: причина недоступности, нехватка средств, остаток тиража или подсказка.
+  let info: { text: ReactNode; tone: 'muted' | 'error' } | null = null;
+  if (blocked) {
+    const why =
+      reason === 'LEVEL'
         ? t('case.levelRequired', { level: a.levelRequired ?? 0 })
-        : a.reason === 'SOLD_OUT'
+        : reason === 'SOLD_OUT'
           ? t('case.soldOut')
-          : a.reason === 'ADULT'
+          : reason === 'ADULT'
             ? t('case.adultRequired')
-            : a.reason === 'COOLDOWN'
+            : reason === 'COOLDOWN'
               ? t('case.cooldown')
               : t('case.unavailable');
-    action = (
-      <Button size="lg" disabled className="min-w-56">
-        <Lock size={18} /> {label}
-        {a.reason === 'COOLDOWN' && a.availableAt && (
-          <Countdown to={a.availableAt} className="tabular" onDone={() => void detail.refetch()} />
-        )}
-      </Button>
-    );
-  } else {
-    action = (
-      <Button
-        size="lg"
-        loading={busy}
-        disabled={spinning}
-        onClick={() => void open(false)}
-        className="min-w-56"
-        data-testid="case-open"
-      >
-        {c.kind === 'free' ? (
-          t('case.openFree')
-        ) : (
+    info = {
+      tone: 'muted',
+      text:
+        reason === 'COOLDOWN' && a.availableAt ? (
           <>
-            {t('case.openFor')} <GemPill value={total} size="md" />
+            {why}{' '}
+            <Countdown
+              to={a.availableAt}
+              className="tabular"
+              onDone={() => void detail.refetch()}
+            />
           </>
-        )}
-      </Button>
-    );
+        ) : (
+          why
+        ),
+    };
+  } else if (insufficient) {
+    info = { tone: 'error', text: t('case.insufficient') };
+  } else if (supply) {
+    info = {
+      tone: 'muted',
+      text: t('case.supply', { left: supply.total - supply.used, total: supply.total }),
+    };
+  } else if (me.data && a.freeOpens > 0 && !free) {
+    // Поясняет кнопку с подарком рядом с «Быстро».
+    info = { tone: 'muted', text: t('case.bonusCount', { count: a.freeOpens }) };
+  } else if (!signedIn && !me.isLoading && c.minLevel) {
+    info = { tone: 'muted', text: t('case.levelRequired', { level: c.minLevel }) };
+  } else if (free && c.cooldownSeconds) {
+    info = {
+      tone: 'muted',
+      text: t('case.everyHours', { hours: Math.round(c.cooldownSeconds / 3600) }),
+    };
   }
 
+  const openLabel = free ? (
+    <span>{t('case.openFree')}</span>
+  ) : (
+    <span>
+      {t('case.openFor')} <span className="case-open__sum">{formatGems(total)}</span>
+    </span>
+  );
+  const fastOn = prefsHydrated && fast;
+  const soundShown = !prefsHydrated || soundOn;
+
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        {Array.from({ length: lanes }, (_, i) => (
-          <Roulette
-            key={i}
-            pool={pool}
-            winner={winners[i] ?? null}
+    <section
+      className="case-stage"
+      aria-labelledby={`${infoId}-name`}
+      data-testid="case-stage"
+      data-count={openCount}
+      data-phase={phase}
+    >
+      <h1 id={`${infoId}-name`} className="case-stage__name" data-testid="case-name">
+        {c.name}
+      </h1>
+
+      <div className="case-band" data-testid="case-band">
+        {phase === 'idle' || !result ? (
+          <CaseStageIdle
+            game={game}
+            name={c.name}
+            imageUrl={c.imageUrl}
+            count={openCount}
+            neighbours={neighbours}
+          />
+        ) : (
+          <CaseRoulette
+            pool={c.items}
+            winners={result.results.map((r) => r.item)}
             spinId={spinId}
             fast={fast}
-            compact={lanes > 1}
-            durationMs={5600 + i * 250}
-            onDone={onLaneDone}
+            onLaneDone={onLaneDone}
           />
-        ))}
+        )}
       </div>
 
-      {supply && (
-        <div className="space-y-1.5">
-          <div className="flex justify-between text-xs text-muted">
-            <span>{t('case.limited')}</span>
-            <span className="tabular">
-              {t('case.supply', { left: supply.total - supply.used, total: supply.total })}
-            </span>
-          </div>
-          <Progress
-            value={supply.total - supply.used}
-            max={supply.total}
-            label={t('case.limited')}
-          />
-        </div>
-      )}
-
-      <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-        {c.kind !== 'free' && (
-          <div className="flex gap-1.5" role="group" aria-label={t('case.count')}>
+      {/*
+        Порядок в разметке = порядок фокуса во всех раскладках: количество → «Быстро» (подарок,
+        звук) → открытие. На десктопе кнопки стоят в колонках сетки (открытие — по центру), ниже
+        десктопа — рядами в том же порядке, без перестановки через CSS.
+      */}
+      <div className="case-controls" data-spinning={spinning ? '' : undefined}>
+        {!free && c.maxOpenCount > 1 ? (
+          <div className="case-controls__counts" role="group" aria-label={t('case.count')}>
             {Array.from({ length: c.maxOpenCount }, (_, i) => i + 1).map((n) => (
               <button
                 key={n}
                 type="button"
-                onClick={() => {
-                  setCount(n);
-                  setResult(null);
-                }}
-                className={cn(
-                  'clip-cut h-12 w-12 font-display text-sm font-bold transition [--cut:7px]',
-                  count === n
-                    ? 'bg-accent text-accent-ink'
-                    : 'bg-surface-3 text-muted hover:text-text',
-                )}
+                className="case-count"
                 aria-pressed={count === n}
+                disabled={spinning || busy}
+                onClick={() => setCount(n)}
+                data-testid={`case-count-${n}`}
               >
-                x{n}
+                <span>x{n}</span>
               </button>
             ))}
           </div>
-        )}
-        {action}
-        {me.data && a.freeOpens > 0 && c.kind !== 'free' && (
-          <Button
-            size="lg"
-            variant="outline"
-            loading={busy}
+        ) : null}
+
+        <div className="case-controls__extra">
+          <button
+            type="button"
+            className="case-toggle"
+            aria-pressed={fastOn}
             disabled={spinning}
-            onClick={() => void open(true)}
-            data-testid="case-open-bonus"
-          >
-            <Gift size={18} /> {t('case.openBonus')} · {a.freeOpens}
-          </Button>
-        )}
-        <div className="flex gap-1.5">
-          <Button
-            variant={fast ? 'outline' : 'secondary'}
-            size="icon"
-            className="h-12 w-12"
             onClick={() => setFast(!fast)}
-            aria-pressed={fast}
-            aria-label={t('case.fast')}
-            title={t('case.fast')}
+            data-testid="case-fast"
           >
-            <Zap size={18} />
-          </Button>
-          <Button
-            variant="secondary"
-            size="icon"
-            className="h-12 w-12"
-            onClick={() => setSound(!soundOn)}
-            aria-pressed={soundOn}
-            aria-label={t('case.sound')}
-            title={t('case.sound')}
+            <FastIcon className="shrink-0" />
+            <span>{t('case.fast')}</span>
+          </button>
+          {/* Подарок и звук — отдельной группой: на планшете «Быстро» стоит по центру, они — справа. */}
+          <div className="case-controls__more">
+            {me.data && a.freeOpens > 0 && !free ? (
+              <button
+                type="button"
+                className="case-toggle case-toggle--on"
+                aria-disabled={spinning || busy || undefined}
+                onClick={() => {
+                  if (!spinning && !busy) void open(true);
+                }}
+                aria-label={`${t('case.openBonus')}: ${t('case.bonusCount', { count: a.freeOpens })}`}
+                title={t('case.bonusCount', { count: a.freeOpens })}
+                data-testid="case-open-bonus"
+              >
+                <GiftIcon className="shrink-0" />
+                <span>{a.freeOpens}</span>
+              </button>
+            ) : null}
+            {/* На телефоне и планшете переключателя звука в верхнем блоке нет — он здесь, компактный. */}
+            <button
+              type="button"
+              className="case-toggle case-toggle--icon md:hidden"
+              aria-pressed={soundShown}
+              aria-label={t('case.sound')}
+              title={t('case.sound')}
+              onClick={() => setSound(!soundOn)}
+              data-testid="case-sound"
+            >
+              {soundShown ? <SoundOnIcon /> : <SoundOffIcon />}
+            </button>
+          </div>
+        </div>
+
+        <div className="case-controls__main">
+          {signedIn || loading ? (
+            <button
+              ref={openRef}
+              type="button"
+              className="case-open"
+              data-state={openState}
+              aria-disabled={openInactive || undefined}
+              aria-busy={busy || undefined}
+              aria-describedby={info ? infoId : undefined}
+              onClick={() => {
+                if (!openInactive) void open(false);
+              }}
+              data-testid="case-open"
+            >
+              <OpenIcon className="shrink-0" />
+              {openLabel}
+            </button>
+          ) : (
+            <button
+              ref={openRef}
+              type="button"
+              className="case-open"
+              data-state={blocked ? 'blocked' : 'ready'}
+              aria-disabled={blocked || undefined}
+              aria-describedby={info ? infoId : undefined}
+              title={blocked ? undefined : t('case.loginToOpen')}
+              onClick={() => {
+                if (!blocked) openLogin();
+              }}
+              data-testid="case-open-login"
+            >
+              <OpenIcon className="shrink-0" />
+              {openLabel}
+            </button>
+          )}
+          <p
+            id={infoId}
+            className="case-info"
+            data-tone={info?.tone}
+            // Обратный отсчёт меняется каждую секунду — его не зачитываем, он есть в описании кнопки.
+            aria-live={blocked && reason === 'COOLDOWN' ? 'off' : 'polite'}
+            data-testid="case-info"
           >
-            {soundOn ? <Volume2 size={18} /> : <VolumeX size={18} />}
-          </Button>
+            {info?.text}
+          </p>
         </div>
       </div>
 
       <Modal
-        open={showResult && Boolean(result)}
-        onOpenChange={(v) => !v && setShowResult(false)}
+        open={phase === 'result' && Boolean(result)}
+        onOpenChange={(v) => !v && closeResult()}
         title={t('case.resultTitle', { count: result?.results.length ?? 1 })}
         size={result && result.results.length > 2 ? 'lg' : 'md'}
+        returnFocusRef={openRef}
       >
         {result && (
           <div className="space-y-5">
@@ -335,24 +483,28 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
               <span className="text-muted">{t('case.total')}</span>
               <GemAmount value={resultValue} size="lg" className="text-accent" />
             </div>
-            <div className="grid gap-2 sm:grid-cols-3">
+            {/* «Продать всё за N» — во всю ширину: в три колонки подписи не помещались и переносились. */}
+            <div className="grid gap-2 sm:grid-cols-2">
               <Button
                 variant="secondary"
+                className="whitespace-nowrap sm:col-span-2"
                 disabled={!unsoldIds.length}
                 onClick={() => void sell(unsoldIds)}
                 data-testid="result-sell-all"
               >
                 {t('case.sellAll')} <GemAmount value={resultValue} size="sm" />
               </Button>
-              <Button variant="secondary" onClick={() => setShowResult(false)}>
+              <Button variant="secondary" className="whitespace-nowrap" onClick={closeResult}>
                 {t('case.keep')}
               </Button>
               <Button
+                className="whitespace-nowrap"
                 onClick={() => {
-                  setShowResult(false);
+                  closeResult();
                   void open();
                 }}
-                disabled={blocked || c.kind === 'free'}
+                disabled={blocked || free}
+                data-testid="result-open-again"
               >
                 <RotateCcw size={16} /> {t('case.openAgain')}
               </Button>
@@ -366,6 +518,6 @@ export function CaseOpener({ game, initial }: { game: string; initial: CaseDetai
           </div>
         )}
       </Modal>
-    </div>
+    </section>
   );
 }

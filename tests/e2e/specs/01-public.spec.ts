@@ -25,8 +25,15 @@ test.describe('Публичная часть', () => {
     const c = await api.cheapestCase('cs2');
     await page.goto(`/cs2/case/${c.slug}`);
     await expect(page.getByTestId('case-open')).toHaveCount(0);
-    await page.getByRole('button', { name: 'Войдите, чтобы открыть' }).click();
+    // Гостю — та же лаймовая «Открыть за N», но она ведёт ко входу.
+    const open = page.getByTestId('case-open-login');
+    await expect(open).toContainText(`Открыть за ${c.price}`);
+    await open.click();
     await expect(page.getByTestId('dev-login-player')).toBeVisible();
+    // Окно закрыто — фокус снова на кнопке, а не в начале страницы.
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('login-modal')).toHaveCount(0);
+    await expect(open).toBeFocused();
   });
 
   test('правовые страницы и FAQ @mobile', async ({ page }) => {
