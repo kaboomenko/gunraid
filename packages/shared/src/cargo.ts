@@ -137,6 +137,11 @@ export interface CargoDetailDto {
   availability: CargoAvailabilityDto;
   /** Последний завершённый раунд (показ результата, если сокет пропустил событие). */
   lastResult: CargoResultDto | null;
+  /**
+   * Сколько мест вошедший игрок купил в раунде lastResult (0 — гость, не участвовал или lastResult нет): по нему
+   * страница узнаёт участника, даже если места куплены в другой вкладке (cargo:seats владельцев мест не несёт).
+   */
+  lastResultMySeats: number;
   serverTime: string;
 }
 

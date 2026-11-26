@@ -27,6 +27,7 @@ export default async function FairPage() {
           <li>{t('how2')}</li>
           <li>{t('how3')}</li>
           <li>{t('how4')}</li>
+          <li>{t('how5')}</li>
         </ol>
         <div className="text-xs uppercase tracking-wider text-dim">{t('formula')}</div>
         <pre className="clip-cut overflow-x-auto bg-surface-2 p-3 text-xs text-accent [--cut:6px]">

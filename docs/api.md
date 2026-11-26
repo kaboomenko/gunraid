@@ -113,7 +113,7 @@
 | Метод | Путь | Доступ | Что делает |
 |---|---|---|---|
 | GET | `/games/{game}/cargo` | P | грузы с открытым раундом (по порядку): `{items: CargoCardDto[], serverTime}` |
-| GET | `/games/{game}/cargo/{slug}` | P (U — своя доступность) | шаблон, текущий раунд (`round`, хэш server seed с первой секунды), `noRound` (`PRIZE_UNAVAILABLE` / `STARTING`), доступность покупки (`reason`, `maxBuy`, свои места и client seed'ы), последний итог `lastResult`, `serverTime`; 404 `CARGO_NOT_FOUND` — нет шаблона или он выключен и раунда нет |
+| GET | `/games/{game}/cargo/{slug}` | P (U — своя доступность) | шаблон, текущий раунд (`round`, хэш server seed с первой секунды), `noRound` (`PRIZE_UNAVAILABLE` / `STARTING`), доступность покупки (`reason`, `maxBuy`, свои места и client seed'ы), последний итог `lastResult` и `lastResultMySeats` — сколько мест вошедший купил в этом раунде (0 — гость или не участвовал: по нему страница узнаёт участника, даже если места куплены в другой вкладке), `serverTime`; 404 `CARGO_NOT_FOUND` — нет шаблона или он выключен и раунда нет |
 | POST | `/games/{game}/cargo/{slug}/buy` | U, IK | `{roundId, count: 1..10 000, clientSeed}` → места `seatFrom…seatTo`, списание, раунд после покупки; если покупка заняла последнее место — `result` (итог) и `next` (новый раунд) |
 | GET | `/fair/proof/cargo/{id}` | P (U — `mine`) | доказательство раунда: покупки по порядку мест (без покупателей), server seed после завершения, client seed раунда, выигравшее место или `voidSeat`; лимит `general` |
 
@@ -176,7 +176,7 @@
 
 | Раздел | Эндпоинты | Доступ |
 |---|---|---|
-| Дашборд | `GET dashboard?days&game` — пользователи, пополнения, выводы, бонусы, GGR, фактический и целевой RTP по режимам, результат сверки ledger; `GET ledger/reconciliation` | A |
+| Дашборд | `GET dashboard?days&game` — пользователи, пополнения, выводы, бонусы, GGR, фактический и целевой RTP по режимам (`cases`, `upgrade`, `contract`, `battles`, `cargo`), результат сверки ledger; `GET ledger/reconciliation` | A |
 | Пользователи | `GET users?q&status&suspicious&role`; `GET users/{id}` — профиль, способы входа, профили игр, статистика, входы (IP и устройства), связанные аккаунты; `GET users/{id}/ledger` | S, A |
 | | `POST users/{id}/balance` (± гемы, причина обязательна, IK); `POST users/{id}/ban` / `unban`; `PATCH users/{id}` (подозрительный, заметка, роль) | A |
 | Выводы | `GET withdrawals?status`; `GET withdrawals/{id}`; `POST withdrawals/{id}/approve` (`{priceGold}` для Standoff 2), `reject` (`{reason}`), `confirm-purchase` (Standoff 2), `simulate` (`{event}` — **заглушка** CS2) | S, A |
@@ -185,9 +185,39 @@
 | Кейсы | `GET games/{game}/case-categories`; `GET games/{game}/cases`; `POST games/{game}/cases`; `PUT games/{game}/cases/{id}`; `GET cases/{id}`; `PUT cases/{id}/contents` — сумма шансов ровно 100 %, новая неизменяемая ревизия | A |
 | Каталог | `GET games/{game}/items?q&rarity&active`; `PATCH items/{id}` (цена, флаги); `POST games/{game}/items/bulk-price` (процент или цена по фильтру); `GET games/{game}/rarities`, `PATCH rarities/{id}`; `POST catalog/{game}/import` (CSV), `POST catalog/{game}/refresh-prices` | A |
 | Бонусы | `GET/POST games/{game}/wheel-prizes`, `PUT …/{id}`; `GET/POST promo-codes`, `PUT promo-codes/{id}`; `GET/POST partners`, `PUT partners/{id}` (со статистикой); `PUT levels`; `GET leaderboards`, `PUT leaderboards/{id}`; `GET achievements`, `PATCH achievements/{id}`; `GET games/{game}/refs?q` (кейсы и предметы для форм) | A |
+| Грузы | `GET games/{game}/cargo?archived=1` — шаблоны по порядку (архивные скрыты; с `archived=1` — в конце списка): приз, RTP при распродаже, открытый раунд (продано, выручка, участники, RTP при текущих продажах, попытки приземления и последняя ошибка), `issue`; `POST games/{game}/cargo` — создать (активный сразу получает раунд №1); `GET cargo/{id}`; `PUT games/{game}/cargo/{id}` — правка; `DELETE cargo/{id}` — в архив; `GET cargo/{id}/rounds?status&page&pageSize` — история раундов (новые первыми); `GET cargo-rounds/{id}` — раунд с участниками; `POST cargo-rounds/{id}/cancel` (`{reason}` от 5 символов) — отмена с возвратом гемов; `GET cargo-reconciliation` — сверка грузов с ledger (`{ok, mismatches, checkedAt}`) | A |
 | Аудит | `GET audit?entityType&entityId` | A |
 
 Все изменения из админки пишутся в `admin_audit_log` (кто, что, до/после, причина, IP). Балансы меняются только через ledger.
+
+**Грузы в админке.** Тело создания и правки — все поля шаблона сразу (`adminCargoSchema`, без лишних ключей). Приз,
+места, цена, лимит, длительность, условия и минимум продаж действуют со следующего раунда (идущий раунд живёт по
+снимку), название, картинка, порядок и активность — сразу; выключенный груз доигрывает текущий раунд, новый не
+начнётся; включённый груз без раунда получает его сразу. Бесплатный груз (`seatPrice: 0`) сохраняется с лимитом 1.
+«Удаление» — архив: груз только читается, его адрес (slug) остаётся занятым, раунды больше не открываются; архив
+возможен только без открытого раунда — у активного груза отмена сразу открывает следующий раунд, поэтому сначала груз
+выключают, затем отменяют раунд. Отмена раунда — в одной транзакции: возврат каждому платившему (одна запись
+`cargo_refund` на игрока, уведомление), client seed раунда и место, которое выиграло бы (`voidSeat`, публично на
+странице проверки), следующий раунд; XP за отменённый раунд не начисляется. id из адреса приводится к нижнему регистру.
+`issue` (первое подходящее): `LANDING_STUCK` — раунд открыт, но распродан или срок вышел больше минуты назад;
+`PRIZE_INACTIVE` / `PRIZE_GAME` — приз выключен или из другой игры (новый раунд не начнётся); `NO_ROUND` — груз
+активен, а раунда нет.
+
+Ошибки: 400 `CARGO_PRIZE_INVALID {reason: 'missing' | 'game' | 'inactive'}` — приз не активный предмет этой игры (при
+правке тот же приз не перепроверяется: выключенный в каталоге приз не мешает выключить или переименовать груз);
+400 `VALIDATION_ERROR {field: 'perUserLimit' | 'minSeatsToLand'}` — больше, чем мест; 409 `CONFLICT {field: 'slug'}` —
+адрес занят (и архивным грузом); 404 `CARGO_NOT_FOUND` — нет груза или он другой игры; 409 `CONFLICT
+{reason: 'archived'}` — правка архивного; 409 `CONFLICT {reason: 'round_open', roundId}` — архив при открытом раунде;
+404 `CARGO_ROUND_NOT_FOUND`; 409 `CARGO_ROUND_NOT_OPEN` — раунд уже завершён (в том числе повтор отмены); 409 `CONFLICT
+{reason: 'cargo_busy'}` — покупки пять раз подряд меняли набор платящих во время отмены.
+
+Аудит грузов: `cargo.create`, `cargo.update`, `cargo.archive` (сущность `cargo`; before / after — поля шаблона, у
+создания и правки ещё `roundId` открытого ими раунда) и `cargo_round.cancel` (сущность `cargo_round`, причина; в after
+— `users` и `gems` возврата, `purchases`, `clientSeed`, `voidSeat`, `nextRoundId`).
+
+Режим `cargo` дашборда — приземлившиеся за период раунды: ставки — оплата мест, выплаты — призы платных раундов
+(стоимость при выдаче), призы бесплатных грузов вычитаются из общего GGR, как бесплатные кейсы; целевого RTP нет.
+Отменённые и закрытые по минимуму продаж раунды не учитываются — гемы вернулись.
 
 ## WebSocket (Socket.IO, `/socket.io`)
 

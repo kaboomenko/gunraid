@@ -23,12 +23,15 @@ import { ApiError, api, newIdempotencyKey } from '@/lib/api';
 import {
   cargoChance,
   cargoImageSrcSet,
+  cargoParticipant,
+  cargoWide,
   clampCount,
   formatSeatRanges,
   mergeBuyResult,
   mergeSeats,
   missedResult,
   randomClientSeed,
+  seatsKey,
   type CargoNeighbours,
 } from '@/lib/cargo-page';
 import { cn } from '@/lib/cn';
@@ -65,16 +68,21 @@ interface Info {
   verifyHref?: string;
 }
 
-/** Показанный итог раунда: участник видит окно, остальные — строку под кнопкой. */
+/** Показанный итог раунда: участник видит окно, остальные — строку под кнопкой (note). */
 interface Shown {
   result: CargoResultDto;
-  participant: boolean;
+  /** null — пока неизвестно: своих мест в раунде страница не знает, ждём данных груза (cargoParticipant). */
+  participant: boolean | null;
   won: boolean;
-  note: Info | null;
+  note: Info;
+  /** Для кого решали: null — гость. */
+  userId: string | null;
 }
 
 const LANDING_MS = 1200;
 const NOTE_MS = 10_000;
+/** Сколько ждать данных груза, чтобы узнать места игрока (купленные в другой вкладке); дальше — как зрителю. */
+const PARTICIPANT_WAIT_MS = 5000;
 /** Опрос, пока груз приземляется: шаг редеет, чтобы сотни вкладок не опрашивали API раз в 3 с. */
 const CLOSING_POLL_MS = [3000, 6000, 12000, 30000];
 /** После этих отказов данные груза устарели — перечитываем (свободные места, раунд, лимит, условия). */
@@ -113,12 +121,24 @@ export function CargoStage({
   /** Кнопка покупки: на неё возвращается фокус после окна результата. */
   const buyRef = useRef<HTMLButtonElement>(null);
   const slug = initial.slug;
+  const userId = me.data?.id ?? null;
+  /** Данные груза — свои у каждого игрока (доступность, места) и у гостя. */
+  const keyOf = useCallback(
+    (id: string | null) => ['cargo', game, slug, id ?? 'guest'],
+    [game, slug],
+  );
+  /**
+   * Игрок сейчас — для обработчиков из прежних замыканий (ответ покупки, отложенный итог): выход и вход
+   * другого игрока идут без перезагрузки страницы.
+   */
+  const userRef = useRef<{ id: string; shortId: number } | null>(null);
+  userRef.current = me.data ? { id: me.data.id, shortId: me.data.shortId } : null;
 
   // Детальная страницы — без кэша (часы таймера ставятся по ней); свежие ответы сверяют часы снова.
   useEffect(() => noteServerTime(initial.serverTime), [initial.serverTime]);
 
   const detail = useQuery({
-    queryKey: ['cargo', game, slug, me.data?.id ?? 'guest'],
+    queryKey: keyOf(userId),
     queryFn: async () => {
       const r = await api.get<CargoDetailDto>(`/games/${game}/cargo/${slug}`);
       noteServerTime(r.serverTime);
@@ -153,10 +173,14 @@ export function CargoStage({
   /** Раунд, чей срок вышел: ждём его итога в фазе closing. */
   const closingRound = useRef<string | null>(null);
   /**
-   * Места игрока по раундам: после приземления детальная перечитается (в новом раунде мест 0), а окну
-   * результата нужны места показанного раунда.
+   * Места по игроку и раунду (seatsKey): после приземления детальная перечитается (в новом раунде мест 0), а
+   * окну результата нужны места показанного раунда — того игрока, что на странице сейчас.
    */
   const seatsByRound = useRef(new Map<string, number>());
+  /** Начало посадки груза: окно или строка — через LANDING_MS от него, даже если участие ещё выяснялось. */
+  const landingAt = useRef(0);
+  /** Номер показанного итога: данные груза, пришедшие для прежнего итога, уже не нужны. */
+  const showSeq = useRef(0);
   /** Раунды, которые страница показывала: итог такого раунда в данных груза без события — пропущенный. */
   const seenRounds = useRef(new Set<string>());
   /**
@@ -167,11 +191,13 @@ export function CargoStage({
   const buyingRound = useRef<string | null>(null);
   const deferredResult = useRef<CargoResultDto | null>(null);
   const mySeats = a.mySeats;
+  // Места — только из данных груза этого игрока: у вошедшего, пока его данные не пришли, на руках гостевые.
+  const ownSeats = userId && detail.data ? mySeats : null;
   useEffect(() => {
     if (!roundId) return;
     seenRounds.current.add(roundId);
-    if (signedIn) seatsByRound.current.set(roundId, mySeats);
-  }, [roundId, signedIn, mySeats]);
+    if (userId && ownSeats !== null) seatsByRound.current.set(seatsKey(userId, roundId), ownSeats);
+  }, [roundId, userId, ownSeats]);
 
   // Количество всегда в пределах 1…сколько можно взять (свободные, лимит); у бесплатного — одно место.
   const qty = free ? 1 : clampCount(count, maxBuy);
@@ -185,70 +211,99 @@ export function CargoStage({
     setCount(n);
   };
 
+  /** Итог раскрыт: участнику — окно, остальным — строка под кнопкой (фокус не трогаем). */
+  const reveal = useCallback((s: Shown) => {
+    // Игрок сменился, пока груз садился (вышел, вошёл другой), — окно итога прежнего ему не показываем.
+    if (s.participant && s.userId === (userRef.current?.id ?? null)) {
+      setPhase('result');
+      if (s.won) sound.win(3);
+      else sound.lose();
+    } else {
+      setPhase('idle');
+      setNote(s.note);
+    }
+  }, []);
+
   const showResult = useCallback(
     (r: CargoResultDto) => {
       if (shownRounds.current.has(r.roundId)) return;
       shownRounds.current.add(r.roundId);
       if (closingRound.current === r.roundId) closingRound.current = null;
       // Раунд закрыт — у шаблона новый раунд (или его нет): доступность перечитываем.
-      void qc.invalidateQueries({ queryKey: ['cargo', game, slug] });
-      const mine = seatsByRound.current.get(r.roundId) ?? 0;
-      const won = meShortId !== null && r.winner?.shortId === meShortId;
-      const participant = mine > 0 || won;
+      const refreshed = qc.invalidateQueries({ queryKey: ['cargo', game, slug] });
+      // Игрок — на момент итога: обработчик мог прийти из замыкания, созданного до выхода или входа другого.
+      const user = userRef.current;
+      const key = keyOf(user?.id ?? null);
+      const participantBy = (server: CargoDetailDto | undefined) =>
+        cargoParticipant(
+          r,
+          user?.shortId ?? null,
+          user ? (seatsByRound.current.get(seatsKey(user.id, r.roundId)) ?? 0) : 0,
+          server,
+        );
+      // Данные груза уже с этим итогом (опрос после срока, пропущенный итог) — места игрока в них.
+      const participant = participantBy(qc.getQueryData<CargoDetailDto>(key));
       // Не участник и мест не покупали — показывать нечего: сразу новый раунд.
-      if (!participant && r.status === 'expired' && r.seatsSold === 0) {
+      if (participant === false && r.status === 'expired' && r.seatsSold === 0) {
         setPhase('idle');
         return;
       }
-      const verifyHref = `/provably-fair?cargo=${r.roundId}`;
-      const noteInfo: Info | null = participant
-        ? null
-        : {
-            verifyHref,
-            text:
-              r.status === 'landed' && r.winner && r.winningSeat !== null
-                ? t('cargo.result.note', {
-                    nickname: r.winner.nickname,
-                    seat: r.winningSeat,
-                    sold: r.seatsSold,
-                  })
-                : r.status === 'cancelled'
-                  ? t('cargo.result.noteCancelled')
-                  : t('cargo.result.noteMin', { min: r.minSeatsToLand ?? 0 }),
-          };
-      setShown({ result: r, participant, won, note: noteInfo });
-      if (!prefersReducedMotion()) {
+      const s: Shown = {
+        result: r,
+        participant,
+        won: user !== null && r.winner?.shortId === user.shortId,
+        userId: user?.id ?? null,
+        note: {
+          verifyHref: `/provably-fair?cargo=${r.roundId}`,
+          text:
+            r.status === 'landed' && r.winner && r.winningSeat !== null
+              ? t('cargo.result.note', {
+                  nickname: r.winner.nickname,
+                  seat: r.winningSeat,
+                  sold: r.seatsSold,
+                })
+              : r.status === 'cancelled'
+                ? t('cargo.result.noteCancelled')
+                : t('cargo.result.noteMin', { min: r.minSeatsToLand ?? 0 }),
+        },
+      };
+      const seq = ++showSeq.current;
+      setShown(s);
+      const reduced = prefersReducedMotion();
+      if (!reduced) {
+        // Груз садится сразу; окно или строка — когда сядет и станет ясно, участник ли игрок (эффект ниже).
+        landingAt.current = Date.now();
         setPhase('landing');
-        return;
-      }
-      // «Уменьшить движение»: без анимации — сразу окно (участнику) или строка под кнопкой.
-      if (participant) {
-        setPhase('result');
-        if (won) sound.win(3);
-        else sound.lose();
+      } else if (participant !== null) {
+        // «Уменьшить движение»: без анимации — сразу окно (участнику) или строка под кнопкой.
+        reveal(s);
       } else {
-        setPhase('idle');
-        setNote(noteInfo);
+        // Без анимации ждём данных груза в фазе closing: кнопка неактивна, «Груз приземляется…».
+        setPhase('closing');
       }
+      if (participant !== null) return;
+      // Своих мест в раунде страница не знает, но их могли купить в другой вкладке: решают данные груза
+      // (lastResultMySeats), когда перечитаются; не пришли за PARTICIPANT_WAIT_MS — как зрителю.
+      const wait = new Promise((ok) => setTimeout(ok, PARTICIPANT_WAIT_MS));
+      void Promise.race([refreshed, wait]).then(() => {
+        if (showSeq.current !== seq) return;
+        const same = userRef.current?.id === user?.id;
+        const fresh = same ? qc.getQueryData<CargoDetailDto>(key) : undefined;
+        const next = { ...s, participant: (same && participantBy(fresh)) || false };
+        setShown(next);
+        if (reduced) reveal(next);
+      });
     },
-    [qc, game, slug, meShortId, t],
+    [qc, game, slug, keyOf, reveal, t],
   );
 
-  // Груз «садится» 1,2 с, затем участнику — окно, остальным — строка под кнопкой (фокус не трогаем).
+  // Груз «садится» 1,2 с с начала посадки, затем — итог (reveal). Пока выясняется, участник ли игрок, — ждём.
   useEffect(() => {
-    if (phase !== 'landing' || !shown) return;
-    const id = setTimeout(() => {
-      if (shown.participant) {
-        setPhase('result');
-        if (shown.won) sound.win(3);
-        else sound.lose();
-      } else {
-        setPhase('idle');
-        setNote(shown.note);
-      }
-    }, LANDING_MS);
+    if (phase !== 'landing' || !shown || shown.participant === null) return;
+    const left = Math.max(0, landingAt.current + LANDING_MS - Date.now());
+    const id = setTimeout(() => reveal(shown), left);
     return () => clearTimeout(id);
-  }, [phase, shown]);
+  }, [phase, shown, reveal]);
 
   // Строка с итогом чужого раунда держится 10 с.
   useEffect(() => {
@@ -349,6 +404,8 @@ export function CargoStage({
     if (!me.data) return openLogin();
     if (insufficient) return openDeposit();
     if (!round) return;
+    // Покупатель — на момент нажатия: ответ может прийти уже после выхода (или входа другого игрока).
+    const buyer = me.data.id;
     setBusy(true);
     buyingRound.current = round.id;
     try {
@@ -359,9 +416,10 @@ export function CargoStage({
       );
       // Места этой покупки — сразу, а не эффектом после перерисовки: итог раунда может застать страницу
       // раньше (отложенный — в finally, по сокету — до эффекта), и участник без них увидел бы строку зрителя.
-      seatsByRound.current.set(res.roundId, res.availability.mySeats);
-      // Пока шёл ответ, сокет мог принести чужие покупки — они не теряются (см. mergeBuyResult).
-      qc.setQueriesData<CargoDetailDto>(detailFilter, (x) => (x ? mergeBuyResult(x, res) : x));
+      seatsByRound.current.set(seatsKey(buyer, res.roundId), res.availability.mySeats);
+      // Пока шёл ответ, сокет мог принести чужие покупки — они не теряются (см. mergeBuyResult). Доступность в
+      // ответе — покупателя: только в его данные груза (не в гостевые — после выхода её увидел бы гость).
+      qc.setQueryData<CargoDetailDto>(keyOf(buyer), (x) => (x ? mergeBuyResult(x, res) : x));
       invalidateWallet();
       toast.success(t('cargo.bought', { count: res.count, from: res.seatFrom, to: res.seatTo }));
       // Эта покупка заняла последнее место — груз приземлился в той же транзакции.
@@ -379,7 +437,7 @@ export function CargoStage({
       buyingRound.current = null;
       // Итог пришёл во время покупки (по сокету или в данных груза): показан по ответу — повтор отсеется;
       // иначе — по местам, которые страница знает: с местами этой покупки, если она прошла (раунд распродал
-      // другой игрок); покупка не прошла и мест нет — строкой для зрителя.
+      // другой игрок); покупка не прошла и мест нет — решают данные груза (места могли купить в другой вкладке).
       const deferred = deferredResult.current;
       deferredResult.current = null;
       if (deferred) showResult(deferred);
@@ -454,7 +512,11 @@ export function CargoStage({
 
   return (
     <section className="cargo-stage" aria-labelledby={titleId} data-testid="cargo-stage">
-      <div className="cargo-stage__inner" data-phase={phase}>
+      <div
+        className="cargo-stage__inner"
+        data-phase={phase}
+        data-wide={cargoWide(d.imageUrl) || undefined}
+      >
         <h1 id={titleId} className="cargo-title" data-testid="cargo-title">
           {d.name}
         </h1>

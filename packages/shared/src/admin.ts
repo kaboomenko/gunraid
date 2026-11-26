@@ -1,4 +1,12 @@
 import { z } from 'zod';
+import {
+  CARGO_MAX_SEATS,
+  CARGO_ROUND_STATUSES,
+  CARGO_SLUG_RE,
+  type CargoLandReason,
+  type CargoMismatchDto,
+  type CargoRoundStatus,
+} from './cargo.js';
 import { ADRENALINE_LEVELS, type AdrenalineLevel } from './cases.js';
 import type { ItemDto } from './catalog.js';
 import type { AllSettings } from './settings.js';
@@ -29,7 +37,11 @@ export const adminDashboardQuerySchema = z.object({
 });
 export type AdminDashboardQuery = z.infer<typeof adminDashboardQuerySchema>;
 
-export type AdminMode = 'cases' | 'upgrade' | 'contract' | 'battles';
+/**
+ * Режимы в GGR дашборда. cargo — приземлившиеся раунды грузов: ставки — оплата мест, выплаты — призы платных
+ * раундов; призы бесплатных грузов вычитаются из общего GGR, как бесплатные кейсы (D13).
+ */
+export type AdminMode = 'cases' | 'upgrade' | 'contract' | 'battles' | 'cargo';
 
 export interface AdminModeStatsDto {
   mode: AdminMode;
@@ -283,6 +295,185 @@ export const adminCaseContentsSchema = z
   })
   .strict();
 export type AdminCaseContentsBody = z.infer<typeof adminCaseContentsSchema>;
+
+// ---------- Грузы ----------
+
+/**
+ * Шаблон груза: тело создания и правки (все поля сразу). Приз, места, цена, лимит, длительность, условия и минимум
+ * продаж действуют со следующего раунда (снимок в раунде, D18); название, картинка, порядок и активность — сразу.
+ */
+export const adminCargoSchema = z
+  .object({
+    slug: z.string().regex(CARGO_SLUG_RE),
+    name: z.string().trim().min(2).max(80),
+    /** Стандартная картинка — cargoImageUrl(kind) (уменьшенные копии есть), иначе — свой путь как есть. */
+    imageUrl: z.string().trim().min(1).max(500),
+    /** Активный предмет каталога этой игры (иначе 400 CARGO_PRIZE_INVALID). */
+    prizeItemId: uuid,
+    seatsTotal: z.number().int().min(2).max(CARGO_MAX_SEATS),
+    /** Цена места; 0 — бесплатный груз: лимит всегда 1 место на игрока (perUserLimit заменяется на 1). */
+    seatPrice: gems,
+    /** Мест на игрока за раунд; null — без лимита. Не больше seatsTotal (проверка на сервере). */
+    perUserLimit: z.number().int().min(1).max(CARGO_MAX_SEATS).nullable().optional(),
+    durationMinutes: z
+      .number()
+      .int()
+      .min(5)
+      .max(30 * 24 * 60),
+    /** Условия участия (против мультиаккаунтов): уровень и пополнение за последние N дней; null — без условия. */
+    minLevel: z.number().int().min(1).max(1000).nullable().optional(),
+    depositWithinDays: z.number().int().min(1).max(3650).nullable().optional(),
+    /** Минимум продаж для приземления по таймеру (D36); null — без минимума. Не больше seatsTotal. */
+    minSeatsToLand: z.number().int().min(1).max(CARGO_MAX_SEATS).nullable().optional(),
+    isActive: z.boolean(),
+    sortOrder: z.number().int().min(0).max(100_000),
+  })
+  .strict();
+export type AdminCargoBody = z.infer<typeof adminCargoSchema>;
+
+/** `?archived=1` — вместе с архивными (по умолчанию архивные скрыты, D37). */
+export const adminCargoListQuerySchema = z.object({ archived: z.enum(['0', '1']).optional() });
+export type AdminCargoListQuery = z.infer<typeof adminCargoListQuerySchema>;
+
+export const adminCargoRoundsQuerySchema = z.object({
+  status: z.enum(CARGO_ROUND_STATUSES).optional(),
+  page,
+  pageSize,
+});
+export type AdminCargoRoundsQuery = z.infer<typeof adminCargoRoundsQuerySchema>;
+
+export const adminCargoCancelSchema = z
+  .object({ reason: z.string().trim().min(5).max(500) })
+  .strict();
+export type AdminCargoCancelBody = z.infer<typeof adminCargoCancelSchema>;
+
+/**
+ * Проблема шаблона (первая подходящая): LANDING_STUCK — раунд open, но распродан или срок вышел больше минуты
+ * назад (приземление не проходит: landAttempts и lastLandError в round); PRIZE_INACTIVE — приз выключен в каталоге,
+ * PRIZE_GAME — приз другой игры: новый раунд не начнётся (D17); NO_ROUND — груз активен, а открытого раунда нет.
+ */
+export const ADMIN_CARGO_ISSUES = [
+  'LANDING_STUCK',
+  'PRIZE_INACTIVE',
+  'PRIZE_GAME',
+  'NO_ROUND',
+] as const;
+export type AdminCargoIssue = (typeof ADMIN_CARGO_ISSUES)[number];
+
+/** Текущий (открытый) раунд шаблона. */
+export interface AdminCargoRoundSummaryDto {
+  id: string;
+  number: number;
+  status: CargoRoundStatus;
+  seatsSold: number;
+  seatsTotal: number;
+  seatPrice: number;
+  /** Оплачено за места раунда (сумма paid). */
+  revenue: number;
+  /** Сколько разных игроков купили места. */
+  participants: number;
+  /** Приз раунда (снимок на старте) по текущей цене каталога; prizeValue — его цена на старте раунда. */
+  prize: ItemDto;
+  prizeValue: number;
+  /** prizeValue / revenue — RTP, если раунд приземлится с текущими продажами; null без платных продаж. > 1 — убыток. */
+  rtpNow: number | null;
+  minSeatsToLand: number | null;
+  /** Неудачные попытки приземления и причина последней (без SQL и параметров). */
+  landAttempts: number;
+  lastLandError: string | null;
+  lastLandErrorAt: string | null;
+  startedAt: string;
+  endsAt: string;
+  serverSeedHash: string;
+}
+
+export interface AdminCargoRowDto {
+  id: string;
+  /** Код игры шаблона (для адресов правки `admin/games/{game}/cargo/{id}`). */
+  game: string;
+  slug: string;
+  name: string;
+  imageUrl: string;
+  isActive: boolean;
+  sortOrder: number;
+  seatsTotal: number;
+  seatPrice: number;
+  perUserLimit: number | null;
+  durationMinutes: number;
+  minLevel: number | null;
+  depositWithinDays: number | null;
+  minSeatsToLand: number | null;
+  /** Приз шаблона (для следующих раундов) — и выключенный в каталоге (тогда issue PRIZE_INACTIVE). */
+  prize: ItemDto;
+  /** prize.price / (seatPrice × seatsTotal) — RTP при распродаже; null у бесплатного. */
+  rtp: number | null;
+  /** Открытый раунд; null — его нет. */
+  round: AdminCargoRoundSummaryDto | null;
+  /** Сколько раундов приземлились с победителем. */
+  roundsLanded: number;
+  issue: AdminCargoIssue | null;
+  /** В архиве (D37): только чтение, slug остаётся занятым. */
+  archivedAt: string | null;
+}
+
+export interface AdminCargoDetailDto extends AdminCargoRowDto {
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Строка истории раундов (по номеру, новые первыми). */
+export interface AdminCargoRoundRowDto {
+  id: string;
+  number: number;
+  status: CargoRoundStatus;
+  seatsSold: number;
+  seatsTotal: number;
+  seatPrice: number;
+  /** Оплачено за места (сумма paid); у отменённых и закрытых по минимуму эти гемы вернулись участникам. */
+  revenue: number;
+  prize: ItemDto;
+  /** Цена приза на старте раунда (снимок). */
+  prizeValue: number;
+  winner: { id: string; shortId: number; nickname: string } | null;
+  winningSeat: number | null;
+  /** Отменён / закрыт по минимуму с продажами: место, которое выиграло бы (публично, D33). */
+  voidSeat: number | null;
+  minSeatsToLand: number | null;
+  /** sold_out / deadline / min_seats; у отменённого и открытого — null. */
+  landReason: CargoLandReason | null;
+  cancelReason: string | null;
+  startedAt: string;
+  endsAt: string;
+  finishedAt: string | null;
+  serverSeedHash: string;
+}
+
+/** Участник раунда: его места, покупки и сколько он заплатил. */
+export interface AdminCargoParticipantDto {
+  user: { id: string; shortId: number; nickname: string; avatarUrl: string | null };
+  seats: number;
+  /** Покупки по порядку мест: [от, до] включительно (соседние покупки не склеиваются). */
+  ranges: Array<[number, number]>;
+  spent: number;
+  firstAt: string;
+  /** Гемы за раунд вернулись (отмена или минимум продаж). */
+  refunded: boolean;
+}
+
+/** Раунд целиком: участники — по числу мест (больше — выше), затем по первой покупке. */
+export interface AdminCargoRoundDetailDto extends AdminCargoRoundRowDto {
+  templateId: string;
+  templateName: string;
+  game: string;
+  participants: AdminCargoParticipantDto[];
+}
+
+/** Сверка грузов с ledger (D39): ok — расхождений нет; до 100 строк. */
+export interface AdminCargoReconciliationDto {
+  ok: boolean;
+  mismatches: CargoMismatchDto[];
+  checkedAt: string;
+}
 
 // ---------- Каталог ----------
 

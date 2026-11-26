@@ -141,6 +141,8 @@ export function AdminAudit() {
             'user',
             'withdrawal',
             'case',
+            'cargo',
+            'cargo_round',
             'item',
             'settings',
             'promo_code',
@@ -186,6 +188,11 @@ export function AdminAudit() {
               r.entityType === 'user' && r.entityId ? (
                 <Link href={`/admin/users/${r.entityId}`} className="underline">
                   {r.entityType}
+                </Link>
+              ) : r.entityType === 'cargo' && r.entityId ? (
+                // Игру редактор груза берёт из шаблона — ссылке ?game= не нужен.
+                <Link href={`/admin/cargo/${r.entityId}`} className="underline">
+                  {`${r.entityType} · ${r.entityId.slice(0, 8)}`}
                 </Link>
               ) : (
                 `${r.entityType}${r.entityId ? ` · ${r.entityId.slice(0, 8)}` : ''}`

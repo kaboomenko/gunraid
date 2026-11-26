@@ -12,12 +12,15 @@ import {
   cargoChance,
   cargoImageSrcSet,
   cargoNeighbours,
+  cargoParticipant,
+  cargoWide,
   clampCount,
   formatSeatRanges,
   mergeBuyResult,
   mergeSeats,
   missedResult,
   randomClientSeed,
+  seatsKey,
   splitCountdown,
   stepCount,
 } from './cargo-page';
@@ -82,6 +85,7 @@ function detail(seatsSold: number, maxBuy: number): CargoDetailDto {
     noRound: null,
     availability: { canBuy: true, reason: null, mySeats: 0, myPurchases: [], maxBuy },
     lastResult: null,
+    lastResultMySeats: 0,
     serverTime: '2026-11-26T13:00:00.000Z',
   };
 }
@@ -314,6 +318,70 @@ describe('missedResult', () => {
   it('skips a result that is already shown or missing', () => {
     expect(missedResult(last, new Set(['round-1']), new Set(['round-1']))).toBeNull();
     expect(missedResult(null, new Set(['round-1']), new Set())).toBeNull();
+  });
+});
+
+describe('seatsKey', () => {
+  it('keeps seats of different players in one round apart', () => {
+    expect(seatsKey('user-a', 'round-1')).not.toBe(seatsKey('user-b', 'round-1'));
+    expect(seatsKey('user-a', 'round-1')).not.toBe(seatsKey('user-a', 'round-2'));
+    expect(seatsKey('user-a', 'round-1')).toBe(seatsKey('user-a', 'round-1'));
+  });
+
+  it('does not hand the seats of a player who logged out to the next one', () => {
+    const seats = new Map([[seatsKey('user-a', 'round-1'), 2]]);
+    expect(seats.get(seatsKey('user-b', 'round-1')) ?? 0).toBe(0);
+  });
+});
+
+describe('cargoParticipant', () => {
+  const r = result('round-1');
+  const lost = { ...r, winner: { shortId: 8, nickname: 'other', avatarUrl: null } };
+  const server = (roundId: string, lastResultMySeats: number) => ({
+    lastResult: result(roundId),
+    lastResultMySeats,
+  });
+
+  it('decides at once for a guest, the winner and seats the page knows', () => {
+    expect(cargoParticipant(r, null, 0, null)).toBe(false);
+    // Гость после выхода игрока с местами — не участник, что бы ни было в данных.
+    expect(cargoParticipant(r, null, 3, server('round-1', 3))).toBe(false);
+    expect(cargoParticipant(r, 7, 0, null)).toBe(true);
+    expect(cargoParticipant(lost, 7, 2, null)).toBe(true);
+  });
+
+  it('is not a participant when no seats were sold at all', () => {
+    const empty: CargoResultDto = {
+      ...r,
+      status: 'expired',
+      landReason: 'deadline',
+      seatsSold: 0,
+      winningSeat: null,
+      winner: null,
+    };
+    expect(cargoParticipant(empty, 7, 0, null)).toBe(false);
+  });
+
+  it('takes the seats bought in another tab from the server data of that round', () => {
+    expect(cargoParticipant(lost, 7, 0, server('round-1', 2))).toBe(true);
+    expect(cargoParticipant(lost, 7, 0, server('round-1', 0))).toBe(false);
+  });
+
+  it('needs fresh server data when it is about another round or missing', () => {
+    // Данные груза ещё до приземления: lastResult — прошлый раунд.
+    expect(cargoParticipant(lost, 7, 0, server('round-0', 5))).toBeNull();
+    expect(cargoParticipant(lost, 7, 0, { lastResult: null, lastResultMySeats: 0 })).toBeNull();
+    expect(cargoParticipant(lost, 7, 0, null)).toBeNull();
+    expect(cargoParticipant(lost, 7, 0, undefined)).toBeNull();
+  });
+});
+
+describe('cargoWide', () => {
+  it('marks the special cargo with three canopies only', () => {
+    expect(cargoWide('/media/cargo/special.webp')).toBe(true);
+    for (const kind of ['light', 'black', 'free', 'signal'])
+      expect(cargoWide(`/media/cargo/${kind}.webp`)).toBe(false);
+    expect(cargoWide('/media/cases/custom.webp')).toBe(false);
   });
 });
 

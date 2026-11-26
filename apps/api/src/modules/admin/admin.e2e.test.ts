@@ -177,7 +177,13 @@ describe('admin: settings, cases, dashboard (integration)', () => {
   it('dashboard returns GGR and RTP by mode', async () => {
     const d = await admin.get<AdminDashboardDto>('/api/v1/admin/dashboard?days=30');
     expect(d.status).toBe(200);
-    expect(d.body.modes.map((m) => m.mode)).toEqual(['cases', 'upgrade', 'contract', 'battles']);
+    expect(d.body.modes.map((m) => m.mode)).toEqual([
+      'cases',
+      'upgrade',
+      'contract',
+      'battles',
+      'cargo',
+    ]);
     expect(d.body.users.total).toBeGreaterThan(0);
     const cs = d.body.modes.find((m) => m.mode === 'cases')!;
     expect(cs.wagered).toBeGreaterThan(0);

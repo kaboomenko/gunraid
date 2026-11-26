@@ -1,4 +1,5 @@
 import {
+  cargoImageUrl,
   cargoImageVariant,
   type CargoBuyResultDto,
   type CargoCardDto,
@@ -134,6 +135,41 @@ export function missedResult(
   shown: ReadonlySet<string>,
 ): CargoResultDto | null {
   return last && seen.has(last.roundId) && !shown.has(last.roundId) ? last : null;
+}
+
+/**
+ * Ключ мест игрока в раунде: страница помнит места по игроку — после выхода или входа другого (без
+ * перезагрузки) места прежнего не достаются ни гостю, ни новому игроку.
+ */
+export function seatsKey(userId: string, roundId: string): string {
+  return `${userId}:${roundId}`;
+}
+
+/**
+ * Участник ли игрок итога r (D31: участнику — окно, остальным — строка под кнопкой). Гость — нет; победитель
+ * или игрок с местами в раунде, которые знает страница (покупки этой вкладки, данные груза), — да; мест в
+ * раунде не продано — нет. Иначе решают данные груза с сервера (места могли купить в другой вкладке):
+ * lastResultMySeats, если lastResult — этот раунд. null — таких данных нет: перечитать груз и решить снова.
+ */
+export function cargoParticipant(
+  r: CargoResultDto,
+  meShortId: number | null,
+  knownSeats: number,
+  server: Pick<CargoDetailDto, 'lastResult' | 'lastResultMySeats'> | null | undefined,
+): boolean | null {
+  if (meShortId === null) return false;
+  if (r.winner?.shortId === meShortId || knownSeats > 0) return true;
+  if (r.seatsSold === 0) return false;
+  if (server?.lastResult?.roundId === r.roundId) return server.lastResultMySeats > 0;
+  return null;
+}
+
+/**
+ * Груз с широким силуэтом — «Особый» (три купола): видимая часть — до 352 влево и 355 вправо от оси против
+ * 288 у остальных. Боковым блокам сцены нужен больший отступ (CSS: .cargo-stage__inner[data-wide]).
+ */
+export function cargoWide(imageUrl: string): boolean {
+  return imageUrl === cargoImageUrl('special');
 }
 
 /**

@@ -226,6 +226,8 @@ export class CargoService {
       noRound,
       availability: await this.availability(open?.r ?? null, open?.live ?? false, viewer),
       lastResult: last ? await this.resultOf(this.db, last, prizes) : null,
+      // Участник ли вошедший в последнем раунде (места могли быть куплены в другой вкладке).
+      lastResultMySeats: last && viewer ? await this.seatsOf(this.db, last.id, viewer.userId) : 0,
       serverTime: new Date().toISOString(),
     };
   }
@@ -868,6 +870,24 @@ export class CargoService {
     throw new AppError('CONFLICT', 409, { reason: 'cargo_busy' });
   }
 
+  /**
+   * Отмена открытого раунда админом (D33) — через closeWithRefund: возврат каждому платившему, client seed раунда и
+   * место, которое выиграло бы (публично), аудит `cargo_round.cancel`, следующий раунд у активного шаблона — в одной
+   * транзакции. Не open → 409 CARGO_ROUND_NOT_OPEN; покупки не дают закрыть раунд 5 раз подряд → 409 CONFLICT
+   * {reason: 'cargo_busy'}.
+   */
+  async cancelRound(
+    roundId: string,
+    actorId: string,
+    reason: string,
+    ip: string | null,
+  ): Promise<CargoLanding> {
+    const res = await this.closeWithRefund(roundId, { status: 'cancelled', actorId, reason, ip });
+    // Недостижимо: null бывает только у закрытия по минимуму продаж (раунд уже закрыт другим воркером).
+    if (!res) throw new AppError('CARGO_ROUND_NOT_OPEN', 409);
+    return res;
+  }
+
   /** Обработчик outbox `cargo.deadline`: рано (часы Node и БД расходятся) — событие заново на остаток. */
   async onDeadline(roundId: string): Promise<CargoLanding | null> {
     const out = await this.land(roundId);
@@ -1066,6 +1086,15 @@ export class CargoService {
       .from(cargoPurchases)
       .where(and(eq(cargoPurchases.roundId, roundId), eq(cargoPurchases.userId, userId)))
       .orderBy(asc(cargoPurchases.seatFrom));
+  }
+
+  /** Сколько мест игрок купил в раунде. */
+  private async seatsOf(tx: DbOrTx, roundId: string, userId: string): Promise<number> {
+    const [row] = await tx
+      .select({ n: sql<number>`coalesce(sum(${cargoPurchases.count}), 0)::int` })
+      .from(cargoPurchases)
+      .where(and(eq(cargoPurchases.roundId, roundId), eq(cargoPurchases.userId, userId)));
+    return row?.n ?? 0;
   }
 
   private async levelOf(tx: DbOrTx, userId: string): Promise<number> {

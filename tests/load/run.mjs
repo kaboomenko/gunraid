@@ -13,13 +13,16 @@
  *      После — ждём, что воркер доиграл все баттлы.
  *   3. Конкурентные атаки: двойное списание, повтор с тем же idempotency key,
  *      двойная продажа и двойной апгрейд одного предмета.
- *   4. Сверка: баланс каждого кошелька = сумма записей ledger (эндпоинт админки).
+ *      Гонка за места груза: игроки нагрузки разом покупают по месту в своём грузе
+ *      (приземление — в транзакции последнего покупателя), потом груз уходит в архив.
+ *   4. Сверка: баланс каждого кошелька = сумма записей ledger, места грузов сходятся
+ *      с ledger (эндпоинты админки).
  *
  * Код выхода ≠ 0, если есть ответы 5xx, нарушен инвариант, не сошёлся ledger
- * или p95 открытия кейса выше порога (--p95, мс).
+ * или p95 открытия кейса (и покупки места груза) выше порога (--p95, мс).
  * Нужен AUTH_DEV_LOGIN=true (по умолчанию в .env.example для локального стенда).
  */
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { parseArgs } from 'node:util';
@@ -538,6 +541,194 @@ async function concurrency(cases) {
   check((await b.ledgerSum()) === (await b.balance()), 'ledger игрока сходится после атак');
 }
 
+// ---------------------------------------------------------------- фаза 3б: гонка за места груза
+
+/** Грузы — в Standoff 2 (как e2e): игра нагрузки (--game) на гонку не влияет. */
+const CARGO_GAME = 'standoff2';
+const CARGO_PRICE = 10;
+const CARGO_RACE_ERRORS = new Set(['CARGO_SEATS_LEFT', 'CARGO_ROUND_CLOSED']);
+
+/** Тело PUT из детальной админки: схема строгая — только поля шаблона. */
+function cargoBody(d, isActive) {
+  return {
+    slug: d.slug,
+    name: d.name,
+    imageUrl: d.imageUrl,
+    prizeItemId: d.prize.id,
+    seatsTotal: d.seatsTotal,
+    seatPrice: d.seatPrice,
+    perUserLimit: d.perUserLimit,
+    durationMinutes: d.durationMinutes,
+    minLevel: d.minLevel,
+    depositWithinDays: d.depositWithinDays,
+    minSeatsToLand: d.minSeatsToLand,
+    isActive,
+    sortOrder: d.sortOrder,
+  };
+}
+
+/**
+ * Убрать груз: выключить (иначе отмена сразу откроет следующий раунд), отменить открытый раунд с возвратом,
+ * отправить в архив. Повтор — если раунд сменился между шагами.
+ */
+async function retireCargo(admin, id) {
+  for (let i = 0; i < 5; i++) {
+    let d = (await admin.req('GET', `/admin/cargo/${id}`, undefined, { record: false })).body;
+    if (!d?.id) return false;
+    if (d.archivedAt) return true;
+    if (d.isActive) {
+      const off = await admin.req(
+        'PUT',
+        `/admin/games/${d.game}/cargo/${id}`,
+        cargoBody(d, false),
+        {
+          record: false,
+        },
+      );
+      if (off.status === 200) d = off.body;
+    }
+    if (d.round?.status === 'open') {
+      await admin.req(
+        'POST',
+        `/admin/cargo-rounds/${d.round.id}/cancel`,
+        { reason: 'load: уборка груза гонки' },
+        { record: false },
+      );
+    }
+    const del = await admin.req('DELETE', `/admin/cargo/${id}`, undefined, { record: false });
+    if (del.status === 200 && del.body?.archivedAt) return true;
+  }
+  return false;
+}
+
+/**
+ * Все покупатели груза стоят в очереди на одну строку раунда, а приземление идёт в транзакции последнего —
+ * это и меряем. Свой груз (N = 20, цена 10), игроки нагрузки разом покупают по одному месту (свой client seed
+ * и idempotency key): успешных ровно N, прочие — 409 (мест не осталось / раунд уже закрыт), 5xx нет; открыт
+ * раунд №2, победитель раунда №1 — среди купивших. Игроков меньше 30 — мест меньше: гонка за последние места
+ * остаётся (N = игроков − 10, не меньше 2).
+ */
+async function cargoRace(players) {
+  console.log('\n▶ Гонка за места груза');
+  if (players.length < 3) {
+    console.log('  – пропущено: нужно хотя бы 3 игрока');
+    return null;
+  }
+  const seats = Math.min(20, Math.max(2, players.length - 10));
+  const admin = new Client('admin-cargo');
+  await admin.devLogin('admin');
+  // Приз — самый дешёвый активный предмет: админка отдаёт по убыванию цены, он в конце последней страницы.
+  const itemsUrl = (page) => `/admin/games/${CARGO_GAME}/items?active=1&pageSize=100&page=${page}`;
+  const first = await admin.req('GET', itemsUrl(1), undefined, { record: false });
+  if (first.status !== 200) throw new Error(`items ${first.status}: ${JSON.stringify(first.body)}`);
+  const pages = Math.max(1, Math.ceil(first.body.total / 100));
+  const lastPage =
+    pages > 1
+      ? (await admin.req('GET', itemsUrl(pages), undefined, { record: false })).body
+      : first.body;
+  const prize = lastPage.items.reduce((a, b) => (b.price < a.price ? b : a));
+  const slug = `load-${RUN}`;
+  const created = await admin.req(
+    'POST',
+    `/admin/games/${CARGO_GAME}/cargo`,
+    {
+      slug,
+      name: `Нагрузка ${RUN}`,
+      imageUrl: '/media/cargo/light.webp',
+      prizeItemId: prize.id,
+      seatsTotal: seats,
+      seatPrice: CARGO_PRICE,
+      perUserLimit: null,
+      durationMinutes: 60,
+      minLevel: null,
+      depositWithinDays: null,
+      minSeatsToLand: null,
+      isActive: true,
+      sortOrder: 99_999,
+    },
+    { record: false },
+  );
+  if (created.status !== 200 || !created.body.round) {
+    throw new Error(`груз ${created.status}: ${JSON.stringify(created.body)}`);
+  }
+  const cargoId = created.body.id;
+  const roundId = created.body.round.id;
+  try {
+    // После смешанной нагрузки у кого-то могло не остаться гемов — без пополнения он получил бы не 409, а отказ
+    // по балансу.
+    await Promise.all(
+      players.map(async (p) => {
+        if ((await p.balance()) < CARGO_PRICE) await p.topUp(1);
+      }),
+    );
+    const t0 = performance.now();
+    const results = await Promise.all(
+      players.map((p) =>
+        p.req(
+          'POST',
+          `/games/${CARGO_GAME}/cargo/${slug}/buy`,
+          { roundId, count: 1, clientSeed: randomBytes(16).toString('hex') },
+          { idem: true, label: 'POST cargo buy' },
+        ),
+      ),
+    );
+    const elapsed = performance.now() - t0;
+    const codes = {};
+    for (const r of results) {
+      const k = r.status === 200 ? '200' : `${r.status} ${r.body?.error?.code ?? ''}`.trim();
+      codes[k] = (codes[k] ?? 0) + 1;
+    }
+    const statusText = Object.entries(codes)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(', ');
+    const ok = results.filter((r) => r.status === 200);
+    check(
+      ok.length === seats,
+      `груз: успешных покупок ${ok.length} при ${seats} местах и ${players.length} покупателях`,
+    );
+    check(
+      results.every(
+        (r) => r.status === 200 || (r.status === 409 && CARGO_RACE_ERRORS.has(r.body?.error?.code)),
+      ),
+      `остальные — 409 CARGO_SEATS_LEFT / CARGO_ROUND_CLOSED (${statusText})`,
+    );
+    check(
+      results.every((r) => r.status !== 0 && r.status < 500),
+      'груз: нет ответов 5xx и сетевых ошибок',
+    );
+    const taken = ok.map((r) => r.body.seatFrom).sort((a, b) => a - b);
+    check(
+      taken.length === seats &&
+        taken.every((s, i) => s === i + 1) &&
+        ok.every((r) => r.body.count === 1),
+      `места 1…${seats} выданы по одному, без повторов и пропусков`,
+    );
+    check(
+      ok.filter((r) => r.body.result?.status === 'landed').length === 1,
+      'груз приземлился в транзакции последнего покупателя (итог — в одном ответе)',
+    );
+    const buyers = new Set(
+      results.flatMap((r, i) => (r.status === 200 ? [players[i].me.shortId] : [])),
+    );
+    const d = (
+      await admin.req('GET', `/games/${CARGO_GAME}/cargo/${slug}`, undefined, { record: false })
+    ).body;
+    check(d?.round?.number === 2, `открыт следующий раунд: №${d?.round?.number ?? '—'}`);
+    const last = d?.lastResult;
+    check(
+      last?.roundId === roundId && last.status === 'landed' && buyers.has(last.winner?.shortId),
+      `у раунда №1 победитель среди купивших (${last?.winner?.nickname ?? '—'}, место №${last?.winningSeat ?? '—'})`,
+    );
+    const row = stats.summary(elapsed).find((r) => r.label === 'POST cargo buy');
+    console.log('');
+    printTable([row]);
+    check(row.p95 <= P95_LIMIT, `p95 покупки места груза ${row.p95} мс ≤ ${P95_LIMIT} мс`);
+    return { seats, buyers: players.length, statuses: codes, row };
+  } finally {
+    check(await retireCargo(admin, cargoId), 'груз гонки: открытый раунд отменён, груз в архиве');
+  }
+}
+
 // ---------------------------------------------------------------- фаза 4: сверка
 
 async function reconcile() {
@@ -548,6 +739,13 @@ async function reconcile() {
   check(
     r.status === 200 && r.body.ok === true,
     `баланс каждого кошелька = сумма записей ledger (расхождений: ${r.body?.mismatches?.length ?? '?'})`,
+  );
+  // Грузы (D39): у платной покупки — своя запись списания того же игрока и раунда, возвраты — только у
+  // раундов с возвратом, места подряд.
+  const c = await admin.req('GET', '/admin/cargo-reconciliation', undefined, { record: false });
+  check(
+    c.status === 200 && c.body.ok === true,
+    `места грузов сходятся с ledger (расхождений: ${c.body?.mismatches?.length ?? '?'})`,
   );
 }
 
@@ -611,6 +809,7 @@ try {
   );
 
   await concurrency(cases);
+  const cargo = await cargoRace(players);
   await reconcile();
 
   if (opt.json) {
@@ -624,6 +823,7 @@ try {
           sockets: SOCKETS,
           rows,
           counters: { ...load.counters, battles: load.counters.battles.length },
+          cargo,
           ws: load.ws,
           failures,
         },

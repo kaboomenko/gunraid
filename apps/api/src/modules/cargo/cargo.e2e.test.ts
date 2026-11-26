@@ -1248,6 +1248,43 @@ describe('cargo (integration)', () => {
     expect(p).toBeDefined();
   });
 
+  it('lastResultMySeats: seats of the viewer in the last finished round (guest and others — 0)', async () => {
+    const c = await createCargo();
+    const a = await playerWith(1_000);
+    const b = await playerWith(1_000);
+    const other = await playerWith(0);
+    const detail = async (client: TestClient) =>
+      (await client.get<CargoDetailDto>(`/api/v1/games/cs2/cargo/${c.slug}`)).body;
+    expect(await detail(a.client)).toMatchObject({ lastResult: null, lastResultMySeats: 0 });
+    await buy(a.client, c, 2);
+    // Места идущего раунда — в availability, не здесь.
+    expect(await detail(a.client)).toMatchObject({
+      lastResult: null,
+      lastResultMySeats: 0,
+      availability: { mySeats: 2 },
+    });
+    const last = await buy(b.client, c, 1);
+    expect(last.body.result?.status).toBe('landed');
+    // Места, купленные где угодно (другая вкладка — тот же игрок), видны в детальной после приземления.
+    for (const [client, seats] of [
+      [a.client, 2],
+      [b.client, 1],
+      [other.client, 0],
+      [new TestClient(app), 0],
+    ] as const) {
+      const d = await detail(client);
+      expect(d.lastResult?.roundId).toBe(c.round.id);
+      expect(d.lastResultMySeats).toBe(seats);
+    }
+    // Следующий раунд закрылся без продаж — теперь последний он, мест в нём нет ни у кого.
+    const next = (await openRoundOf(c.id))!;
+    await endNow(next.id);
+    await svc().land(next.id);
+    const d = await detail(a.client);
+    expect(d.lastResult).toMatchObject({ roundId: next.id, status: 'expired' });
+    expect(d.lastResultMySeats).toBe(0);
+  });
+
   it('reconciliation is clean at the end (ledger and cargo)', async () => {
     expect(await app.get(LedgerService).reconcile()).toEqual([]);
     expect(await reconcileCargo(db(app))).toEqual([]);
