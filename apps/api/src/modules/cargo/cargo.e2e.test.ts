@@ -1,6 +1,8 @@
 import { randomBytes } from 'node:crypto';
+import type { Logger } from '@nestjs/common';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import {
+  adminAuditLog,
   cargoPurchases,
   cargoRounds,
   cargoTemplates,
@@ -33,8 +35,11 @@ import { TestClient, createTestApp } from '../../test/app.js';
 import { db, gameId, grantGems, newPlayer, userBalance } from '../../test/fixtures.js';
 import { InventoryService } from '../inventory/inventory.service.js';
 import { LedgerService } from '../ledger/ledger.service.js';
+import type { OutboxProcessor } from '../outbox/outbox.processor.js';
 import { reconcileCargo } from './cargo-recon.js';
-import { CargoService, type CargoLanding } from './cargo.service.js';
+import { CargoHandlers } from './cargo.handlers.js';
+import type { CargoNotifier } from './cargo.notifier.js';
+import { CargoService, type CargoLanding, type CargoOpened } from './cargo.service.js';
 
 let app: NestFastifyApplication;
 type Err = { error: { code: string; details?: Record<string, unknown> } };
@@ -139,6 +144,29 @@ async function deposit(client: TestClient, usd: number): Promise<DepositDto> {
   });
   expect(done.status).toBe(200);
   return done.body;
+}
+
+/** Логгер сервиса (в тестах вывод выключен, но вызовы видны шпиону). */
+const loggerOf = (o: object) => (o as { logger: Logger }).logger;
+
+/**
+ * Настоящая ошибка БД при выдаче приза раунда: предмета-приза нет (внешний ключ user_items → items). Drizzle
+ * заворачивает её в DrizzleQueryError: в message — SQL и параметры (среди них id победителя), ошибка pg — в cause.
+ */
+function failPrizeGrant(inventory: InventoryService, roundId: string) {
+  const grant = inventory.grant.bind(inventory);
+  return vi
+    .spyOn(inventory, 'grant')
+    .mockImplementation((tx, input) =>
+      grant(tx, input.sourceId === roundId ? { ...input, itemId: newId() } : input),
+    );
+}
+
+/** Текст сбоя — причина из PostgreSQL, без SQL, параметров запроса и id игроков. */
+function expectCauseOnly(text: string | null | undefined, userIds: string[]) {
+  expect(text).toMatch(/\[23503\] insert or update on table "user_items" violates foreign key/);
+  expect(text).not.toMatch(/Failed query|params:|values \(/);
+  for (const id of userIds) expect(text).not.toContain(id);
 }
 
 /** Имя нарушенного ограничения PostgreSQL (drizzle оборачивает ошибку pg в cause). */
@@ -769,6 +797,43 @@ describe('cargo (integration)', () => {
     expect(s.opened.find((o) => o.templateId === b.id)?.round.number).toBe(2);
   });
 
+  it('ticker: landed rounds reach the notifier even if opening rounds fails afterwards', async () => {
+    const c = await createCargo();
+    const p = await playerWith(1_000);
+    await buy(p.client, c, 1);
+    await db(app)
+      .update(cargoRounds)
+      .set({ endsAt: sql`now() - interval '365 days'` })
+      .where(eq(cargoRounds.id, c.round.id));
+    const finished: CargoLanding[] = [];
+    const opened: CargoOpened[] = [];
+    const notifier = {
+      finished: (l: CargoLanding) => finished.push(l),
+      opened: (o: CargoOpened) => opened.push(o),
+    } as unknown as CargoNotifier;
+    const handlers = new CargoHandlers({ on() {} } as unknown as OutboxProcessor, svc(), notifier);
+    // Сбой уже после приземлений (первый запрос открытия раундов: БД или пул): приземление закоммичено,
+    // повторно его события не отправит никто — ни следующий проход, ни событие cargo.deadline.
+    const open = vi.spyOn(svc(), 'ensureOpenRounds').mockRejectedValueOnce(new Error('transient'));
+    const log = vi.spyOn(loggerOf(svc()), 'error');
+    let logged: string[];
+    try {
+      await handlers.sweepOnce();
+      expect(open).toHaveBeenCalledTimes(1);
+      logged = log.mock.calls.map(([m]) => String(m));
+    } finally {
+      open.mockRestore();
+      log.mockRestore();
+    }
+    expect((await roundRow(c.round.id)).status).toBe('landed');
+    const mine = finished.filter((l) => l.result.roundId === c.round.id);
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ winnerId: p.me.id, result: { status: 'landed' } });
+    expect(mine[0]!.next?.number).toBe(2);
+    expect(opened).toEqual([]);
+    expect(logged.some((m) => m.includes('transient'))).toBe(true);
+  });
+
   it('client seed is required and echoed in the proof (mine only for the buyer)', async () => {
     const c = await createCargo({ seatsTotal: 10 });
     const { client, me } = await playerWith(1_000);
@@ -897,6 +962,66 @@ describe('cargo (integration)', () => {
     ).toHaveLength(0);
   });
 
+  it('refund by a round id in upper case: ledger, audit and reconciliation get the canonical id (D39)', async () => {
+    // UUID прописными проходит z.string().uuid() (будущая ручка отмены), а uuid в PostgreSQL сравнивается без учёта
+    // регистра — раунд найдётся. Но ref_id и ключ возврата — текст, сверка сравнивает их с round_id::text.
+    const c = await createCargo({ seatsTotal: 5 });
+    const p = await playerWith(1_000);
+    const admin = await newPlayer(app, 'cadm');
+    await buy(p.client, c, 2);
+    const id = c.round.id;
+    const cancel = (roundId: string) =>
+      svc().closeWithRefund(roundId, {
+        status: 'cancelled',
+        actorId: admin.me.id,
+        reason: 'test cancel',
+        ip: null,
+      });
+    const out = await cancel(id.toUpperCase());
+    expect(out?.result).toMatchObject({ roundId: id, status: 'cancelled', refunded: true });
+    expect(out?.balances).toEqual([{ userId: p.me.id, balance: 1_000 }]);
+    const refundsOf = (userId: string) =>
+      db(app)
+        .select({
+          refId: ledgerEntries.refId,
+          key: ledgerEntries.idempotencyKey,
+          amount: ledgerEntries.amount,
+        })
+        .from(ledgerEntries)
+        .where(and(eq(ledgerEntries.type, 'cargo_refund'), eq(ledgerEntries.userId, userId)));
+    expect(await refundsOf(p.me.id)).toEqual([
+      { refId: id, key: `cargo_refund:${id}:${p.me.id}`, amount: 200 },
+    ]);
+    const audit = await db(app)
+      .select({ entityId: adminAuditLog.entityId })
+      .from(adminAuditLog)
+      .where(
+        and(eq(adminAuditLog.action, 'cargo_round.cancel'), eq(adminAuditLog.actorId, admin.me.id)),
+      );
+    expect(audit).toEqual([{ entityId: id }]);
+    expect(await reconcileCargo(db(app))).toEqual([]);
+    await expect(cancel(id)).rejects.toMatchObject({ code: 'CARGO_ROUND_NOT_OPEN' });
+    expect(await refundsOf(p.me.id)).toHaveLength(1);
+    expect(await userBalance(app, p.me.id)).toBe(1_000);
+
+    // Минимум продаж (D36) через land() с id прописными — тот же путь возврата.
+    const m = await createCargo({ seatsTotal: 5, minSeatsToLand: 3 });
+    const q = await playerWith(1_000);
+    await buy(q.client, m, 1);
+    await endNow(m.round.id);
+    const expired = (await svc().land(m.round.id.toUpperCase())) as CargoLanding;
+    expect(expired.result).toMatchObject({
+      roundId: m.round.id,
+      status: 'expired',
+      landReason: 'min_seats',
+      refunded: true,
+    });
+    expect(await refundsOf(q.me.id)).toEqual([
+      { refId: m.round.id, key: `cargo_refund:${m.round.id}:${q.me.id}`, amount: 100 },
+    ]);
+    expect(await reconcileCargo(db(app))).toEqual([]);
+  });
+
   it('landing failure on the last seat (D2): purchase kept, round sold out, worker lands later', async () => {
     const c = await createCargo();
     const a = await playerWith(1_000);
@@ -941,6 +1066,55 @@ describe('cargo (integration)', () => {
     expect(due).toHaveLength(1);
     const out = (await svc().land(c.round.id)) as CargoLanding;
     expect(out.result).toMatchObject({ status: 'landed', landReason: 'sold_out', seatsSold: 3 });
+    expect(await reconcileCargo(db(app))).toEqual([]);
+  });
+
+  it('landing failure with a real DB error: the cause is kept, not the SQL with players and outcome', async () => {
+    const c = await createCargo();
+    const a = await playerWith(1_000);
+    const b = await playerWith(1_000);
+    const buyers = [a.me.id, b.me.id];
+    await buy(a.client, c, 2);
+    const grant = failPrizeGrant(app.get(InventoryService), c.round.id);
+    const log = vi.spyOn(loggerOf(svc()), 'error');
+    const logged = () =>
+      log.mock.calls.map(([m]) => String(m)).filter((m) => m.includes(c.round.id));
+    try {
+      // D2: последнее место — приземление в SAVEPOINT падает, покупка остаётся.
+      const last = await buy(b.client, c, 1);
+      expect(last.status).toBe(200);
+      expect(last.body).toMatchObject({ result: null, round: { status: 'open', seatsSold: 3 } });
+      const stuck = await roundRow(c.round.id);
+      expect(stuck.landAttempts).toBe(1);
+      expectCauseOnly(stuck.lastLandError, buyers);
+      expect(logged()).toHaveLength(1);
+      expectCauseOnly(logged()[0], buyers);
+
+      // Воркер: land() падает так же — причина в last_land_error, ошибка уходит наружу (повтор outbox).
+      await expect(svc().land(c.round.id)).rejects.toThrow();
+      const again = await roundRow(c.round.id);
+      expect(again.landAttempts).toBe(2);
+      expectCauseOnly(again.lastLandError, buyers);
+
+      // Тикер (окно 5 мин после ошибки прошло): в логе прохода — причина.
+      await db(app)
+        .update(cargoRounds)
+        .set({
+          lastLandErrorAt: sql`now() - interval '6 minutes'`,
+          endsAt: sql`now() - interval '365 days'`,
+        })
+        .where(eq(cargoRounds.id, c.round.id));
+      log.mockClear();
+      await svc().sweep();
+      expect(logged()).toHaveLength(1);
+      expectCauseOnly(logged()[0], buyers);
+    } finally {
+      grant.mockRestore();
+      log.mockRestore();
+    }
+    const out = (await svc().land(c.round.id)) as CargoLanding;
+    expect(out.result).toMatchObject({ status: 'landed', landReason: 'sold_out', seatsSold: 3 });
+    expect(buyers).toContain(out.winnerId);
     expect(await reconcileCargo(db(app))).toEqual([]);
   });
 

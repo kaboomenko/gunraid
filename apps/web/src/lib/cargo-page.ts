@@ -1,8 +1,10 @@
 import {
   cargoImageVariant,
+  type CargoBuyResultDto,
   type CargoCardDto,
   type CargoDetailDto,
   type CargoMyPurchaseDto,
+  type CargoResultDto,
   type CargoSeatsEventDto,
 } from '@gunraid/shared';
 
@@ -63,6 +65,16 @@ export function clampCount(value: number, max: number): number {
   return Math.min(Math.max(1, Math.floor(value)), Math.floor(max));
 }
 
+/**
+ * Шаг стрелкой ↑/↓ в поле количества: от набранного, но ещё не подтверждённого числа (черновик), а без
+ * него — от выбранного; результат — в пределах 1…max.
+ */
+export function stepCount(draft: string | null, value: number, delta: number, max: number): number {
+  const typed = draft === null ? Number.NaN : Number.parseInt(draft, 10);
+  const base = Number.isFinite(typed) ? clampCount(typed, max) : value;
+  return clampCount(base + delta, max);
+}
+
 /** Client seed покупки (обязателен, D5): 16 случайных байт — 32 hex-символа, подходит под CARGO_SEED_RE. */
 export function randomClientSeed(): string {
   const bytes = new Uint8Array(16);
@@ -71,14 +83,14 @@ export function randomClientSeed(): string {
 }
 
 /**
- * Событие cargo:seats → данные груза. Только тот же раунд; проданных мест не меньше, чем уже известно
- * (события могут прийти не по порядку). Сколько можно взять за раз — не больше свободных: иначе
+ * Данные груза, когда известно, что продано sold мест: проданных — не меньше, чем уже известно (события
+ * и ответы могут прийти не по порядку). Сколько можно взять за раз — не больше свободных: иначе
  * выбранное количество осталось бы больше свободных и покупка получила бы лишний CARGO_SEATS_LEFT.
  */
-export function mergeSeats(d: CargoDetailDto, e: CargoSeatsEventDto): CargoDetailDto {
+function withSeatsSold(d: CargoDetailDto, sold: number): CargoDetailDto {
   const r = d.round;
-  if (!r || r.id !== e.roundId || e.seatsSold <= r.seatsSold) return d;
-  const seatsSold = Math.min(e.seatsSold, r.seatsTotal);
+  if (!r || sold <= r.seatsSold) return d;
+  const seatsSold = Math.min(sold, r.seatsTotal);
   const left = r.seatsTotal - seatsSold;
   const a = d.availability;
   const availability =
@@ -93,6 +105,35 @@ export function mergeSeats(d: CargoDetailDto, e: CargoSeatsEventDto): CargoDetai
             a.reason === 'CLOSED' || a.reason === 'UNAVAILABLE' ? a.reason : ('SOLD_OUT' as const),
         };
   return { ...d, round: { ...r, seatsSold }, availability };
+}
+
+/** Событие cargo:seats → данные груза: только тот же раунд. */
+export function mergeSeats(d: CargoDetailDto, e: CargoSeatsEventDto): CargoDetailDto {
+  return d.round?.id === e.roundId ? withSeatsSold(d, e.seatsSold) : d;
+}
+
+/**
+ * Ответ покупки → данные груза: раунд и доступность из ответа, только если раунд тот же (пока шёл ответ, он
+ * мог смениться). Ответ посчитан в своей транзакции, а сокет мог уже принести покупки, сделанные после
+ * неё: известные продажи не теряются, и сколько можно взять — не больше оставшихся свободных.
+ */
+export function mergeBuyResult(d: CargoDetailDto, res: CargoBuyResultDto): CargoDetailDto {
+  const r = d.round;
+  if (!r || r.id !== res.roundId) return d;
+  return withSeatsSold({ ...d, round: res.round, availability: res.availability }, r.seatsSold);
+}
+
+/**
+ * Итог, который страница пропустила: последний завершённый раунд груза — из тех, что страница показывала
+ * (а не завершившийся до захода на неё), и его итог ещё не показан (сокет лежал, событие потерялось).
+ * Иначе null.
+ */
+export function missedResult(
+  last: CargoResultDto | null,
+  seen: ReadonlySet<string>,
+  shown: ReadonlySet<string>,
+): CargoResultDto | null {
+  return last && seen.has(last.roundId) && !shown.has(last.roundId) ? last : null;
 }
 
 /**

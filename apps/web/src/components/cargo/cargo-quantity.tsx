@@ -2,13 +2,13 @@
 
 import { Minus, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useState, type CSSProperties } from 'react';
-import { clampCount } from '@/lib/cargo-page';
+import { useEffect, useState, type CSSProperties } from 'react';
+import { clampCount, stepCount } from '@/lib/cargo-page';
 
 /**
  * Выбор количества мест «−  50  +» (плашка 160×48, срез правого нижнего угла, лайм 20 % + размытие
  * фона — вариант glass). Число можно ввести с клавиатуры: при вводе — черновик, по Enter или уходу из
- * поля он приводится к 1…max; стрелки вверх и вниз — ±1.
+ * поля он приводится к 1…max; стрелки вверх и вниз — ±1 от видимого числа (и от набранного).
  */
 export function CargoQuantity({
   value,
@@ -24,13 +24,17 @@ export function CargoQuantity({
   const t = useTranslations('cargo');
   /** Пока игрок вводит число — черновик (может быть пустым); null — показываем value. */
   const [draft, setDraft] = useState<string | null>(null);
+  // Поле стало неактивным (груз приземляется, мест не осталось) — недописанное число отбрасывается.
+  useEffect(() => {
+    if (disabled) setDraft(null);
+  }, [disabled]);
   const shown = draft ?? String(value);
   const step = (delta: number) => onChange(clampCount(value + delta, max));
   const commit = () => {
     if (draft === null) return;
     const n = Number.parseInt(draft, 10);
     setDraft(null);
-    if (Number.isFinite(n)) onChange(clampCount(n, max));
+    if (!disabled && Number.isFinite(n)) onChange(clampCount(n, max));
   };
   const atMin = disabled || value <= 1;
   const atMax = disabled || value >= max;
@@ -53,23 +57,36 @@ export function CargoQuantity({
       >
         <Minus size={24} strokeWidth={2} aria-hidden="true" />
       </button>
+      {/*
+        Поле тоже не disabled, а readOnly + aria-disabled: иначе фокус из него падает на <body>, когда груз
+        приземляется. Неактивное поле ввод и стрелки не меняют.
+      */}
       <input
         className="cargo-qty__value"
         inputMode="numeric"
+        role="spinbutton"
         aria-label={t('count')}
+        aria-valuenow={value}
+        aria-valuemin={1}
+        aria-valuemax={Math.max(1, max)}
+        aria-disabled={disabled || undefined}
+        readOnly={disabled}
         value={shown}
         style={{ '--n': String(shown.length || 1) } as CSSProperties}
-        onChange={(e) => setDraft(e.target.value.replace(/\D/g, '').slice(0, 6))}
+        onChange={(e) => {
+          if (!disabled) setDraft(e.target.value.replace(/\D/g, '').slice(0, 6));
+        }}
         onBlur={commit}
         onKeyDown={(e) => {
           if (e.key === 'Enter') commit();
           else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
             e.preventDefault();
             setDraft(null);
-            if (e.key === 'ArrowUp' ? !atMax : !atMin) step(e.key === 'ArrowUp' ? 1 : -1);
+            if (disabled) return;
+            const n = stepCount(draft, value, e.key === 'ArrowUp' ? 1 : -1, max);
+            if (n !== value) onChange(n);
           }
         }}
-        disabled={disabled}
         data-testid="cargo-qty"
       />
       <button

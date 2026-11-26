@@ -57,13 +57,16 @@ export function CargoResult({
           <SkinCard item={r.prize} className="w-[286px] max-w-full" />
           {r.status === 'landed' && r.winner ? (
             <div className="flex flex-col items-center gap-3">
+              {/* Ник одним словом шире окна (до 24 широких букв) переносится, а не раздвигает окно. */}
               <Link
                 href={`/${game}/u/${r.winner.shortId}`}
-                className="flex items-center gap-3 text-lg font-semibold hover:text-accent"
+                className="flex max-w-full items-center gap-3 text-lg font-semibold hover:text-accent"
                 data-testid="cargo-result-winner"
               >
                 <Avatar src={r.winner.avatarUrl} name={r.winner.nickname} size="sm" />
-                <span>{t('winner', { nickname: r.winner.nickname })}</span>
+                <span className="min-w-0 [overflow-wrap:anywhere]">
+                  {t('winner', { nickname: r.winner.nickname })}
+                </span>
               </Link>
               {r.winningSeat !== null && (
                 <p className="text-muted" data-testid="cargo-result-seat">

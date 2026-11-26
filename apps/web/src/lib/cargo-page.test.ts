@@ -1,7 +1,9 @@
 import {
   CARGO_SEED_RE,
+  type CargoBuyResultDto,
   type CargoCardDto,
   type CargoDetailDto,
+  type CargoResultDto,
   type CargoSeatsEventDto,
   type ItemDto,
 } from '@gunraid/shared';
@@ -12,9 +14,12 @@ import {
   cargoNeighbours,
   clampCount,
   formatSeatRanges,
+  mergeBuyResult,
   mergeSeats,
+  missedResult,
   randomClientSeed,
   splitCountdown,
+  stepCount,
 } from './cargo-page';
 import { formatChance } from './case-page';
 
@@ -83,6 +88,53 @@ function detail(seatsSold: number, maxBuy: number): CargoDetailDto {
 
 function seats(seatsSold: number, roundId = 'round-1'): CargoSeatsEventDto {
   return { game: 'standoff2', templateId: 't-light', roundId, seatsSold, seatsTotal: 100 };
+}
+
+/** Ответ покупки одного места №seat: раунд и доступность — на момент своей транзакции. */
+function bought(seat: number, maxBuy: number, roundId = 'round-1'): CargoBuyResultDto {
+  const round = { ...detail(seat, maxBuy).round!, id: roundId };
+  const purchase = { seatFrom: seat, seatTo: seat, clientSeed: 'c'.repeat(32) };
+  return {
+    purchaseId: 'p-1',
+    templateId: 't-light',
+    slug: 'light',
+    roundId,
+    seatFrom: seat,
+    seatTo: seat,
+    count: 1,
+    paid: 153,
+    clientSeed: purchase.clientSeed,
+    serverSeedHash: round.serverSeedHash,
+    balance: 1000,
+    round,
+    availability: {
+      canBuy: maxBuy > 0,
+      reason: maxBuy > 0 ? null : 'SOLD_OUT',
+      mySeats: 1,
+      myPurchases: [purchase],
+      maxBuy,
+    },
+    result: null,
+    next: null,
+  };
+}
+
+function result(roundId: string): CargoResultDto {
+  return {
+    roundId,
+    templateId: 't-light',
+    number: 1,
+    status: 'landed',
+    landReason: 'sold_out',
+    seatsSold: 100,
+    seatsTotal: 100,
+    minSeatsToLand: null,
+    winningSeat: 57,
+    winner: { shortId: 7, nickname: 'winner', avatarUrl: null },
+    refunded: false,
+    prize: PRIZE,
+    finishedAt: '2026-11-26T13:00:00.000Z',
+  };
 }
 
 describe('cargoNeighbours', () => {
@@ -157,6 +209,29 @@ describe('clampCount', () => {
   });
 });
 
+describe('stepCount', () => {
+  it('steps from the typed number, not from the previous one', () => {
+    expect(stepCount('5', 1, 1, 100)).toBe(6);
+    expect(stepCount('40', 1, -1, 100)).toBe(39);
+    expect(stepCount('12', 1, 1, 100)).toBe(13);
+  });
+
+  it('steps from the chosen count when nothing is typed', () => {
+    expect(stepCount(null, 3, 1, 100)).toBe(4);
+    expect(stepCount(null, 3, -1, 100)).toBe(2);
+    expect(stepCount('', 3, -1, 100)).toBe(2);
+  });
+
+  it('stays within 1…max', () => {
+    expect(stepCount('500', 1, 1, 100)).toBe(100);
+    expect(stepCount('500', 1, -1, 100)).toBe(99);
+    expect(stepCount('0', 5, -1, 100)).toBe(1);
+    expect(stepCount(null, 100, 1, 100)).toBe(100);
+    expect(stepCount(null, 1, -1, 100)).toBe(1);
+    expect(stepCount('7', 1, 1, 0)).toBe(1);
+  });
+});
+
 describe('randomClientSeed', () => {
   it('matches the client seed format and differs between calls', () => {
     const a = randomClientSeed();
@@ -193,6 +268,52 @@ describe('mergeSeats', () => {
     const d = mergeSeats(detail(97, 3), seats(100));
     expect(d.round?.seatsSold).toBe(100);
     expect(d.availability).toMatchObject({ maxBuy: 0, canBuy: false, reason: 'SOLD_OUT' });
+  });
+});
+
+describe('mergeBuyResult', () => {
+  it('takes the round and the availability from the response', () => {
+    const d = mergeBuyResult(detail(0, 100), bought(1, 99));
+    expect(d.round?.seatsSold).toBe(1);
+    expect(d.availability).toMatchObject({ mySeats: 1, maxBuy: 99, canBuy: true, reason: null });
+  });
+
+  it('keeps purchases the socket brought while the response was on its way', () => {
+    // Ответ посчитан до чужой покупки 97 мест: свободных 2, а не 99.
+    const d = mergeBuyResult(detail(98, 2), bought(1, 99));
+    expect(d.round?.seatsSold).toBe(98);
+    expect(d.availability).toMatchObject({ mySeats: 1, maxBuy: 2, canBuy: true, reason: null });
+  });
+
+  it('blocks buying when others sold the rest meanwhile', () => {
+    const d = mergeBuyResult(detail(100, 0), bought(1, 99));
+    expect(d.round?.seatsSold).toBe(100);
+    expect(d.availability).toMatchObject({ mySeats: 1, maxBuy: 0, canBuy: false });
+    expect(d.availability.reason).toBe('SOLD_OUT');
+  });
+
+  it('ignores a response for a round that is no longer shown', () => {
+    const d = detail(0, 100);
+    expect(mergeBuyResult(d, bought(1, 99, 'round-0'))).toBe(d);
+    const none = { ...d, round: null };
+    expect(mergeBuyResult(none, bought(1, 99))).toBe(none);
+  });
+});
+
+describe('missedResult', () => {
+  const last = result('round-1');
+
+  it('returns the result of a round the page showed, when it was not shown yet', () => {
+    expect(missedResult(last, new Set(['round-1', 'round-2']), new Set())).toBe(last);
+  });
+
+  it('skips a round that finished before the page was opened', () => {
+    expect(missedResult(last, new Set(['round-2']), new Set())).toBeNull();
+  });
+
+  it('skips a result that is already shown or missing', () => {
+    expect(missedResult(last, new Set(['round-1']), new Set(['round-1']))).toBeNull();
+    expect(missedResult(null, new Set(['round-1']), new Set())).toBeNull();
   });
 });
 

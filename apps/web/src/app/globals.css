@@ -1852,7 +1852,7 @@
     outline: 2px solid var(--color-accent);
     outline-offset: -6px;
   }
-  .cargo-qty__value:disabled {
+  .cargo-qty__value[aria-disabled='true'] {
     opacity: 0.5;
   }
   /* «Доступно мест n/N» — Medium 24, белый 50 %, в 12 под плашками; место держит и без раунда. */
@@ -1880,12 +1880,14 @@
   }
   /*
    * Строка под кнопкой — вид .case-info, но длинная строка (условия, итог чужого раунда) переносится, а
-   * не выходит за края: иначе её обрезали бы края .cargo-page. Ссылка «Проверить» — подчёркнута, цвет строки.
+   * не выходит за края: иначе её обрезали бы края .cargo-page; ник победителя одним словом шире строки
+   * переносится по буквам. Ссылка «Проверить» — подчёркнута, цвет строки.
    */
   .cargo-info {
     max-width: 100%;
     white-space: normal;
     text-wrap: balance;
+    overflow-wrap: anywhere;
   }
   .cargo-info__link,
   .cargo-how__link {

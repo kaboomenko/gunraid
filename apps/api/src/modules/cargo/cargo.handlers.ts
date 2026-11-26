@@ -1,4 +1,5 @@
 import { Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from '@nestjs/common';
+import { errorText } from '../../common/pg-errors.js';
 import { OutboxProcessor } from '../outbox/outbox.processor.js';
 import { CargoNotifier } from './cargo.notifier.js';
 import { CargoService } from './cargo.service.js';
@@ -37,7 +38,7 @@ export class CargoHandlers implements OnModuleInit, OnApplicationShutdown {
       s.landed.forEach((l) => this.notifier.finished(l));
       s.opened.forEach((o) => this.notifier.opened(o));
     } catch (err) {
-      this.logger.error(`cargo sweep: ${(err as Error).message}`);
+      this.logger.error(`cargo sweep: ${errorText(err)}`);
     } finally {
       this.running = false;
     }

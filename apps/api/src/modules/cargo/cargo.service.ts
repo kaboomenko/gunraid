@@ -57,6 +57,7 @@ import {
 } from 'drizzle-orm';
 import { DB } from '../../core/tokens.js';
 import { AppError, notFound } from '../../common/app-error.js';
+import { errorText } from '../../common/pg-errors.js';
 import { AuditService } from '../audit/audit.service.js';
 import { CatalogService } from '../catalog/catalog.service.js';
 import { localize } from '../catalog/item-mapper.js';
@@ -389,7 +390,8 @@ export class CargoService {
       } catch (err) {
         // SAVEPOINT откатился, покупка остаётся. Всё — через tx (строка раунда уже заблокирована этой
         // транзакцией), не this.db: иначе второе соединение пула и запись, которая переживёт откат покупки.
-        const msg = (err as Error).message;
+        // Причина без SQL и параметров: в них победитель и исход раунда, который ещё open.
+        const msg = errorText(err);
         this.logger.error(`cargo ${r.id}: landing failed: ${msg}`);
         await tx
           .update(cargoRounds)
@@ -536,7 +538,7 @@ export class CargoService {
         .set({
           landAttempts: sql`${cargoRounds.landAttempts} + 1`,
           lastLandErrorAt: sql`now()`,
-          lastLandError: (err as Error).message.slice(0, 500),
+          lastLandError: errorText(err).slice(0, 500),
         })
         .where(and(eq(cargoRounds.id, roundId), eq(cargoRounds.status, 'open')))
         .catch(() => undefined);
@@ -716,6 +718,10 @@ export class CargoService {
             .where(eq(cargoRounds.id, roundId))
             .for('update', { of: cargoRounds }); // 2. раунд
           if (!row) throw notFound('CARGO_ROUND_NOT_FOUND');
+          // Дальше — канонический id из строки: тот же UUID может прийти прописными (z.string().uuid() их пропускает,
+          // uuid в PostgreSQL сравнивается без учёта регистра), а ref_id и ключ возврата в ledger и entity_id в аудите —
+          // текст; сверка D39 сравнивает ref_id с round_id::text.
+          const id = row.r.id;
           if (row.r.status !== 'open') {
             if (mode.status === 'cancelled') throw new AppError('CARGO_ROUND_NOT_OPEN', 409);
             return { done: null }; // уже закрыт другим воркером
@@ -745,11 +751,11 @@ export class CargoService {
               refundedAt: cargoPurchases.refundedAt,
             })
             .from(cargoPurchases)
-            .where(eq(cargoPurchases.roundId, roundId))
+            .where(eq(cargoPurchases.roundId, id))
             .orderBy(asc(cargoPurchases.seatFrom));
           const sold = row.r.seatsSold;
           if (cargoSeatsSold(purchases) !== sold) {
-            throw new Error(`cargo ${roundId}: seats_sold ${sold} != purchases`);
+            throw new Error(`cargo ${id}: seats_sold ${sold} != purchases`);
           }
           const sums = new Map<string, number>();
           for (const p of purchases) {
@@ -764,8 +770,8 @@ export class CargoService {
               type: 'cargo_refund',
               amount,
               refType: 'cargo_round',
-              refId: roundId,
-              idempotencyKey: `cargo_refund:${roundId}:${userId}`,
+              refId: id,
+              idempotencyKey: `cargo_refund:${id}:${userId}`,
               actorId: mode.status === 'cancelled' ? mode.actorId : null,
               reason: mode.status === 'cancelled' ? mode.reason : null,
               meta: { templateId: row.r.templateId, game: row.game, why: mode.status },
@@ -787,7 +793,7 @@ export class CargoService {
             .set({ refundedAt: sql`now()` })
             .where(
               and(
-                eq(cargoPurchases.roundId, roundId),
+                eq(cargoPurchases.roundId, id),
                 gt(cargoPurchases.paid, 0),
                 isNull(cargoPurchases.refundedAt),
               ),
@@ -808,9 +814,9 @@ export class CargoService {
               cancelledBy: mode.status === 'cancelled' ? mode.actorId : null,
               finishedAt: sql`now()`,
             })
-            .where(eq(cargoRounds.id, roundId))
+            .where(eq(cargoRounds.id, id))
             .returning();
-          if (!closed) throw new Error(`cargo ${roundId}: close failed`);
+          if (!closed) throw new Error(`cargo ${id}: close failed`);
           const next = row.t.isActive ? await this.openRound(tx, row.r.templateId) : null; // 3. шаблон
           if (mode.status === 'cancelled') {
             await this.audit.log(
@@ -818,7 +824,7 @@ export class CargoService {
                 actorId: mode.actorId,
                 action: 'cargo_round.cancel',
                 entityType: 'cargo_round',
-                entityId: roundId,
+                entityId: id,
                 before: { status: 'open', seatsSold: sold },
                 after: {
                   users: refunds.length,
@@ -912,7 +918,7 @@ export class CargoService {
         });
         if (o) opened.push(o);
       } catch (err) {
-        this.logger.error(`cargo template ${t.id}: open round failed: ${(err as Error).message}`);
+        this.logger.error(`cargo template ${t.id}: open round failed: ${errorText(err)}`);
       }
     }
     return opened;
@@ -949,10 +955,18 @@ export class CargoService {
         const out = await this.land(id); // ошибка одного не останавливает остальные; land() сам считает попытки
         if (out && !('notDue' in out)) landed.push(out);
       } catch (err) {
-        this.logger.error(`cargo ${id}: sweep landing failed: ${(err as Error).message}`);
+        this.logger.error(`cargo ${id}: sweep landing failed: ${errorText(err)}`);
       }
     }
-    return { landed, opened: await this.ensureOpenRounds() };
+    // Приземления уже закоммичены, и их событий никто не повторит (раунд не open: ни следующий проход, ни
+    // cargo.deadline его не вернут), поэтому сбой открытия раундов не должен их терять — откроет следующий проход.
+    let opened: CargoOpened[] = [];
+    try {
+      opened = await this.ensureOpenRounds();
+    } catch (err) {
+      this.logger.error(`cargo sweep: open rounds failed: ${errorText(err)}`);
+    }
+    return { landed, opened };
   }
 
   /** Победитель раунда (для inventory:update после покупки последнего места). */

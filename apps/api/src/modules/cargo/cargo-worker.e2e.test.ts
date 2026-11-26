@@ -1,16 +1,17 @@
 import { randomBytes } from 'node:crypto';
-import { Module, type INestApplicationContext } from '@nestjs/common';
+import { Module, type INestApplicationContext, type Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { cargoRounds, cargoTemplates, items, newId, outboxEvents } from '@gunraid/db';
 import type { CargoBuyResultDto } from '@gunraid/shared';
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { CoreModule } from '../../core/core.module.js';
 import { createTestApp } from '../../test/app.js';
 import { testEnv } from '../../test/env.js';
 import { db, gameId, grantGems, newPlayer } from '../../test/fixtures.js';
 import { WorkerModule } from '../../worker.module.js';
+import type { InventoryService } from '../inventory/inventory.service.js';
 import { LedgerModule } from '../ledger/ledger.module.js';
 import { OutboxProcessor } from '../outbox/outbox.processor.js';
 import { CargoHandlers } from './cargo.handlers.js';
@@ -160,6 +161,82 @@ describe('cargo worker (integration)', () => {
     const [landed] = await db(app).select().from(cargoRounds).where(eq(cargoRounds.id, round!.id));
     expect(landed).toMatchObject({ status: 'landed', landReason: 'deadline', winnerId: me.id });
     expect((await openRoundOf(t.id))?.number).toBe(2);
+  });
+
+  it('a failing deadline event keeps the DB cause, not the SQL with the winner (outbox last_error)', async () => {
+    const t = await createTemplate();
+    const round = (await db(app).transaction((tx) => app.get(CargoService).openRound(tx, t.id)))!;
+    const { client, me } = await newPlayer(app, 'cwf');
+    await grantGems(app, me.id, 1_000);
+    const res = await client.post<CargoBuyResultDto>(
+      `/api/v1/games/cs2/cargo/${t.slug}/buy`,
+      { roundId: round.id, count: 1, clientSeed: randomBytes(16).toString('hex') },
+      { 'idempotency-key': crypto.randomUUID() },
+    );
+    expect(res.status).toBe(200);
+    const [ev] = await db(app)
+      .select({ id: outboxEvents.id })
+      .from(outboxEvents)
+      .where(
+        and(
+          eq(outboxEvents.type, 'cargo.deadline'),
+          sql`${outboxEvents.payload}->>'roundId' = ${round.id}`,
+          isNull(outboxEvents.processedAt),
+        ),
+      );
+    const event = async () =>
+      (await db(app).select().from(outboxEvents).where(eq(outboxEvents.id, ev!.id)))[0];
+
+    // Настоящая ошибка БД в воркере: приза нет (внешний ключ user_items → items); единственный покупатель — победитель,
+    // его id есть в параметрах упавшего запроса. Подмена — до срока раунда: фоновый тикер воркера не приземлит его раньше.
+    const inventory = (worker.get(CargoService) as unknown as { inventory: InventoryService })
+      .inventory;
+    const original = inventory.grant.bind(inventory);
+    const grant = vi
+      .spyOn(inventory, 'grant')
+      .mockImplementation((tx, input) =>
+        original(tx, input.sourceId === round.id ? { ...input, itemId: newId() } : input),
+      );
+    const processor = worker.get(OutboxProcessor);
+    const warn = vi.spyOn((processor as unknown as { logger: Logger }).logger, 'warn');
+    let warned: string[];
+    let failed: Awaited<ReturnType<typeof event>>;
+    let stuck: typeof cargoRounds.$inferSelect | undefined;
+    try {
+      await db(app)
+        .update(cargoRounds)
+        .set({ endsAt: sql`now() - interval '1 second'` })
+        .where(eq(cargoRounds.id, round.id));
+      await db(app)
+        .update(outboxEvents)
+        .set({ availableAt: sql`now() - interval '1 second'` })
+        .where(eq(outboxEvents.id, ev!.id));
+      expect(
+        await until(
+          async () => ((await event())?.attempts ?? 0) > 0,
+          () => processor.tick(),
+        ),
+      ).toBe(true);
+      // До снятия подмены: иначе фоновый тик воркера может успеть приземлить раунд.
+      failed = await event();
+      [stuck] = await db(app).select().from(cargoRounds).where(eq(cargoRounds.id, round.id));
+      warned = warn.mock.calls
+        .map(([m]) => String(m))
+        .filter((m) => m.includes(`cargo.deadline#${ev!.id}`));
+    } finally {
+      grant.mockRestore();
+      warn.mockRestore();
+    }
+    expect(stuck?.status).toBe('open');
+    expect(warned.length).toBeGreaterThan(0);
+    for (const text of [failed?.lastError, stuck?.lastLandError, ...warned]) {
+      expect(text).toMatch(/\[23503\] insert or update on table "user_items" violates foreign key/);
+      expect(text).not.toMatch(/Failed query|params:|values \(/);
+      expect(text).not.toContain(me.id);
+    }
+    await app.get(CargoService).land(round.id);
+    const [landed] = await db(app).select().from(cargoRounds).where(eq(cargoRounds.id, round.id));
+    expect(landed).toMatchObject({ status: 'landed', winnerId: me.id });
   });
 
   it('the ticker opens a round for an active template without one', async () => {

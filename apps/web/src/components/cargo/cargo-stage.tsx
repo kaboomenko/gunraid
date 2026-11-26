@@ -25,7 +25,9 @@ import {
   cargoImageSrcSet,
   clampCount,
   formatSeatRanges,
+  mergeBuyResult,
   mergeSeats,
+  missedResult,
   randomClientSeed,
   type CargoNeighbours,
 } from '@/lib/cargo-page';
@@ -155,6 +157,8 @@ export function CargoStage({
    * результата нужны места показанного раунда.
    */
   const seatsByRound = useRef(new Map<string, number>());
+  /** Раунды, которые страница показывала: итог такого раунда в данных груза без события — пропущенный. */
+  const seenRounds = useRef(new Set<string>());
   /**
    * Раунд, в котором сейчас идёт покупка, и итог этого раунда, пришедший по сокету раньше ответа: сервер
    * рассылает события сразу после коммита, и покупатель последнего места иначе увидел бы итог «зрителем»
@@ -164,24 +168,31 @@ export function CargoStage({
   const deferredResult = useRef<CargoResultDto | null>(null);
   const mySeats = a.mySeats;
   useEffect(() => {
-    if (roundId && signedIn) seatsByRound.current.set(roundId, mySeats);
+    if (!roundId) return;
+    seenRounds.current.add(roundId);
+    if (signedIn) seatsByRound.current.set(roundId, mySeats);
   }, [roundId, signedIn, mySeats]);
 
   // Количество всегда в пределах 1…сколько можно взять (свободные, лимит); у бесплатного — одно место.
   const qty = free ? 1 : clampCount(count, maxBuy);
+  // Сколько можно взять, стало меньше (чужие покупки, лимит, приземление) — урезается и сам выбор: иначе в
+  // новом раунде поле без действий игрока вернулось бы к прежнему, большему числу.
+  useEffect(() => {
+    setCount((c) => clampCount(c, maxBuy));
+  }, [maxBuy]);
   const changeCount = (n: number) => {
     setNote(null);
     setCount(n);
   };
 
   const showResult = useCallback(
-    (r: CargoResultDto, seats?: number) => {
+    (r: CargoResultDto) => {
       if (shownRounds.current.has(r.roundId)) return;
       shownRounds.current.add(r.roundId);
       if (closingRound.current === r.roundId) closingRound.current = null;
       // Раунд закрыт — у шаблона новый раунд (или его нет): доступность перечитываем.
       void qc.invalidateQueries({ queryKey: ['cargo', game, slug] });
-      const mine = seats ?? seatsByRound.current.get(r.roundId) ?? 0;
+      const mine = seatsByRound.current.get(r.roundId) ?? 0;
       const won = meShortId !== null && r.winner?.shortId === meShortId;
       const participant = mine > 0 || won;
       // Не участник и мест не покупали — показывать нечего: сразу новый раунд.
@@ -282,6 +293,16 @@ export function CargoStage({
     else setPhase('idle');
   }, [phase, roundId, lastResult, showResult]);
 
+  // Раунд, который страница показывала, завершился без события итога (сокет лежал, телефон спал): после
+  // переподключения итог берётся из данных груза — как если бы событие пришло.
+  useEffect(() => {
+    if (phase !== 'idle') return;
+    const missed = missedResult(lastResult, seenRounds.current, shownRounds.current);
+    if (!missed) return;
+    if (buyingRound.current === missed.roundId) deferredResult.current ??= missed;
+    else showResult(missed);
+  }, [phase, lastResult, showResult]);
+
   const detailFilter = { queryKey: ['cargo', game, slug] };
   useRoom(WS_ROOMS.cargo(game));
   useSocketEvent<CargoSeatsEventDto>(WS_EVENTS.cargoSeats, (e) => {
@@ -336,16 +357,15 @@ export function CargoStage({
         { roundId: round.id, count: qty, clientSeed: randomClientSeed() },
         { idempotencyKey: newIdempotencyKey() },
       );
-      qc.setQueriesData<CargoDetailDto>(detailFilter, (x) => {
-        if (!x?.round || x.round.id !== res.roundId) return x;
-        // Пока шёл ответ, сокет мог принести чужие покупки — проданных мест не меньше известного.
-        const seatsSold = Math.max(res.round.seatsSold, x.round.seatsSold);
-        return { ...x, round: { ...res.round, seatsSold }, availability: res.availability };
-      });
+      // Места этой покупки — сразу, а не эффектом после перерисовки: итог раунда может застать страницу
+      // раньше (отложенный — в finally, по сокету — до эффекта), и участник без них увидел бы строку зрителя.
+      seatsByRound.current.set(res.roundId, res.availability.mySeats);
+      // Пока шёл ответ, сокет мог принести чужие покупки — они не теряются (см. mergeBuyResult).
+      qc.setQueriesData<CargoDetailDto>(detailFilter, (x) => (x ? mergeBuyResult(x, res) : x));
       invalidateWallet();
       toast.success(t('cargo.bought', { count: res.count, from: res.seatFrom, to: res.seatTo }));
       // Эта покупка заняла последнее место — груз приземлился в той же транзакции.
-      if (res.result) showResult(res.result, res.availability.mySeats);
+      if (res.result) showResult(res.result);
     } catch (err) {
       if (err instanceof ApiError && err.code === 'INSUFFICIENT_BALANCE') {
         toast.error(t('cargo.notEnough'));
@@ -357,8 +377,9 @@ export function CargoStage({
     } finally {
       setBusy(false);
       buyingRound.current = null;
-      // Итог пришёл по сокету во время покупки: показан по ответу — повтор отсеется; покупка не прошла —
-      // показываем по местам, которые страница уже знает (нет мест — строкой для зрителя).
+      // Итог пришёл во время покупки (по сокету или в данных груза): показан по ответу — повтор отсеется;
+      // иначе — по местам, которые страница знает: с местами этой покупки, если она прошла (раунд распродал
+      // другой игрок); покупка не прошла и мест нет — строкой для зрителя.
       const deferred = deferredResult.current;
       deferredResult.current = null;
       if (deferred) showResult(deferred);
@@ -534,11 +555,14 @@ export function CargoStage({
             <OpenIcon className="shrink-0" />
             {free ? (
               <span>{t('cargo.joinFree')}</span>
-            ) : (
+            ) : round ? (
               <span>
                 {t('cargo.buyFor', { count: qty })}{' '}
                 <span className="cargo-buy__sum">{formatGems(total)}</span>
               </span>
+            ) : (
+              // Без раунда цены места нет (в данных груза её нет), а «за 0» ввело бы в заблуждение.
+              <span>{t('cargo.buy')}</span>
             )}
           </button>
           <p

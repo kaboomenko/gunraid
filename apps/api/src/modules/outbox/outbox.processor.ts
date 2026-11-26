@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { outboxEvents, type Db } from '@gunraid/db';
 import { eq, sql } from 'drizzle-orm';
+import { errorText } from '../../common/pg-errors.js';
 import { DB } from '../../core/tokens.js';
 
 export type OutboxHandler = (payload: Record<string, unknown>) => Promise<void>;
@@ -83,14 +84,14 @@ export class OutboxProcessor implements OnModuleInit, OnApplicationShutdown {
         } catch (err) {
           const attempts = row.attempts + 1;
           const backoffSec = Math.min(3600, 2 ** attempts);
-          this.logger.warn(
-            `outbox ${row.type}#${row.id} failed (attempt ${attempts}): ${(err as Error).message}`,
-          );
+          // Причина без SQL и параметров упавшего запроса (там бывают id игроков и исход розыгрыша).
+          const reason = errorText(err);
+          this.logger.warn(`outbox ${row.type}#${row.id} failed (attempt ${attempts}): ${reason}`);
           await this.db
             .update(outboxEvents)
             .set({
               attempts,
-              lastError: (err as Error).message.slice(0, 500),
+              lastError: reason.slice(0, 500),
               availableAt: sql`now() + make_interval(secs => ${backoffSec})`,
             })
             .where(eq(outboxEvents.id, Number(row.id)));
@@ -98,7 +99,7 @@ export class OutboxProcessor implements OnModuleInit, OnApplicationShutdown {
       }
       return rows.length;
     } catch (err) {
-      this.logger.error(`outbox tick failed: ${(err as Error).message}`);
+      this.logger.error(`outbox tick failed: ${errorText(err)}`);
       return 0;
     } finally {
       this.running = false;
