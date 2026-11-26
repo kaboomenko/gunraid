@@ -6,7 +6,18 @@ import { siteUrl } from '@/lib/site';
 // Собираем при запросе: каталог и кейсы живут в БД и меняются из админки.
 export const dynamic = 'force-dynamic';
 
-const LEGAL = ['terms', 'privacy', 'cookies', 'rules', 'age', 'responsible'];
+const LEGAL = [
+  'terms',
+  'privacy',
+  'payments',
+  'refunds',
+  'cookies',
+  'bonuses',
+  'giveaways',
+  'rules',
+  'age',
+  'responsible',
+];
 const GAME_PAGES = ['', '/upgrade', '/contract', '/battles', '/bonuses', '/leaderboard', '/items'];
 const MAX_ITEM_PAGES = 10;
 

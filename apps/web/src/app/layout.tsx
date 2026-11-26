@@ -71,7 +71,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               </div>
               <SiteHeader />
               <main className="min-h-[60vh] flex-1 px-3 pt-4 md:px-6 md:pt-6">{children}</main>
-              <SiteFooter supportUrl={config.supportTelegramUrl} />
+              <SiteFooter />
             </div>
             <MobileTabBar />
             <LoginModal />

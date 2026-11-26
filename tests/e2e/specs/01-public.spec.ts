@@ -36,10 +36,38 @@ test.describe('Публичная часть', () => {
     await expect(open).toBeFocused();
   });
 
+  test('футер: разделы ведут в текущую игру, документы открываются @mobile', async ({ page }) => {
+    await page.goto('/standoff2');
+    // Баннер cookie на телефоне закрывает низ страницы — сначала отвечаем на него.
+    await page.getByTestId('cookie-banner').getByRole('button', { name: 'Принять все' }).click();
+    const footer = page.getByTestId('site-footer');
+    await footer.scrollIntoViewIfNeeded();
+    await expect(footer.getByRole('link', { name: 'Апгрейд' })).toHaveAttribute(
+      'href',
+      '/standoff2/upgrade',
+    );
+    await expect(footer.getByRole('link')).toHaveCount(12);
+    await expect(footer).toContainText(
+      `© ${new Date().getFullYear()} GunRaid. Все права защищены.`,
+    );
+    await footer.getByRole('link', { name: 'Правила розыгрышей' }).click();
+    await expect(page).toHaveURL(/\/legal\/giveaways$/);
+    await expect(page.getByTestId('legal-doc')).toContainText('Правила розыгрышей');
+  });
+
   test('правовые страницы и FAQ @mobile', async ({ page }) => {
     await page.goto('/legal/terms');
     await expect(page.getByTestId('legal-doc')).toContainText('TODO: юрист');
-    for (const slug of ['privacy', 'rules', 'age', 'responsible']) {
+    for (const slug of [
+      'privacy',
+      'payments',
+      'refunds',
+      'bonuses',
+      'giveaways',
+      'rules',
+      'age',
+      'responsible',
+    ]) {
       const res = await page.goto(`/legal/${slug}`);
       expect(res?.status()).toBe(200);
       await expect(page.getByTestId('legal-doc')).toBeVisible();

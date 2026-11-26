@@ -5,7 +5,19 @@ import { notFound } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { pageMeta } from '@/lib/seo';
 
-const SLUGS = ['terms', 'privacy', 'cookies', 'rules', 'age', 'responsible'] as const;
+// Порядок — как в футере; «Правила сайта», «18+» и «Ответственная игра» — в общем списке внизу страницы.
+const SLUGS = [
+  'terms',
+  'privacy',
+  'payments',
+  'refunds',
+  'cookies',
+  'bonuses',
+  'giveaways',
+  'rules',
+  'age',
+  'responsible',
+] as const;
 type Slug = (typeof SLUGS)[number];
 const isSlug = (s: string): s is Slug => (SLUGS as readonly string[]).includes(s);
 

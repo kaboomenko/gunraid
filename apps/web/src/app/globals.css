@@ -1460,6 +1460,141 @@
       transform: none;
     }
   }
+
+  /*
+   * ---------- Футер (макет 1920) ----------
+   * Фон — вертикальный градиент #121117 → #0E0D11. Поля внутрь: сверху 48, слева и справа 72 (планшет —
+   * 48, телефон — 24), снизу 24 (на телефоне — ещё место под нижнее меню). Логотип высотой 40, белый →
+   * 24 → описание и ссылки (Medium 18, белый 30%) → 24 → разделитель 1px → 24 → копирайт по центру.
+   * От 1660px — как в макете: описание у левого поля; разделы сайта и первый столбец документов — два
+   * столбца равной ширины ровно по центру футера; второй столбец документов — у правого поля (строки в нём
+   * по левому краю). Уже середина не помещается между краями: 1280–1659 — описание и три столбца ссылок
+   * в ряд с равными промежутками, планшет — столбцы под описанием, телефон — всё одним столбцом.
+   */
+  /* На телефоне текст 16 — копирайт и длинные названия документов помещаются в строку. */
+  .site-footer {
+    margin-top: 64px;
+    padding: 48px 24px calc(var(--tabbar-h) + 24px);
+    background: linear-gradient(180deg, #121117, #0e0d11);
+    font-size: 16px;
+    font-weight: 500;
+    color: rgb(255 255 255 / 0.3);
+  }
+  .site-footer__top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  .site-footer__logo {
+    height: 40px;
+    justify-self: start;
+    color: #fff;
+  }
+  /* 440 — ширина текстового блока макета: строки переносятся там же, где в макете (предлоги — с неразрывным пробелом). */
+  .site-footer__about {
+    max-width: 440px;
+  }
+  .site-footer__mid {
+    display: grid;
+    gap: 24px;
+  }
+  /* Ссылки — с шагом 25, как в макете: строка после обрезки по прописным — 12,6, между строками — 12,4. */
+  .site-footer__list {
+    display: flex;
+    flex-direction: column;
+    gap: 12.4px;
+  }
+  .site-footer__link {
+    color: inherit;
+    transition: color 0.15s ease;
+  }
+  .site-footer__link:hover,
+  .site-footer__link:focus-visible {
+    color: rgb(255 255 255 / 0.6);
+  }
+  /*
+   * Разделитель по ширине содержимого: белый 0% → 100% → 0%. В макете у слоя ещё общая прозрачность —
+   * в середине линия светлее фона всего на ~10% белого, поэтому opacity 0.1.
+   */
+  .site-footer__rule {
+    height: 1px;
+    margin-top: 24px;
+    background: linear-gradient(90deg, rgb(255 255 255 / 0), #fff 50%, rgb(255 255 255 / 0));
+    opacity: 0.1;
+  }
+  .site-footer__copy {
+    margin-top: 24px;
+    text-align: center;
+  }
+  @media (min-width: 640px) {
+    .site-footer {
+      font-size: 18px;
+    }
+    .site-footer__top {
+      grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+      column-gap: 48px;
+    }
+    .site-footer__logo,
+    .site-footer__about {
+      grid-column: 1 / -1;
+    }
+    .site-footer__mid {
+      display: contents;
+    }
+  }
+  @media (min-width: 768px) {
+    .site-footer {
+      padding: 48px 48px 24px;
+    }
+  }
+  /* Описание и три столбца ссылок — во второй строке сетки, в порядке разметки. */
+  @media (min-width: 1280px) {
+    .site-footer {
+      padding-inline: 72px;
+    }
+    .site-footer__top {
+      grid-template-columns: minmax(0, 340px) auto auto auto;
+      justify-content: space-between;
+      column-gap: 24px;
+    }
+    .site-footer__logo {
+      grid-area: 1 / 1;
+    }
+    .site-footer__about {
+      grid-area: 2 / 1;
+    }
+    .site-footer__mid > *,
+    .site-footer__end {
+      grid-row: 2;
+    }
+  }
+  @media (min-width: 1660px) {
+    .site-footer__top {
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      justify-content: normal;
+      column-gap: 0;
+    }
+    /* Два столбца равной ширины (по самому широкому), середина группы — ровно по центру футера. */
+    .site-footer__mid {
+      grid-area: 2 / 2;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0;
+    }
+    .site-footer__mid > * {
+      grid-row: auto;
+    }
+    .site-footer__end {
+      grid-area: 2 / 3;
+      justify-self: end;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .site-footer__link {
+      transition: none;
+    }
+  }
 }
 
 /* Размеры сцены считаются в px там, где объявлены (cqw — от ширины сцены), и наследуются как готовые. */

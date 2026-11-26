@@ -1,101 +1,60 @@
-import { Send } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { FooterGameLinks } from './footer-game-links';
 
-export async function SiteFooter({ supportUrl }: { supportUrl: string | null }) {
+/** Документы — два столбца справа от разделов сайта, порядок как в макете. */
+const DOCS = [
+  [
+    { href: '/legal/terms', key: 'offer' },
+    { href: '/legal/privacy', key: 'privacy' },
+    { href: '/legal/payments', key: 'payments' },
+    { href: '/legal/refunds', key: 'refunds' },
+  ],
+  [
+    { href: '/legal/cookies', key: 'cookies' },
+    { href: '/legal/bonuses', key: 'bonusRules' },
+    { href: '/legal/giveaways', key: 'giveaways' },
+    { href: '/provably-fair', key: 'fair' },
+  ],
+] as const;
+
+/**
+ * Футер по макету: логотип, под ним описание, справа разделы сайта и документы, ниже разделитель
+ * и копирайт. Раскладка и размеры — классы .site-footer* в globals.css.
+ */
+export async function SiteFooter() {
   const t = await getTranslations('footer');
   const year = new Date().getFullYear();
-  const docs = [
-    { href: '/legal/terms', label: t('terms') },
-    { href: '/legal/privacy', label: t('privacy') },
-    { href: '/legal/cookies', label: t('cookies') },
-    { href: '/legal/rules', label: t('rules') },
-    { href: '/legal/age', label: t('adult') },
-    { href: '/legal/responsible', label: t('responsible') },
-  ];
+  const [docs, docsEnd] = DOCS;
   return (
-    <footer className="mt-16 border-t border-line bg-surface-1/60 pb-[calc(var(--tabbar-h)+16px)] md:pb-0">
-      <div className="mx-auto grid max-w-[1440px] gap-8 px-4 py-10 sm:px-5 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
-        <div className="space-y-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo.svg" alt="GunRaid" className="h-7 w-auto" />
-          <p className="max-w-sm text-sm text-muted">{t('about')}</p>
-          <div className="flex items-center gap-3">
-            <span className="clip-cut grid h-9 w-11 place-items-center bg-danger font-display text-sm font-extrabold text-bg [--cut:6px]">
-              18+
-            </span>
-            <p className="text-xs text-dim">{t('disclaimer')}</p>
-          </div>
-        </div>
-        <div>
-          <div className="mb-3 font-display text-xs font-bold uppercase tracking-widest text-dim">
-            {t('sections.site')}
-          </div>
-          <ul className="space-y-2 text-sm">
-            <li>
-              <Link className="text-muted hover:text-text" href="/items">
-                {t('items')}
-              </Link>
-            </li>
-            <li>
-              <Link className="text-muted hover:text-text" href="/bonuses">
-                {t('bonuses')}
-              </Link>
-            </li>
-            <li>
-              <Link className="text-muted hover:text-text" href="/leaderboard">
-                {t('leaderboard')}
-              </Link>
-            </li>
-            <li>
-              <Link className="text-muted hover:text-text" href="/provably-fair">
-                {t('fair')}
-              </Link>
-            </li>
-            <li>
-              <Link className="text-muted hover:text-text" href="/faq">
-                {t('faq')}
-              </Link>
-            </li>
-          </ul>
-        </div>
-        <div>
-          <div className="mb-3 font-display text-xs font-bold uppercase tracking-widest text-dim">
-            {t('sections.docs')}
-          </div>
-          <ul className="space-y-2 text-sm">
+    <footer className="site-footer" data-testid="site-footer">
+      <div className="site-footer__top">
+        <span className="logo-mask site-footer__logo" role="img" aria-label={t('logo')} />
+        <p className="site-footer__about">{t('about')}</p>
+        <div className="site-footer__mid">
+          <FooterGameLinks />
+          <ul className="site-footer__list">
             {docs.map((d) => (
               <li key={d.href}>
-                <Link className="text-muted hover:text-text" href={d.href}>
-                  {d.label}
+                <Link href={d.href} className="site-footer__link">
+                  {t(d.key)}
                 </Link>
               </li>
             ))}
           </ul>
         </div>
-        <div>
-          <div className="mb-3 font-display text-xs font-bold uppercase tracking-widest text-dim">
-            {t('sections.help')}
-          </div>
-          {supportUrl ? (
-            <a
-              href={supportUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="clip-cut inline-flex h-10 items-center gap-2 bg-surface-3 px-4 text-sm font-semibold transition hover:bg-line-strong [--cut:7px]"
-            >
-              <Send size={16} className="text-accent" /> {t('support')}
-            </a>
-          ) : (
-            <Link className="text-sm text-muted hover:text-text" href="/faq">
-              {t('faq')}
-            </Link>
-          )}
-        </div>
+        <ul className="site-footer__list site-footer__end">
+          {docsEnd.map((d) => (
+            <li key={d.href}>
+              <Link href={d.href} className="site-footer__link">
+                {t(d.key)}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
-      <div className="border-t border-line py-4 text-center text-xs text-dim">
-        {t('rights', { year })}
-      </div>
+      <div className="site-footer__rule" aria-hidden="true" />
+      <p className="site-footer__copy">{t('rights', { year })}</p>
     </footer>
   );
 }
