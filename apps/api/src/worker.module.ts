@@ -3,6 +3,7 @@ import type { Env } from './config/env.js';
 import { CoreModule } from './core/core.module.js';
 import { BattlesWorkerModule } from './modules/battles/battles-worker.module.js';
 import { BonusesWorkerModule } from './modules/bonuses/bonuses-worker.module.js';
+import { CargoWorkerModule } from './modules/cargo/cargo-worker.module.js';
 import { WithdrawalsWorkerModule } from './modules/withdrawals/withdrawals-worker.module.js';
 import { FeedWorkerModule } from './modules/feed/feed-worker.module.js';
 import { LedgerModule } from './modules/ledger/ledger.module.js';
@@ -19,6 +20,7 @@ export class WorkerModule {
         MaintenanceModule,
         FeedWorkerModule,
         BattlesWorkerModule,
+        CargoWorkerModule,
         BonusesWorkerModule,
         WithdrawalsWorkerModule,
       ],

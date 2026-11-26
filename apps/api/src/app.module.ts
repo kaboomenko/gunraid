@@ -9,6 +9,7 @@ import { CatalogModule } from './modules/catalog/catalog.module.js';
 import { InventoryModule } from './modules/inventory/inventory.module.js';
 import { LedgerModule } from './modules/ledger/ledger.module.js';
 import { BattlesModule } from './modules/battles/battles.module.js';
+import { CargoModule } from './modules/cargo/cargo.module.js';
 import { BonusesModule } from './modules/bonuses/bonuses.module.js';
 import { WithdrawalsModule } from './modules/withdrawals/withdrawals.module.js';
 import { ModesModule } from './modules/modes/modes.module.js';
@@ -43,6 +44,7 @@ export class AppModule {
         CasesModule,
         ModesModule,
         BattlesModule,
+        CargoModule,
         BonusesModule,
         WithdrawalsModule,
       ],

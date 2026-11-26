@@ -23,6 +23,7 @@ export const ITEM_SOURCES = [
   'leaderboard',
   'admin',
   'seed',
+  'cargo',
 ] as const;
 export type ItemSource = (typeof ITEM_SOURCES)[number];
 

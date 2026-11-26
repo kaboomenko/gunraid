@@ -52,7 +52,7 @@
 | PUT | `/fair/client-seed` | U | новый client seed (с ротацией пары) |
 | POST | `/fair/rotate` | U | раскрыть текущий server seed, выдать новую пару |
 | GET | `/fair/seeds?cursor=` | U | раскрытые сиды |
-| GET | `/fair/proof/{type}/{id}` | P | данные для проверки результата (`case_opening`, `upgrade`, `contract`, `wheel_spin`, `battle`) — после раскрытия сида |
+| GET | `/fair/proof/{type}/{id}` | P | данные для проверки результата (`case_opening`, `upgrade`, `contract`, `wheel_spin`, `battle`, `cargo`) — после раскрытия сида |
 
 ## Каталог и кейсы
 
@@ -102,6 +102,32 @@
 | POST | `/battles/{id}/bots` | U | создатель заполняет свободные места ботами; `{clientSeed?}` — сид из браузера для ботов |
 | POST | `/battles/{id}/cancel` | U | создатель до старта; возврат всем участникам |
 | GET | `/fair/proof/battle/{id}` | P | сиды участников, client seed баттла, составы кейсов и билеты по раундам, бросок ничьей |
+
+## Ивентовые грузы
+
+Груз — розыгрыш одного приза среди купленных мест. Шаблон (вид груза) задаёт приз, число мест N, цену места, лимит
+на игрока, длительность и условия; раунд — текущий розыгрыш шаблона со снимком этих значений. Места нумеруются
+подряд 1…N в порядке покупки; раунд приземляется сразу при распродаже или по таймеру (если продано ≥ 1 места и не
+меньше минимума продаж, если он задан); победитель — владелец выигравшего места среди проданных.
+
+| Метод | Путь | Доступ | Что делает |
+|---|---|---|---|
+| GET | `/games/{game}/cargo` | P | грузы с открытым раундом (по порядку): `{items: CargoCardDto[], serverTime}` |
+| GET | `/games/{game}/cargo/{slug}` | P (U — своя доступность) | шаблон, текущий раунд (`round`, хэш server seed с первой секунды), `noRound` (`PRIZE_UNAVAILABLE` / `STARTING`), доступность покупки (`reason`, `maxBuy`, свои места и client seed'ы), последний итог `lastResult`, `serverTime`; 404 `CARGO_NOT_FOUND` — нет шаблона или он выключен и раунда нет |
+| POST | `/games/{game}/cargo/{slug}/buy` | U, IK | `{roundId, count: 1..10 000, clientSeed}` → места `seatFrom…seatTo`, списание, раунд после покупки; если покупка заняла последнее место — `result` (итог) и `next` (новый раунд) |
+| GET | `/fair/proof/cargo/{id}` | P (U — `mine`) | доказательство раунда: покупки по порядку мест (без покупателей), server seed после завершения, client seed раунда, выигравшее место или `voidSeat`; лимит `general` |
+
+`clientSeed` в покупке **обязателен** (`^[A-Za-z0-9_-]{8,64}$`, иначе 400 `VALIDATION_ERROR`): сервер не подставляет
+свой; сайт шлёт случайный. Ответ эхом отдаёт `clientSeed` и `serverSeedHash`, оба пишутся в meta записи ledger.
+
+Ошибки покупки: 403 `CARGO_CONDITIONS_NOT_MET {reason: 'LEVEL', level} | {reason: 'NO_DEPOSIT', days}`;
+402 `INSUFFICIENT_BALANCE`; 404 `CARGO_NOT_FOUND`; 409 `CARGO_ROUND_CLOSED {reason: 'stale' | 'status' | 'deadline'}`
+(не тот раунд, раунд завершён, срок вышел — клиент перечитывает груз), `CARGO_SEATS_LEFT {left}` (без частичной
+продажи), `CARGO_LIMIT_REACHED {limit, mine}`. Доказательство: 404 `CARGO_ROUND_NOT_FOUND`.
+
+Причины `availability.reason`: `LOGIN`, `ADULT`, `LEVEL`, `NO_DEPOSIT`, `LIMIT`, `SOLD_OUT`, `CLOSED` (срок вышел,
+приземление вот-вот), `UNAVAILABLE` (раунда нет). `maxBuy` — сколько мест можно взять за раз (для гостя — как будто
+вошёл; для `ADULT` / `LEVEL` / `NO_DEPOSIT` — как без этих условий: от него шанс на карточке приза).
 
 ## Бонусы
 
@@ -165,17 +191,21 @@
 
 ## WebSocket (Socket.IO, `/socket.io`)
 
-Клиент → сервер: `subscribe` / `unsubscribe` на комнаты `feed:{game}`, `battles:{game}`, `battle:{id}`, `case:{id}`. Комната `user:{id}` подключается автоматически после входа. Никаких игровых действий через WS.
+Клиент → сервер: `subscribe` / `unsubscribe` на комнаты `feed:{game}`, `battles:{game}`, `battle:{id}`, `case:{id}`,
+`cargo:{game}`. Комната `user:{id}` подключается автоматически после входа. Никаких игровых действий через WS.
 
 | Событие (сервер → клиент) | Комната | Данные |
 |---|---|---|
-| `feed:drop` | `feed:{game}` | игрок, предмет, источник (кейс / апгрейд / контракт / баттл) |
+| `feed:drop` | `feed:{game}` | игрок, предмет, источник (кейс / апгрейд / контракт / баттл / колесо / груз) |
 | `stats:update` | все | онлайн, открыто кейсов |
 | `case:supply` | `case:{id}` | остаток тиража |
 | `battles:upsert`, `battles:remove` | `battles:{game}` | изменения списка лобби |
 | `battle:state` | `battle:{id}` | полное состояние (`BattleDto`): участники, статус, `startsAt` |
 | `battle:round` | `battle:{id}` | дропы раунда и `spinStartAt` (приходит за 1 с до старта вращения) |
 | `battle:finished` | `battle:{id}` | итоговое состояние: победители, выигрыши, раскрытый server seed |
+| `cargo:seats` | `cargo:{game}` | `{game, templateId, roundId, seatsSold, seatsTotal}` — после каждой покупки |
+| `cargo:result` | `cargo:{game}` | `{game, slug, result: CargoResultDto}` — раунд приземлился (победитель, место), закрыт без победителя или отменён |
+| `cargo:round` | `cargo:{game}` | `{game, templateId, slug, round: CargoRoundDto}` — начался новый раунд шаблона |
 | `balance:update` | `user:{id}` | новый баланс |
 | `inventory:update` | `user:{id}` | изменения инвентаря |
 | `notification:new` | `user:{id}` | уведомление |

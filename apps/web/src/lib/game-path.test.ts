@@ -14,6 +14,9 @@ describe('switchGamePath', () => {
   it('drops entity pages that do not exist in another game', () => {
     expect(switchGamePath('/standoff2/case/some-case', 'cs2', GAMES)).toBe('/cs2');
     expect(switchGamePath('/standoff2/battles/0190-uuid', 'cs2', GAMES)).toBe('/cs2/battles');
+    // Грузы у игр свои: со страницы груза — к грузам другой игры (там редирект на первый).
+    expect(switchGamePath('/standoff2/cargo/light', 'cs2', GAMES)).toBe('/cs2/cargo');
+    expect(switchGamePath('/cs2/cargo', 'standoff2', GAMES)).toBe('/standoff2/cargo');
   });
 
   it('goes to the game home from non-game pages', () => {

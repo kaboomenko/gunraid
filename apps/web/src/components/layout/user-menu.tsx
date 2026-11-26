@@ -6,6 +6,7 @@ import { Backpack, Gift, LogOut, Settings, Shield, Trophy, User } from 'lucide-r
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { CargoIcon } from '@/components/icons/design-icons';
 import { Avatar } from '@/components/ui/avatar';
 import {
   Dropdown,
@@ -73,6 +74,12 @@ export function UserMenu({ me, large }: { me: MeDto; large?: boolean }) {
         <DropdownItem asChild>
           <Link href={`/${game}/bonuses`}>
             <Gift size={16} /> {t('nav.bonuses')}
+          </Link>
+        </DropdownItem>
+        {/* «Грузы» есть и в шапке, но только от 1024px: на телефоне и планшете — здесь (и в футере). */}
+        <DropdownItem asChild>
+          <Link href={`/${game}/cargo`}>
+            <CargoIcon size={16} /> {t('nav.cargo')}
           </Link>
         </DropdownItem>
         <DropdownItem asChild>

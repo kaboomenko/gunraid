@@ -15,6 +15,7 @@ export * from './cases.js';
 export * from './fair.js';
 export * from './modes.js';
 export * from './battles.js';
+export * from './cargo.js';
 export * from './bonuses.js';
 export * from './withdrawals.js';
 export * from './admin.js';

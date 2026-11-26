@@ -34,7 +34,14 @@ export function BalancePill({ balance, large }: { balance: number; large?: boole
         aria-label={t('balance')}
         data-testid="balance"
       >
-        {large ? (
+        {large && balance >= 1_000_000 ? (
+          // До 1280px семизначный баланс не помещается в шапку рядом с меню (на 1024 правый блок выходил
+          // на 8–24 px за поле плашки): там он сокращён — «1.23M», с 1280px — полностью.
+          <>
+            <GemAmount value={balance} size="xxl" compact className="xl:hidden" />
+            <GemAmount value={balance} size="xxl" className="hidden xl:inline-flex" />
+          </>
+        ) : large ? (
           <GemAmount value={balance} size="xxl" />
         ) : (
           <GemAmount value={balance} size="sm" compact />

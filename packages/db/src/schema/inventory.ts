@@ -34,6 +34,7 @@ export const ITEM_SOURCES = [
   'leaderboard',
   'admin',
   'seed',
+  'cargo',
 ] as const;
 
 export const userItemStatusEnum = pgEnum('user_item_status', USER_ITEM_STATUSES);

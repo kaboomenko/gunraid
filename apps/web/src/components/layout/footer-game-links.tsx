@@ -9,6 +9,7 @@ const ITEMS = [
   { key: 'upgrade', path: '/upgrade' },
   { key: 'contract', path: '/contract' },
   { key: 'battles', path: '/battles' },
+  { key: 'cargo', path: '/cargo' },
 ] as const;
 
 /** Разделы сайта в футере: футер общий для всех страниц, а ссылки ведут в текущую игру. */

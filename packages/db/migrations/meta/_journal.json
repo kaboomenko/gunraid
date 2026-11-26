@@ -85,6 +85,13 @@
       "when": 1795642449161,
       "tag": "0011_case_adrenaline_mockup_catalog",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795709765869,
+      "tag": "0012_cargo",
+      "breakpoints": true
     }
   ]
 }

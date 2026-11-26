@@ -1471,6 +1471,656 @@
   }
 
   /*
+   * ---------- Страница груза (макет 1920) ----------
+   * Сцена на всю ширину экрана: .cargo-page снимает поля страницы (12 / 24), всё, что выходит за края
+   * (фон 1920, тень), обрезается её краями. Верхнее поле на низком окне сжимается, как у .case-page, но
+   * не меньше 24: «Ё» над названием выходит над обрезанным блоком на ~16 px. Вычитаемое — высота от верха
+   * окна до низа строки под кнопкой при поле 24 плюс 24 воздуха: замер на 768 — 1325 + 24 ≈ 1350, на
+   * 1920 — 1584 + 24 ≈ 1609 (getBoundingClientRect у .cargo-info). Секция выше 1080
+   * по замыслу макета (≈ 1300 px до кнопки), поэтому на 1920×1080 поле — 24: кнопка на первый экран не
+   * попадает и не должна.
+   */
+  .cargo-page {
+    position: relative;
+    isolation: isolate;
+    overflow: clip;
+    margin-inline: -12px;
+    padding: 24px 12px 0;
+  }
+  @media (min-width: 768px) {
+    .cargo-page {
+      margin-inline: -24px;
+      padding: clamp(24px, 100svh - 1350px, 56px) 24px 0;
+    }
+  }
+  /* Вместе с полем страницы — до 120, как над названием кейса. */
+  @media (min-width: 1280px) {
+    .cargo-page {
+      padding-top: clamp(24px, 100svh - 1609px, 96px);
+    }
+  }
+
+  /*
+   * Фигурные плашки груза — один срез из шаблона .shape: левый верхний (цена места) или правый нижний
+   * (выбор количества); остальные углы скруглены, как у шаблона (16 при высоте 72). Высота — через --h.
+   */
+  .cargo-shape-tl,
+  .cargo-shape-br {
+    --h: 72px;
+    --u: calc(var(--h) / 72);
+    height: var(--h);
+  }
+  .cargo-shape-tl {
+    clip-path: polygon(
+      calc(var(--u) * 40.794) 0,
+      calc(100% - var(--u) * 16) 0,
+      calc(100% - var(--u) * 11.859) calc(var(--u) * 0.545),
+      calc(100% - var(--u) * 8) calc(var(--u) * 2.144),
+      calc(100% - var(--u) * 4.686) calc(var(--u) * 4.686),
+      calc(100% - var(--u) * 2.144) calc(var(--u) * 8),
+      calc(100% - var(--u) * 0.545) calc(var(--u) * 11.859),
+      100% calc(var(--u) * 16),
+      100% calc(var(--u) * 56),
+      calc(100% - var(--u) * 0.545) calc(var(--u) * 60.141),
+      calc(100% - var(--u) * 2.144) calc(var(--u) * 64),
+      calc(100% - var(--u) * 4.686) calc(var(--u) * 67.314),
+      calc(100% - var(--u) * 8) calc(var(--u) * 69.856),
+      calc(100% - var(--u) * 11.859) calc(var(--u) * 71.455),
+      calc(100% - var(--u) * 16) 100%,
+      calc(var(--u) * 16) 100%,
+      calc(var(--u) * 11.859) calc(var(--u) * 71.455),
+      calc(var(--u) * 8) calc(var(--u) * 69.856),
+      calc(var(--u) * 4.686) calc(var(--u) * 67.314),
+      calc(var(--u) * 2.144) calc(var(--u) * 64),
+      calc(var(--u) * 0.545) calc(var(--u) * 60.141),
+      0 calc(var(--u) * 56),
+      0 calc(var(--u) * 40.794),
+      calc(var(--u) * 0.545) calc(var(--u) * 36.653),
+      calc(var(--u) * 2.144) calc(var(--u) * 32.794),
+      calc(var(--u) * 4.686) calc(var(--u) * 29.48),
+      calc(var(--u) * 29.48) calc(var(--u) * 4.686),
+      calc(var(--u) * 32.794) calc(var(--u) * 2.144),
+      calc(var(--u) * 36.653) calc(var(--u) * 0.545),
+      calc(var(--u) * 40.794) 0
+    );
+  }
+  .cargo-shape-br {
+    clip-path: polygon(
+      calc(var(--u) * 16) 0,
+      calc(100% - var(--u) * 16) 0,
+      calc(100% - var(--u) * 11.859) calc(var(--u) * 0.545),
+      calc(100% - var(--u) * 8) calc(var(--u) * 2.144),
+      calc(100% - var(--u) * 4.686) calc(var(--u) * 4.686),
+      calc(100% - var(--u) * 2.144) calc(var(--u) * 8),
+      calc(100% - var(--u) * 0.545) calc(var(--u) * 11.859),
+      100% calc(var(--u) * 16),
+      100% calc(var(--u) * 31.206),
+      calc(100% - var(--u) * 0.545) calc(var(--u) * 35.347),
+      calc(100% - var(--u) * 2.144) calc(var(--u) * 39.206),
+      calc(100% - var(--u) * 4.686) calc(var(--u) * 42.52),
+      calc(100% - var(--u) * 29.48) calc(var(--u) * 67.314),
+      calc(100% - var(--u) * 32.794) calc(var(--u) * 69.856),
+      calc(100% - var(--u) * 36.653) calc(var(--u) * 71.455),
+      calc(100% - var(--u) * 40.794) 100%,
+      calc(var(--u) * 16) 100%,
+      calc(var(--u) * 11.859) calc(var(--u) * 71.455),
+      calc(var(--u) * 8) calc(var(--u) * 69.856),
+      calc(var(--u) * 4.686) calc(var(--u) * 67.314),
+      calc(var(--u) * 2.144) calc(var(--u) * 64),
+      calc(var(--u) * 0.545) calc(var(--u) * 60.141),
+      0 calc(var(--u) * 56),
+      0 calc(var(--u) * 16),
+      calc(var(--u) * 0.545) calc(var(--u) * 11.859),
+      calc(var(--u) * 2.144) calc(var(--u) * 8),
+      calc(var(--u) * 4.686) calc(var(--u) * 4.686),
+      calc(var(--u) * 8) calc(var(--u) * 2.144),
+      calc(var(--u) * 11.859) calc(var(--u) * 0.545),
+      calc(var(--u) * 16) 0
+    );
+  }
+
+  /*
+   * Сцена: контейнер — вся ширина контента W (на 1920 — 1872), раскладка зависит от неё (container
+   * queries, пять ярусов: ≥ 1470 — как макет; 1245–1469 — «Как это работает?» под кнопкой; 976–1244 —
+   * оба боковых блока под кнопкой в ряд; 600–975 — груз ×0.75, блоки столбиком; < 600 — телефон).
+   * Все величины сцены — в долях --cu (1 px макета при грузе 744); --cu — длина, не путать с --u.
+   * Вертикаль от верха прописных названия T: «Упадёт через» T + 74.4, таймер T + 132, картинка груза
+   * T + 126.5, стрелки T + 675.4, плашки T + 841.5, «Доступно мест» T + 901.5, центр тени T + 952.5,
+   * кнопка T + 990.3, фон T + 215.3, боковые блоки T + 108, карточка приза T + 157.2.
+   * Слои: container-type включает layout containment — это контекст наложения, поэтому фон и тень
+   * (z-index −1) рисуются над фоном страницы, но под текстом и грузом, а груз (позиционирован, z auto) —
+   * под таймером, стрелками и плашками (z-index 1). Предков таймера и плашек нельзя затемнять через
+   * opacity / filter / mask — backdrop-filter перестанет видеть груз.
+   */
+  .cargo-stage {
+    container: cargo / inline-size;
+  }
+  .cargo-stage__inner {
+    --cargo: 744px;
+    --cu: calc(var(--cargo) / 744);
+    --title: 72px;
+    --sub: 48px;
+    --head-gap: 24px;
+    --frame: 96px;
+    --frame-r: 18px;
+    --digits: 36px;
+    --unit: 18px;
+    --unit-gap: 12px;
+    --arrow: 72px;
+    --avail: 24px;
+    --shadow-gap: 16.2px;
+    --buy-gap: 72px;
+    --buy-w: 470px;
+    --buy-h: 72px;
+    --buy-font: 24px;
+    position: relative;
+  }
+  /* Название — ExtraBold Italic 72, прописные; «Упадёт через» — DemiBold Italic 48, в 24 под ним. */
+  .cargo-title {
+    font-size: var(--title);
+    font-weight: 800;
+    font-style: italic;
+    text-transform: uppercase;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+  .cargo-subtitle {
+    margin-top: var(--head-gap);
+    font-size: var(--sub);
+    font-weight: 600;
+    font-style: italic;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  /* Сцена груза в 24 под «Упадёт через»: таймер у верхнего края, картинка 744 чуть выше и правее (как в макете). */
+  .cargo-scene {
+    position: relative;
+    width: var(--cargo);
+    max-width: 100%;
+    height: calc(709.5 * var(--cu));
+    margin: var(--head-gap) auto 0;
+  }
+  /* Видимая часть груза в картинке не по центру — бокс сдвинут на 2 вправо, чтобы купол и ящик стояли по оси. */
+  .cargo-image {
+    position: absolute;
+    top: calc(-5.5 * var(--cu));
+    left: calc(2 * var(--cu));
+    width: var(--cargo);
+    height: var(--cargo);
+    max-width: none;
+    pointer-events: none;
+    user-select: none;
+    transition: translate 1.2s cubic-bezier(0.33, 0, 0.2, 1);
+  }
+  /* Приземление: груз опускается на помост, тень под ним растёт. */
+  .cargo-stage__inner[data-phase='landing'] .cargo-image,
+  .cargo-stage__inner[data-phase='result'] .cargo-image {
+    translate: 0 calc(24 * var(--cu));
+  }
+  /* Таймер: три фрейма 96×96 через 6, заливка #121117 20 %, размытие фона 12 (Figma) → 6 (CSS), скругление 18. */
+  .cargo-timer {
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    left: 50%;
+    translate: -50% 0;
+    display: flex;
+    gap: 6px;
+  }
+  /* Внутри фрейма: цифры ExtraBold 36, в 12 под ними подпись; блок по центру фрейма. */
+  .cargo-timer__frame {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--unit-gap);
+    width: var(--frame);
+    height: var(--frame);
+    border-radius: var(--frame-r);
+    background: rgb(18 17 23 / 0.2);
+    backdrop-filter: blur(6px);
+  }
+  /* Цифры табличные — не дрожат каждую секунду (D20). */
+  .cargo-timer__value {
+    font-size: var(--digits);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  /* «час / мин / сек» — капителью (требование задания), Medium 18, белый 50 % (D19). */
+  .cargo-timer__unit {
+    font-size: var(--unit);
+    font-weight: 500;
+    font-variant-caps: all-small-caps;
+    color: rgb(255 255 255 / 0.5);
+  }
+  /* Стрелки — вид .case-arrow; стоят у краёв картинки груза: 960 ∓ 300…372, верх — на уровне крышки ящика. */
+  .cargo-arrow {
+    z-index: 1;
+    top: calc(579.4 * var(--cu) - var(--arrow) / 2);
+  }
+  .cargo-arrow--prev {
+    left: 0;
+  }
+  .cargo-arrow--next {
+    right: 0;
+  }
+
+  /*
+   * Под ящиком (плашки заходят на него): цена места и выбор количества 160 + 6 + 160, в 12 под ними
+   * «Доступно мест», в 72 — кнопка 470×72, в 24 под ней — строка пояснения. Всё по оси 960 (в макете
+   * группа левее на 6.5 — неточность, D23). --shadow-cy — центр тени от верха плашек.
+   */
+  .cargo-controls {
+    --shadow-cy: calc(48px + 12px + var(--avail) * 0.7 + var(--shadow-gap) + 18 * var(--cu));
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  /*
+   * Фон-сцена: картинка 1920×1080 в масштабе груза, помост — под тенью (верх фона на 737.2 выше центра
+   * тени); растворение в #121117 сверху и снизу запечено в картинке (D25).
+   */
+  .cargo-backdrop {
+    position: absolute;
+    z-index: -1;
+    left: 50%;
+    top: calc(var(--shadow-cy) - 737.2 * var(--cu));
+    width: calc(1920 * var(--cu));
+    height: calc(1080 * var(--cu));
+    max-width: none;
+    translate: -50% 0;
+    pointer-events: none;
+    user-select: none;
+  }
+  /*
+   * Шире 1920 у фона появляются края — они растворяются полосой, которая растёт с зазором до края окна
+   * (на 1921 — 0.5 px, с 2496 — 288 px), без скачка на 1921.
+   */
+  @media (min-width: 1921px) {
+    .cargo-backdrop {
+      --fade: clamp(0px, (100vw - 1920px) / 2, 288px);
+      mask-image: linear-gradient(
+        90deg,
+        transparent,
+        #000 var(--fade),
+        #000 calc(100% - var(--fade)),
+        transparent
+      );
+    }
+  }
+  /* Тень на помосте: эллипс 342×36, чёрный 90 %, Layer blur 50 → blur(25px); под грузом, над фоном. */
+  .cargo-shadow {
+    position: absolute;
+    z-index: -1;
+    left: 50%;
+    top: calc(var(--shadow-cy) - 18 * var(--cu));
+    width: calc(342 * var(--cu));
+    height: calc(36 * var(--cu));
+    translate: -50% 0;
+    border-radius: 50%;
+    background: rgb(0 0 0 / 0.9);
+    filter: blur(calc(25 * var(--cu)));
+    pointer-events: none;
+    transition: scale 1.2s ease;
+  }
+  .cargo-stage__inner[data-phase='landing'] .cargo-shadow,
+  .cargo-stage__inner[data-phase='result'] .cargo-shadow {
+    scale: 1.12;
+  }
+  /* Плашки — над ящиком (картинка груза позиционирована, поэтому плашкам нужен свой слой). */
+  .cargo-badges {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 6px;
+    max-width: 100%;
+    min-height: 48px;
+  }
+  /*
+   * Цена места: лайм, гем 16×24, через 12 — DemiBold 24 #121117; 160×48, срез левого верхнего угла.
+   * На узком телефоне, когда выбор количества раздвинут длинным числом, плашка цены сжимается до
+   * содержимого — пара плашек не выходит за край.
+   */
+  .cargo-price {
+    --h: 48px;
+    display: inline-flex;
+    flex-shrink: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 160px;
+    min-width: max-content;
+    padding-inline: 12px;
+    background: var(--color-lime);
+    color: #121117;
+    font-size: 24px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .cargo-price__gem {
+    flex: none;
+    width: 16px;
+    height: 24px;
+  }
+  /*
+   * Выбор количества — вариант glass (shaped-button.tsx): акцент #C6FF00 20 % + blur 6, цифры и иконки —
+   * акцент (D22); «−» и «+» по 40 по бокам числа (центры в ∓48 от него), поля 12. Длинное число
+   * раздвигает плашку.
+   */
+  .cargo-qty {
+    --h: 48px;
+    flex-shrink: 0;
+    display: grid;
+    grid-template-columns: 40px minmax(56px, auto) 40px;
+    align-items: center;
+    min-width: 160px;
+    padding-inline: 12px;
+    background: rgb(198 255 0 / 0.2);
+    backdrop-filter: blur(6px);
+    color: var(--color-accent);
+  }
+  .cargo-qty__step {
+    display: grid;
+    place-items: center;
+    height: 48px;
+    color: inherit;
+    transition: opacity 0.15s ease;
+  }
+  .cargo-qty__step[aria-disabled='true'] {
+    opacity: 0.3;
+  }
+  /* Рамка фокуса — внутрь: плашка обрезана по форме, наружная рамка пропала бы. */
+  .cargo-qty__step:focus-visible {
+    outline-offset: -4px;
+  }
+  .cargo-qty__value {
+    width: max(56px, calc(var(--n) * 0.64em + 8px));
+    height: 48px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 24px;
+    font-weight: 600;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .cargo-qty__value:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -6px;
+  }
+  .cargo-qty__value:disabled {
+    opacity: 0.5;
+  }
+  /* «Доступно мест n/N» — Medium 24, белый 50 %, в 12 под плашками; место держит и без раунда. */
+  .cargo-available {
+    min-height: 1cap;
+    margin-top: 12px;
+    font-size: var(--avail);
+    font-weight: 500;
+    white-space: nowrap;
+    color: rgb(255 255 255 / 0.5);
+  }
+  /* Кнопка — вид .case-open (лайм / #FF2529 / #26262F, иконка 24 + 24 + DemiBold 24 #121117, скругление 12). */
+  .cargo-buy {
+    width: var(--buy-w);
+    max-width: 100%;
+    height: var(--buy-h);
+    margin-top: var(--buy-gap);
+    font-size: var(--buy-font);
+  }
+  /* Подчёркнута только сумма: толщина из шрифта (≈1.2), линия в 6.3 под базовой — замер этого макета (D24). */
+  .cargo-buy__sum {
+    text-decoration: underline;
+    text-decoration-thickness: from-font;
+    text-underline-offset: 6.3px;
+  }
+  /*
+   * Строка под кнопкой — вид .case-info, но длинная строка (условия, итог чужого раунда) переносится, а
+   * не выходит за края: иначе её обрезали бы края .cargo-page. Ссылка «Проверить» — подчёркнута, цвет строки.
+   */
+  .cargo-info {
+    max-width: 100%;
+    white-space: normal;
+    text-wrap: balance;
+  }
+  .cargo-info__link,
+  .cargo-how__link {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-thickness: from-font;
+    text-underline-offset: 4px;
+    transition: color 0.15s ease;
+  }
+  .cargo-info__link:hover,
+  .cargo-how__link:hover {
+    color: #fff;
+  }
+
+  /*
+   * «Как это работает?» и «Супер-приз:» — в 24 от краёв контента (на экранах шире 1920 — там же, где на
+   * 1920: центр ∓ 912, над фоном, а не у краёв окна), верх — на базовой «Упадёт через».
+   */
+  .cargo-how,
+  .cargo-prize {
+    position: absolute;
+    top: calc(var(--title) * 0.7 + var(--head-gap) + var(--sub) * 0.7);
+  }
+  /*
+   * Ширина — чтобы не заходить на купол (полуширина видимой части груза 288.6 + 24): min(480, 50% − 336.6);
+   * свой контейнер — чтобы прятать ручные переносы, когда колонка уже 480.
+   */
+  .cargo-how {
+    left: max(24px, 50% - 912px);
+    width: min(480px, 50% - 336.6px);
+    container: cargo-how / inline-size;
+  }
+  .cargo-prize {
+    right: max(24px, 50% - 912px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    width: 286px;
+  }
+  /* Иконка 36 → 24 → заголовок DemiBold 36 по центру иконки; на 1470 запас 3 px — в одну строку. */
+  .cargo-how__head {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .cargo-how__icon {
+    flex: none;
+    width: 36px;
+    height: 36px;
+  }
+  .cargo-how__title {
+    font-size: 36px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  /* Пункты Medium 24, белый 50 %, через 36; в 36 под иконкой; межстрочный 100 % (D21). */
+  .cargo-how__list {
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+    margin-top: 36px;
+    font-size: 24px;
+    font-weight: 500;
+    color: rgb(255 255 255 / 0.5);
+  }
+  /* Номер — табличными цифрами в 8 от края, текст — с 36 (висячий отступ, как в макете). */
+  .cargo-how__item {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    text-wrap: pretty;
+  }
+  .cargo-how__num {
+    padding-left: 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  /*
+   * В колонке 480 строки переносятся только там, где в макете (<br>): самая длинная строка пункта 1 —
+   * 444.25 при колонке текста 444, и без nowrap «грузе.» уехало бы на третью строку. Уже 480 переносы
+   * прячутся, текст переносится сам; перед <br> в текстах стоит пробел — слова не склеиваются.
+   */
+  @container cargo-how (min-width: 480px) {
+    .cargo-how__text {
+      white-space: nowrap;
+    }
+  }
+  /*
+   * Колонка уже 480 (на 1470–1632 — до 362 px текста): самая длинная строка пункта 1 (444 при 24 px) в
+   * неё не помещается, пункты 1 и 3 занимают по три строки — их выравниваем по длине (balance), чтобы
+   * не оставалось одиночных слов в последней строке.
+   */
+  @container cargo-how (max-width: 479.98px) {
+    .cargo-how__item {
+      text-wrap: balance;
+    }
+    .cargo-how__item br {
+      display: none;
+    }
+  }
+  /* «Супер-приз:» — DemiBold Italic 36, прописные, по центру над карточкой, в 24 над ней. */
+  .cargo-prize__title {
+    font-size: 36px;
+    font-weight: 600;
+    font-style: italic;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  /* У .skin-card нет своей ширины (она — контейнер): 286, как в макете. */
+  .cargo-prize__card {
+    width: 286px;
+    max-width: 100%;
+  }
+
+  /*
+   * Ярус «как макет» (W ≥ 1470): страница кончается на нижнем краю фона, а не на строке под кнопкой
+   * (+1 px — запас на округление субпикселей: фон не должен обрезаться снизу).
+   */
+  @container cargo (min-width: 1470px) {
+    .cargo-controls {
+      min-height: calc(var(--shadow-cy) + 342.8 * var(--cu) + 1px);
+    }
+  }
+  /* 1245–1469: приз остаётся справа сверху (влезает с 1245), «Как это работает?» — под кнопкой по центру. */
+  @container cargo (max-width: 1469.98px) {
+    /* Поле снизу — под выносные последней строки (р, у): иначе их обрезал бы край .cargo-page. */
+    .cargo-side {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 96px;
+      margin-top: 96px;
+      padding-bottom: 12px;
+    }
+    .cargo-how {
+      position: static;
+      width: 480px;
+    }
+  }
+  /* 976–1244: оба блока под кнопкой в ряд в порядке DOM — слева «Как это работает?», справа приз (480 + 96 + 286). */
+  @container cargo (max-width: 1244.98px) {
+    .cargo-prize {
+      position: static;
+    }
+  }
+  /*
+   * 600–975 (планшет): груз 558 (×0.75), стрелки 56, название 56 / 36; блоки столбиком, приз сверху.
+   * Порядок DOM (и фокуса) — «Как это работает?», затем приз: здесь видимый порядок расходится с ним на
+   * два элемента — осознанно, ради приза на первом месте.
+   */
+  @container cargo (max-width: 975.98px) {
+    .cargo-stage__inner {
+      --cargo: 558px;
+      --title: 56px;
+      --sub: 36px;
+      --arrow: 56px;
+    }
+    .cargo-side {
+      flex-direction: column;
+      align-items: center;
+      gap: 48px;
+      margin-top: 72px;
+    }
+    .cargo-prize {
+      order: -1;
+    }
+    .cargo-how {
+      width: min(480px, 100%);
+    }
+  }
+  /* < 600 (телефон): груз во всю ширину (до 400), таймер 72, текст мельче, кнопка во всю ширину 56. */
+  @container cargo (max-width: 599.98px) {
+    .cargo-stage__inner {
+      --cargo: min(400px, 100cqw);
+      --title: 32px;
+      --sub: 20px;
+      --head-gap: 12px;
+      --frame: 72px;
+      --frame-r: 14px;
+      --digits: 28px;
+      --unit: 14px;
+      --unit-gap: 8px;
+      --arrow: 48px;
+      --avail: 18px;
+      --shadow-gap: 12px;
+      --buy-gap: 44px;
+      --buy-w: 100%;
+      --buy-h: 56px;
+      --buy-font: 20px;
+    }
+    .cargo-buy {
+      gap: 16px;
+    }
+    .cargo-info {
+      margin-top: 16px;
+      font-size: 18px;
+    }
+    .cargo-side {
+      gap: 40px;
+      margin-top: 56px;
+    }
+    .cargo-how__head {
+      gap: 16px;
+    }
+    .cargo-how__icon {
+      width: 28px;
+      height: 28px;
+    }
+    .cargo-how__title,
+    .cargo-prize__title {
+      font-size: 24px;
+    }
+    .cargo-how__list {
+      gap: 24px;
+      margin-top: 24px;
+      font-size: 18px;
+    }
+    .cargo-how__item {
+      grid-template-columns: 28px minmax(0, 1fr);
+    }
+    .cargo-how__num {
+      padding-left: 4px;
+    }
+    .cargo-prize {
+      gap: 16px;
+      width: 100%;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cargo-image,
+    .cargo-shadow {
+      transition: none;
+    }
+  }
+
+  /*
    * ---------- Футер (макет 1920) ----------
    * Фон — вертикальный градиент #121117 → #0E0D11. Поля внутрь: сверху 48, слева и справа 72 (планшет —
    * 48, телефон — 24), снизу 24 (на телефоне — ещё нижнее меню и безопасная зона экрана). Логотип высотой

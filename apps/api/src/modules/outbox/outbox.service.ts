@@ -10,6 +10,7 @@ export type OutboxEventType =
   | 'battle.finalize'
   | 'battle.expire'
   | 'battle.finished'
+  | 'cargo.deadline'
   | 'wager.placed'
   | 'notification.create'
   | 'daily.claimed';

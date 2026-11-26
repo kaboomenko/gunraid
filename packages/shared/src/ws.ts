@@ -8,6 +8,9 @@ export const WS_EVENTS = {
   battleState: 'battle:state',
   battleRound: 'battle:round',
   battleFinished: 'battle:finished',
+  cargoSeats: 'cargo:seats',
+  cargoResult: 'cargo:result',
+  cargoRound: 'cargo:round',
   balanceUpdate: 'balance:update',
   inventoryUpdate: 'inventory:update',
   notificationNew: 'notification:new',
@@ -21,11 +24,14 @@ export const WS_ROOMS = {
   battles: (game: string) => `battles:${game}`,
   battle: (id: string) => `battle:${id}`,
   case: (id: string) => `case:${id}`,
+  /** Одна комната на игру для всех грузов; клиент фильтрует события по templateId / roundId. */
+  cargo: (game: string) => `cargo:${game}`,
   user: (id: string) => `user:${id}`,
 } as const;
 
 /** Комнаты, на которые клиент может подписаться сам (личная user:* — только автоматически). */
-export const PUBLIC_ROOM_RE = /^(feed|battles):[a-z0-9-]{2,32}$|^(battle|case):[0-9a-f-]{36}$/;
+export const PUBLIC_ROOM_RE =
+  /^(feed|battles|cargo):[a-z0-9-]{2,32}$|^(battle|case):[0-9a-f-]{36}$/;
 
 export interface CaseSupplyPayload {
   caseId: string;

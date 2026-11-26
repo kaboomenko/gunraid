@@ -607,3 +607,22 @@ export function DeclineIcon({ size = 24, ...props }: IconProps) {
     </svg>
   );
 }
+
+/** Груз на парашюте (пункт «Грузы»): купол, стропы и ящик; в архиве иконок её нет — нарисована в стиле набора. */
+export function CargoIcon({ size = 24, ...props }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M12 2.5c-4.97 0-9 3.47-9 7.75 0 .41.34.75.75.75h16.5c.41 0 .75-.34.75-.75C21 5.97 16.97 2.5 12 2.5Z"
+        fill="currentColor"
+      />
+      <path
+        d="M4.5 11.5 9.25 16M19.5 11.5 14.75 16M12 11.5V16"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <rect x="8" y="15.5" width="8" height="6" rx="1.5" fill="currentColor" />
+    </svg>
+  );
+}

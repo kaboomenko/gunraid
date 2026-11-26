@@ -136,7 +136,9 @@ export interface CaseOpenResultDto {
   freeOpens: number;
 }
 
-export type DropSource = 'case' | 'upgrade' | 'contract' | 'battle' | 'wheel';
+/** Откуда предмет в ленте дропов (подпись topBar.sources.*). */
+export const DROP_SOURCES = ['case', 'upgrade', 'contract', 'battle', 'wheel', 'cargo'] as const;
+export type DropSource = (typeof DROP_SOURCES)[number];
 
 export interface FeedDropDto {
   id: string;

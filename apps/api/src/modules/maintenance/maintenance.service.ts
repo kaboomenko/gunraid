@@ -14,12 +14,13 @@ import { rkey } from '../../core/redis.js';
 import { DB, ENV, REDIS } from '../../core/tokens.js';
 import { PricesService } from '../catalog/prices.js';
 import { GamesService } from '../games/games.service.js';
+import { reconcileCargo } from '../cargo/cargo-recon.js';
 import { LedgerService } from '../ledger/ledger.service.js';
 
 const QUEUE = 'maintenance';
 const HOUR = 60 * 60 * 1000;
 
-/** Фоновые задачи воркера: сверка ledger, обновление цен, чистка сессий и ключей идемпотентности. */
+/** Фоновые задачи воркера: сверка ledger и грузов, обновление цен, чистка сессий и ключей идемпотентности. */
 @Injectable()
 export class MaintenanceService implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger(MaintenanceService.name);
@@ -86,8 +87,12 @@ export class MaintenanceService implements OnModuleInit, OnApplicationShutdown {
     }
   }
 
+  /** Сверка кошельков с ledger и мест грузов с ledger (D39): общий счётчик расхождений дашборда. */
   async reconcile(): Promise<number> {
-    const mismatches = await this.ledger.reconcile();
+    const ledger = await this.ledger.reconcile();
+    const cargo = await reconcileCargo(this.db);
+    if (cargo.length) this.logger.error(`cargo reconciliation: ${cargo.length} mismatches`);
+    const mismatches = [...ledger, ...cargo];
     await this.redis.set(
       rkey(this.env, 'recon', 'last'),
       JSON.stringify({ checkedAt: new Date().toISOString(), mismatches }),

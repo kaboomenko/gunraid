@@ -1,4 +1,4 @@
-import type { HomeDto, ItemsPageDto } from '@gunraid/shared';
+import type { CargoListDto, HomeDto, ItemsPageDto } from '@gunraid/shared';
 import type { MetadataRoute } from 'next';
 import { LEGAL_SLUGS } from '@/lib/legal';
 import { getPublicConfig, serverGet } from '@/lib/server-api';
@@ -47,9 +47,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: p === '' ? 1 : 0.6,
       });
     }
-    const [home, items] = await Promise.all([
+    const [home, items, cargo] = await Promise.all([
       serverGet<HomeDto>(`/games/${g.code}/home`, { revalidate: 600 }).catch(() => null),
       gameItems(g.code),
+      serverGet<CargoListDto>(`/games/${g.code}/cargo`, { revalidate: 600 }).catch(() => null),
     ]);
     const slugs = new Set(home?.categories.flatMap((c) => c.cases.map((x) => x.slug)) ?? []);
     for (const slug of slugs) {
@@ -57,6 +58,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         url: `${base}/${g.code}/case/${slug}`,
         changeFrequency: 'weekly',
         priority: 0.8,
+      });
+    }
+    // Грузы: только страницы грузов — «/{игра}/cargo» лишь редиректит на первый.
+    for (const c of cargo?.items ?? []) {
+      entries.push({
+        url: `${base}/${g.code}/cargo/${c.slug}`,
+        changeFrequency: 'daily',
+        priority: 0.7,
       });
     }
     for (const id of items) {

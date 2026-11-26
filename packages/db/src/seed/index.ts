@@ -8,6 +8,7 @@ import {
   seedPromos,
   seedWheel,
 } from './bonuses.js';
+import { seedCargo } from './cargo.js';
 import { seedCases } from './cases.js';
 import { seedCatalog, seedFxRates } from './catalog.js';
 import { seedDevUsers } from './dev-users.js';
@@ -32,6 +33,7 @@ export async function seedAll(db: Db, options: SeedOptions = {}): Promise<void> 
   await seedLeaderboards(db);
   if (options.demo) await seedCatalog(db);
   if (options.demo) await seedCases(db);
+  if (options.demo) await seedCargo(db);
   if (options.demo) await seedWheel(db);
   if (options.demo) await seedPromos(db);
   if (options.demo && options.devUsers) await seedDevUsers(db);

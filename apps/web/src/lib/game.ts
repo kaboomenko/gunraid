@@ -26,11 +26,12 @@ export function switchGamePath(pathname: string, to: string, known: string[]): s
   const parts = pathname.split('/').filter(Boolean);
   if (parts[0] && known.includes(parts[0])) {
     const section = parts[1];
-    // Страницы конкретных сущностей (кейс, предмет, баттл, игрок) в другой игре не существуют.
+    // Страницы конкретных сущностей (кейс, предмет, баттл, груз, игрок) в другой игре не существуют.
     const keepDeep = new Set([
       'upgrade',
       'contract',
       'battles',
+      'cargo',
       'bonuses',
       'leaderboard',
       'profile',

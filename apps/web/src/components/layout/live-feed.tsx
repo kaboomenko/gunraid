@@ -37,8 +37,9 @@ interface FeedItem {
 function DropCard({ drop }: { drop: FeedDropDto }) {
   const t = useTranslations('topBar');
   const hoverImage = drop.caseImage;
+  // Приз груза разыгран, а не выпал: «Выигран в «…»» (caseName — название груза, caseImage — его миниатюра).
   const hoverTitle = drop.caseName
-    ? t('dropFrom', { name: drop.caseName })
+    ? t(drop.source === 'cargo' ? 'dropFromCargo' : 'dropFrom', { name: drop.caseName })
     : t(`sources.${drop.source}`);
   return (
     <Link

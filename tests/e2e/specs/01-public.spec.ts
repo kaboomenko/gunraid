@@ -47,7 +47,9 @@ test.describe('Публичная часть', () => {
       'href',
       '/cs2/upgrade',
     );
-    await expect(footer.getByRole('link')).toHaveCount(12);
+    // Пятый раздел — «Грузы»: гостю на телефоне и планшете их больше негде найти.
+    await expect(footer.getByRole('link', { name: 'Грузы' })).toHaveAttribute('href', '/cs2/cargo');
+    await expect(footer.getByRole('link')).toHaveCount(13);
     await expect(footer).toContainText(
       `© ${new Date().getFullYear()} GunRaid. Все права защищены.`,
     );

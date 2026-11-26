@@ -7,6 +7,7 @@ import { Plus } from 'lucide-react';
 import type { ComponentType } from 'react';
 import {
   BattleIcon,
+  CargoIcon,
   CaseIcon,
   ContractIcon,
   LoginIcon,
@@ -24,9 +25,9 @@ import { isActive } from './nav-items';
 import { NotificationsBell } from './notifications-bell';
 import { UserMenu } from './user-menu';
 
-/** Пункты главного меню из макета (иконка 24 + текст DemiBold 24, между пунктами 48). */
+/** Пункты главного меню: четыре из макета и «Грузы» (иконка 24 + текст DemiBold 24). */
 const DESKTOP_NAV: Array<{
-  key: 'cases' | 'upgrade' | 'contract' | 'battles';
+  key: 'cases' | 'upgrade' | 'contract' | 'battles' | 'cargo';
   path: string;
   icon: ComponentType<{ size?: number }>;
 }> = [
@@ -34,14 +35,18 @@ const DESKTOP_NAV: Array<{
   { key: 'upgrade', path: '/upgrade', icon: UpgradeIcon },
   { key: 'contract', path: '/contract', icon: ContractIcon },
   { key: 'battles', path: '/battles', icon: BattleIcon },
+  { key: 'cargo', path: '/cargo', icon: CargoIcon },
 ];
 
 /**
  * Шапка. Десктоп (от 1024px) — плашка #181821 высотой 120 со скруглением 24, поля 36 слева и 24
- * с остальных сторон: логотип высотой 64 слева, справа «Вход» (или баланс и профиль), а меню
- * (иконка 24 + текст DemiBold 24, внутри пункта 12, между пунктами 48; до 1720px — 32) — ровно по центру всей шапки.
- * Ниже 1536px подписи меню прячутся (остаются иконки с подсказкой), меню встаёт между логотипом и
- * кнопками и не может их перекрыть. Телефон и планшет — компактная липкая шапка (макета пока нет).
+ * с остальных сторон: логотип слева (высотой 64, ниже 1536px — 48), справа «Вход» (или баланс и
+ * профиль), между ними — меню из пяти пунктов (иконка 24 + текст DemiBold 24, внутри пункта 12).
+ * Плашка — сетка «1fr auto 1fr»: меню всегда ровно по центру шапки, а если правый блок шире своей
+ * колонки (большой баланс), сетка сдвигает меню влево, и оно не наезжает ни на логотип, ни на кнопки.
+ * Подписи меню — от 1720px; ниже остаются иконки с подсказкой (title). Между пунктами: ниже 1280px —
+ * 24, 1280–1719 — 48, 1720–1879 — 32, от 1880 — 48. Телефон и планшет — компактная липкая шапка
+ * (макета пока нет).
  */
 export function SiteHeader() {
   const t = useTranslations();
@@ -54,16 +59,18 @@ export function SiteHeader() {
   return (
     <>
       <header className="hidden px-6 pt-[6px] lg:block">
-        <div className="relative flex h-[120px] items-center justify-between gap-6 rounded-b-[36px] rounded-t-[12px] bg-surface-1 py-6 pl-9 pr-6">
+        {/* Поля 24 с обеих сторон (сетка симметрична — меню по центру шапки), логотипу ещё 12 слева: всего 36. */}
+        <div className="grid h-[120px] grid-cols-[1fr_auto_1fr] items-center gap-6 rounded-b-[36px] rounded-t-[12px] bg-surface-1 p-6">
           <Link
             href={`/${game}`}
-            className="flex shrink-0 items-center text-lime"
+            className="ml-3 flex items-center justify-self-start text-lime"
             aria-label={t('brand.name')}
           >
             <span className="logo-mask h-12 2xl:h-16" />
           </Link>
+          {/* 1880px — в rem, как стандартные брейкпоинты: иначе правило встанет раньше 3xl и проиграет ему. */}
           <nav
-            className="flex items-center gap-12 2xl:absolute 2xl:left-1/2 2xl:top-1/2 2xl:-translate-x-1/2 2xl:-translate-y-1/2 2xl:gap-8 3xl:gap-12"
+            className="flex items-center gap-6 xl:gap-12 3xl:gap-8 min-[117.5rem]:gap-12"
             aria-label={t('nav.home')}
           >
             {DESKTOP_NAV.map((item) => {
@@ -80,12 +87,12 @@ export function SiteHeader() {
                   title={t(`nav.${item.key}`)}
                 >
                   <item.icon />
-                  <span className="sr-only 2xl:not-sr-only">{t(`nav.${item.key}`)}</span>
+                  <span className="sr-only 3xl:not-sr-only">{t(`nav.${item.key}`)}</span>
                 </Link>
               );
             })}
           </nav>
-          <div className="flex items-center justify-end gap-[6px]">
+          <div className="flex items-center justify-end gap-[6px] justify-self-end">
             {me.isLoading ? (
               <Skeleton className="h-[72px] w-[167px] rounded-[12px]" />
             ) : me.data ? (

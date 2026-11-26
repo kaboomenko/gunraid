@@ -33,6 +33,8 @@ export const LEDGER_TYPES = [
   'referral_reward',
   'leaderboard_prize',
   'admin_adjustment',
+  'cargo_entry',
+  'cargo_refund',
 ] as const;
 export type LedgerType = (typeof LEDGER_TYPES)[number];
 

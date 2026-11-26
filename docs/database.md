@@ -38,6 +38,11 @@ erDiagram
   battles ||--o{ battle_participants : has
   battles ||--o{ battle_cases : rounds
   battles ||--o{ battle_drops : drops
+  games ||--o{ cargo_templates : has
+  cargo_templates ||--o{ cargo_rounds : rounds
+  cargo_rounds ||--o{ cargo_purchases : seats
+  users ||--o{ cargo_purchases : buys
+  ledger_entries ||--o| cargo_purchases : "paid by"
   users ||--o{ deposits : pays
   users ||--o{ withdrawals : requests
   user_items ||--o| withdrawals : "withdrawn by"
@@ -102,7 +107,7 @@ PK `(user_id, game_id)`, `trade_url?` (CS2, проверка формата), `g
 
 **ledger_entries** — журнал движения гемов, только INSERT.
 `id bigint identity`, `user_id`, `type`, `amount bigint` (± ), `balance_after`, `ref_type`, `ref_id`, `idempotency_key` (unique), `actor_id?` (админ), `reason?` (обязательна для `admin_adjustment`), `meta jsonb`, `created_at`.
-Типы: `deposit`, `deposit_bonus`, `deposit_reversal`, `case_open`, `item_sell`, `upgrade_stake`, `battle_entry`, `battle_refund`, `wheel_prize`, `promo_balance`, `daily_bonus`, `level_reward`, `referral_reward`, `leaderboard_prize`, `admin_adjustment`. Типа «вывод гемов» нет и не будет: гемы не выводятся, выводятся только предметы.
+Типы: `deposit`, `deposit_bonus`, `deposit_reversal`, `case_open`, `item_sell`, `upgrade_stake`, `battle_entry`, `battle_refund`, `wheel_prize`, `promo_balance`, `daily_bonus`, `level_reward`, `referral_reward`, `leaderboard_prize`, `admin_adjustment`, `cargo_entry` (покупка мест в грузе: `ref_type 'cargo_purchase'`, `ref_id` = покупка, в `meta` — раунд, места, client seed покупки и хэш server seed), `cargo_refund` (возврат за раунд груза при отмене или минимуме продаж: `ref_type 'cargo_round'`, одна запись на игрока за раунд). Типа «вывод гемов» нет и не будет: гемы не выводятся, выводятся только предметы.
 Индексы: `(user_id, id DESC)`, `(ref_type, ref_id)`, `(type, created_at)`.
 
 **idempotency_requests**
@@ -120,7 +125,7 @@ PK `(user_id, key)`, `endpoint`, `request_hash`, `status` (`processing` / `done`
 ## 4. Инвентарь
 
 **user_items** — экземпляры предметов у пользователей (раздельно по играм).
-`id uuid`, `user_id`, `game_id`, `item_id`, `status` (`in_inventory`, `sold`, `withdrawing`, `withdrawn`, `used_upgrade`, `used_contract`, `lost_battle`), `acquired_value` (цена на момент получения), `source_type` (`case`, `upgrade`, `contract`, `battle`, `wheel`, `promo`, `level_reward`, `leaderboard`, `admin`), `source_id`, `acquired_at`, `status_changed_at`, `consumed_ref_type?`, `consumed_ref_id?`, `sold_value?`.
+`id uuid`, `user_id`, `game_id`, `item_id`, `status` (`in_inventory`, `sold`, `withdrawing`, `withdrawn`, `used_upgrade`, `used_contract`, `lost_battle`), `acquired_value` (цена на момент получения), `source_type` (`case`, `upgrade`, `contract`, `battle`, `wheel`, `promo`, `level_reward`, `leaderboard`, `admin`, `cargo` — приз ивентового груза, `source_id` = раунд), `source_id`, `acquired_at`, `status_changed_at`, `consumed_ref_type?`, `consumed_ref_id?`, `sold_value?`.
 Индекс: частичный `(user_id, game_id, acquired_at)` где `status = 'in_inventory'`.
 
 **inventory_events** — журнал движения предметов.
@@ -181,6 +186,26 @@ PK `(battle_id, slot)`, `team?`, `user_id?` или `bot_id?` (ровно одн�
 PK `(battle_id, round_index, slot)`, `item_id`, `item_value`, `roll`, `ticket`, `recipient_slot` (кому достаётся), `user_item_id?` (выданный предмет).
 
 **bot_profiles** — `id`, `nickname`, `avatar_url`.
+
+## 8.1 Ивентовые грузы
+
+Груз — розыгрыш одного приза среди купленных мест. Шаблон — вид груза в игре, раунд — его текущий розыгрыш.
+Порядок блокировок: кошельки (по возрастанию id) → раунд → шаблон (`docs/architecture.md` §5.1).
+
+**cargo_templates** — шаблон: приз и правила следующих раундов.
+`id uuid`, `game_id`, `slug` (unique в игре — полный индекс, вместе с архивными), `name jsonb`, `image_url`, `prize_item_id → items`, `seats_total` (2…10 000), `seat_price` (0 — бесплатный), `per_user_limit?` (мест на игрока за раунд; у бесплатного всегда 1), `duration_minutes`, `min_level?` и `deposit_within_days?` (условия участия против мультиаккаунтов), `min_seats_to_land?` (минимум продаж для приземления по таймеру; NULL — приземляется при ≥ 1 проданном месте), `is_active`, `sort_order`, `archived_at?` («удаление» — архив: шаблон только читается), `created_at`, `updated_at`.
+CHECK: места 2…10 000; цена ≥ 0; лимит NULL или ≥ 1; `seat_price > 0 OR coalesce(per_user_limit, 0) = 1` (бесплатный — ровно 1 место на игрока); длительность ≥ 1; минимум продаж NULL или 1…`seats_total`; архивный шаблон неактивен.
+
+**cargo_rounds** — раунд: снимок шаблона на старте (приз, `prize_value` — цена приза на старте для RTP, места, цена, лимит, условия, минимум продаж), продажи и итог.
+`id uuid`, `template_id`, `game_id`, `number` (1, 2, … в шаблоне; unique `(template_id, number)`), `status` (`open` / `landed` / `expired` / `cancelled`), `prize_item_id`, `prize_value`, `seats_total`, `seats_sold`, `seat_price`, `per_user_limit?`, `min_level?`, `deposit_within_days?`, `min_seats_to_land?`, `server_seed_enc`, `server_seed_hash` (публикуется сразу), `client_seed?` (хэш списка покупок — при приземлении, а также при отмене и закрытии по минимуму, если продано > 0), `winning_seat?`, `void_seat?` (место, которое выиграло бы, — у отменённых и закрытых по минимуму раундов с продажами: отменённый исход публичен), `winner_id?`, `winner_purchase_id?` (без FK — иначе цикл ссылок), `user_item_id?` (выданный приз), `land_reason?` (`sold_out` / `deadline` / `min_seats`), `cancel_reason?`, `cancelled_by?`, `land_attempts` и `last_land_error_at?`, `last_land_error?` (неудачные попытки приземления: тикер пропускает раунд 5 минут после ошибки), `started_at`, `ends_at`, `finished_at?`.
+Индексы: частичный unique `(template_id)` где `status = 'open'` (у шаблона один открытый раунд); частичный `(ends_at)` где `status = 'open'` (тикер); `(game_id, status)`. CHECK: `0 ≤ seats_sold ≤ seats_total`; цена ≥ 0; минимум продаж ≤ `seats_total`.
+`expired` — таймер вышел без победителя: мест не купили (`land_reason 'deadline'`) или продано меньше минимума (`'min_seats'`, гемы возвращены). «Раунд с возвратом» — `cancelled` или `expired` с проданными местами (на этом держится сверка грузов).
+
+**cargo_purchases** — покупка: диапазон подряд идущих мест и client seed покупателя.
+`id uuid`, `round_id`, `user_id`, `seat_from`, `seat_to`, `count`, `paid` (0 — бесплатно), `client_seed` (присылает покупатель, `^[A-Za-z0-9_-]{8,64}$`), `ledger_entry_id? → ledger_entries`, `refunded_at?`, `created_at`.
+Индексы: unique `(round_id, seat_from)`; unique `(ledger_entry_id)` (одна запись ledger — одна покупка; NULL у бесплатных не конфликтуют); `(round_id, user_id)`; `(user_id, created_at)`.
+CHECK: `seat_from ≥ 1`, `seat_to ≥ seat_from`, `count = seat_to − seat_from + 1`; `paid ≥ 0`; **`(paid = 0) = (ledger_entry_id IS NULL)`** — платная покупка без списания и списание у бесплатной невозможны; формат `client_seed` (строке для SHA-256 не нужно экранирование).
+Места раунда идут подряд 1…`seats_sold` (номера выдаются под блокировкой строки раунда); проверяет сверка `reconcileCargo`.
 
 ## 9. Бонусы
 

@@ -239,6 +239,8 @@ export const NOTIFICATION_TYPES = [
   'promo_activated',
   'wheel_prize',
   'withdrawal_status',
+  'cargo_won',
+  'cargo_refund',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
