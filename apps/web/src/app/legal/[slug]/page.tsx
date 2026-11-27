@@ -60,7 +60,9 @@ export default async function LegalPage({ params }: { params: Promise<{ slug: st
         </ol>
       </Card>
       {sections.map((s, i) => (
-        <section key={s.title} id={`s${i + 1}`} className="scroll-mt-24 space-y-2">
+        // Отступ раздела при переходе по оглавлению: от 768 — 96 (под липкую шапку планшета), на телефоне
+        // шапка не липкая — 12.
+        <section key={s.title} id={`s${i + 1}`} className="scroll-mt-3 space-y-2 md:scroll-mt-24">
           <h2 className="font-display text-lg font-bold">
             {i + 1}. {s.title}
           </h2>

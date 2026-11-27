@@ -19,6 +19,13 @@ const SIZES = {
   lg: 'h-12 px-6 text-base gap-2.5 [--cut:10px]',
   icon: 'h-10 w-10 p-0 [--cut:8px]',
   iconSm: 'h-8 w-8 p-0 [--cut:6px]',
+  /**
+   * Кнопка окна по шкале телефона (вместе с `Modal phoneScale`, окна итога): на телефоне (< 768) высота
+   * 36, поля 12, скругление 6 вместо среза (кольцо фокуса не обрезается), DemiBold 12 без капса, зазор 12
+   * (иконку 12 задаёт вызывающий); от 768 — как md.
+   */
+  phone:
+    'h-10 px-4 text-sm gap-2 [--cut:8px] max-md:h-9 max-md:gap-3 max-md:rounded-[6px] max-md:px-3 max-md:text-[12px] max-md:font-semibold max-md:normal-case max-md:tracking-normal max-md:[clip-path:none]',
 } as const;
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -53,6 +60,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         'disabled:pointer-events-none disabled:opacity-45',
         VARIANTS[variant],
         SIZES[size],
+        // phone без среза: у outline срез рисует рамка .cut (псевдоэлементы) — скругляем её; у остальных
+        // свечение primary при наведении раньше обрезал срез — на телефоне его по-прежнему нет.
+        size === 'phone' &&
+          (variant === 'outline'
+            ? 'max-md:[--cut:0px] max-md:before:rounded-[6px] max-md:after:rounded-[5px]'
+            : 'max-md:hover:shadow-none'),
         block && 'w-full',
         className,
       )}

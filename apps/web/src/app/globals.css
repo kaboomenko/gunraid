@@ -79,11 +79,24 @@
       --tabbar-h: 0px;
     }
   }
+  /*
+   * Телефон: плашка cookie, пока видна, пишет свою высоту в --cookie-h на <html> (cookie-banner.tsx) и стоит
+   * в 12 над нижним меню: --cookie-space — сколько она занимает над ним (высота + 12; без плашки 0 —
+   * запасное −12 + 12). На столько выше уходят прокрутка к элементу в фокусе, низ подвала и панель «Продать
+   * выбранные». От 768 обеих переменных нет — там всё как без плашки.
+   */
+  @media (width < 48rem) {
+    :root {
+      --cookie-space: calc(var(--cookie-h, -12px) + 12px);
+    }
+  }
   html {
     background: var(--color-bg);
     -webkit-text-size-adjust: 100%;
-    /* Элемент в фокусе (и прокрутка к нему) не уходит под нижнее меню телефона. */
-    scroll-padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 16px);
+    /* Элемент в фокусе (и прокрутка к нему) не уходит под нижнее меню телефона и плашку cookie над ним. */
+    scroll-padding-bottom: calc(
+      var(--tabbar-h) + env(safe-area-inset-bottom) + var(--cookie-space, 0px) + 16px
+    );
   }
   body {
     min-height: 100dvh;
@@ -251,18 +264,30 @@
     background: url('/design/promo-city.webp') center 58% / max(100%, 1400px) auto no-repeat #142456;
   }
   /*
+   * Телефон (макет 36.png): город целиком — шириной полосы (на 360 ровно 336), низ картинки на 1,6 ниже
+   * полосы; сверху, где картинка (ниже 60) кончается, — цвет неба. Уже 336 бока обрезаются поровну.
+   */
+  @media (width < 48rem) {
+    .promo-strip {
+      background: url('/design/promo-city.webp') left 50% bottom -1.6px / max(100%, 336px) auto
+        no-repeat rgb(18 61 122);
+    }
+  }
+  /*
    * Сугроб до готового холста и без JS — тот же силуэт векторами (SVG в фоне ::before): часть под фонарём —
    * от левого края, холм под текстом и низина под кнопкой — от середины, сугроб под куполом — от правого
    * края (на узкой полосе отъезжает вправо), холмы в щелях на широком экране, тонкая подложка; цвет по
    * глубине — копии силуэта, сдвинутые вниз, с голубовато-серым. Где текст или кнопка близко к сугробу
    * (текст в 3–4 строки, узкая полоса), заглушка обрезана по тем же тихим зонам, что и холст: clip-path по
-   * ширине полосы (container queries). На телефоне полоса ниже (88px) — всё в той же пропорции (--snow-k).
+   * ширине полосы (container queries). Телефон (полоса 60px, макет 36.png) — картинка-эталон сугроба целиком
+   * в масштабе 0,1795 = 336/1872 (--snow-k), как город: края эталона у краёв полосы, сугробы — на сплошном
+   * слое снега (подъём 51 px узора); холст рисует то же (профиль DRIFT_PHONE в snow-drift.ts).
    */
   .promo-strip {
-    --snow-k: 0.693;
+    --snow-k: 0.1795;
     container-type: inline-size;
   }
-  @media (min-width: 768px) {
+  @media (width >= 48rem) {
     .promo-strip {
       --snow-k: 1;
     }
@@ -277,67 +302,134 @@
   /* <drift-placeholder> — сгенерировано src/lib/snow-drift-css.ts из данных snow-drift.ts, не править руками */
   .promo-strip::before {
     background:
-      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9' viewBox='0 0 366 40'%3e%3cg id='a'%3e%3cpath d='M0 40V30.25l7-.5 10-1.75 38-15.25 9-2.25 9-.75 20 .25 5 .75 10 2 11 3.75 9 2 10 4.5 4 1 9 .25 11 1.5 9 .5 9 1.75 9 .5 10 2.25 26 .5 20-3.25 12-3 12 .75 12-.75 21 2.75 31 8.25 21 3.25 12 .75V40z'/%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3cuse href='%23a' y='22'/%3e%3cuse href='%23a' y='30'/%3e%3c/g%3e%3c/svg%3e")
-        left bottom / calc(366px * var(--snow-k)) calc(40px * var(--snow-k)) no-repeat,
-      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9' viewBox='-12 0 745 40'%3e%3cg id='a'%3e%3cpath d='M-12 40V40l12-.75 14-1.75 15-3.75 19-2.25 8 0 13 2 12-2.5 4 0 15 2.5 7 0 10-2.5 25-11.75 18-2.5 17 .5 17-1.5 20 1 30-2 19 3.25 11 3.75 10 2 12 6 4 1.25 6-.25 19-5 10-.75 30 5.5 12 3.5 7 1 16-1 11 1.25 6-.25 7-1.5 11-3.75 19-4.75 9-1 20 .75 17 7.5 25 5.5 14 .75 15-.75 14 2.5 15-1.25 15 2.25 26-3.25 18 .5 13 1.25 36-6.25 15-1.5 15 2.5 12 5.5V40z'/%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3cuse href='%23a' y='22'/%3e%3cuse href='%23a' y='30'/%3e%3c/g%3e%3c/svg%3e")
-        calc(50% + 31.5px * var(--snow-k)) bottom / calc(745px * var(--snow-k))
+      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9' viewBox='0 0 253 40'%3e%3cg id='a'%3e%3cpath d='M0 40V32.25l11-.5 24-4.5 19-.5 10-1.25 15 2.5 9 1 12 4 7 1.5 28-1.75 27 2 13-1 12-2.75 12-1.5 14-5.25 6-1 34 7V40z'/%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3c/g%3e%3c/svg%3e")
+        left bottom calc(51px * var(--snow-k)) / calc(253px * var(--snow-k))
         calc(40px * var(--snow-k)) no-repeat,
-      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9' viewBox='-12 0 303 40'%3e%3cg id='a'%3e%3cpath d='M-12 40V40l12-5.5 6-.25 7-2 15-6.25 20-10.75 14-4.75 11-1 27 2.5 27-5.5 7-.75 13 .75 17 2.75 27 11.75 14 1.75 22 8 12 2.5 7-1 18-5 12-2 6-.25 9 2V40z'/%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3cuse href='%23a' y='22'/%3e%3cuse href='%23a' y='30'/%3e%3c/g%3e%3c/svg%3e")
-        calc(100% + max(0px, (917px * var(--snow-k) - 100%) / 2)) bottom /
+      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9' viewBox='0 0 366 40'%3e%3cg id='a'%3e%3cpath d='M0 40V30.25l7-.5 10-1.75 38-15.25 9-2.25 9-.75 20 .25 5 .75 10 2 11 3.75 9 2 10 4.5 4 1 9 .25 11 1.5 9 .5 9 1.75 9 .5 10 2.25 26 .5 20-3.25 12-3 12 .75 12-.75 21 2.75 31 8.25 21 3.25 12 .75V40z'/%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3c/g%3e%3c/svg%3e")
+        left calc(253px * var(--snow-k)) bottom calc(51px * var(--snow-k)) /
+        calc(366px * var(--snow-k)) calc(40px * var(--snow-k)) no-repeat,
+      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9' viewBox='-12 0 745 40'%3e%3cg id='a'%3e%3cpath d='M-12 40V40l12-.75 14-1.75 15-3.75 19-2.25 8 0 13 2 12-2.5 4 0 15 2.5 7 0 10-2.5 25-11.75 18-2.5 17 .5 17-1.5 20 1 30-2 19 3.25 11 3.75 10 2 12 6 4 1.25 6-.25 19-5 10-.75 30 5.5 12 3.5 7 1 16-1 11 1.25 6-.25 7-1.5 11-3.75 19-4.75 9-1 20 .75 17 7.5 25 5.5 14 .75 15-.75 14 2.5 15-1.25 15 2.25 26-3.25 18 .5 13 1.25 36-6.25 15-1.5 15 2.5 12 5.5V40z'/%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3c/g%3e%3c/svg%3e")
+        left calc(50% + 31.5px * var(--snow-k)) bottom calc(51px * var(--snow-k)) /
+        calc(745px * var(--snow-k)) calc(40px * var(--snow-k)) no-repeat,
+      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9' viewBox='-12 0 303 40'%3e%3cg id='a'%3e%3cpath d='M-12 40V40l12-5.5 6-.25 7-2 15-6.25 20-10.75 14-4.75 11-1 27 2.5 27-5.5 7-.75 13 .75 17 2.75 27 11.75 14 1.75 22 8 12 2.5 7-1 18-5 12-2 6-.25 9 2V40z'/%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3c/g%3e%3c/svg%3e")
+        right calc(253px * var(--snow-k)) bottom calc(51px * var(--snow-k)) /
         calc(303px * var(--snow-k)) calc(40px * var(--snow-k)) no-repeat,
-      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9'%3e%3cg id='a'%3e%3csvg viewBox='0 0 250 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M15 40c35 0 70-22 105-22c42 0 84 22 126 22zM169 40c12 0 24-9 36-9c13 0 26 9 39 9z'/%3e%3c/svg%3e%3csvg width='50%25' viewBox='0 0 230 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M14 40c32 0 64-15 96-15c38 0 76 15 114 15z'/%3e%3c/svg%3e%3csvg x='50%25' width='50%25' viewBox='0 0 300 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M14 40c42 0 84-30 126-30c52 0 104 30 156 30zM10 40c15 0 30-12 45-12c13 0 26 12 39 12z'/%3e%3c/svg%3e%3csvg width='25%25' viewBox='0 0 190 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M11 40c28 0 56-12 84-12c30 0 60 12 90 12z'/%3e%3c/svg%3e%3csvg x='25%25' width='25%25' viewBox='0 0 200 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M5 40c30 0 60-13 90-13c33 0 66 13 99 13z'/%3e%3c/svg%3e%3csvg x='75%25' width='25%25' viewBox='0 0 200 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M9 40c32 0 64-17 96-17c30 0 60 17 90 17z'/%3e%3c/svg%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3cuse href='%23a' y='22'/%3e%3cuse href='%23a' y='30'/%3e%3c/g%3e%3c/svg%3e")
-        left calc(354px * var(--snow-k)) bottom / max(0px, 50% - 683px * var(--snow-k))
+      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9' viewBox='0 0 253 40'%3e%3cg id='a'%3e%3cpath d='M0 40V27l10 2.5 5 .5 21-2.5 14 4 61 7.25 5-.75 14-4.25 30-1.5 5-1 14-4.75 15-1.25 10 1 12 3 10 1.25 16 3.75 11 .25V40z'/%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3c/g%3e%3c/svg%3e")
+        right bottom calc(51px * var(--snow-k)) / calc(253px * var(--snow-k))
         calc(40px * var(--snow-k)) no-repeat,
-      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9'%3e%3cg id='a'%3e%3csvg viewBox='0 0 270 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M21 40c43 0 86-24 129-24c38 0 76 24 114 24zM21 40c13 0 26-10 39-10c15 0 30 10 45 10z'/%3e%3c/svg%3e%3csvg width='50%25' viewBox='0 0 300 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M19 40c47 0 94-28 141-28c45 0 90 28 135 28zM211 40c13 0 26-11 39-11c15 0 30 11 45 11z'/%3e%3c/svg%3e%3csvg x='50%25' width='50%25' viewBox='0 0 220 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M10 40c30 0 60-15 90-15c38 0 76 15 114 15z'/%3e%3c/svg%3e%3csvg width='20%25' viewBox='0 0 170 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M5 40c25 0 50-11 75-11c28 0 56 11 84 11z'/%3e%3c/svg%3e%3csvg x='45%25' width='30%25' viewBox='0 0 210 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M11 40c33 0 66-18 99-18c32 0 64 18 96 18z'/%3e%3c/svg%3e%3csvg x='78%25' width='22%25' viewBox='0 0 180 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M4 40c27 0 54-12 81-12c30 0 60 12 90 12z'/%3e%3c/svg%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3cuse href='%23a' y='22'/%3e%3cuse href='%23a' y='30'/%3e%3c/g%3e%3c/svg%3e")
-        right calc(291px * var(--snow-k)) bottom / max(0px, 50% - 683px * var(--snow-k))
-        calc(40px * var(--snow-k)) no-repeat,
-      linear-gradient(#eef3f9, #eef3f9) bottom / 100% calc(3.5px * var(--snow-k)) no-repeat;
+      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9'%3e%3cg id='a'%3e%3csvg viewBox='0 0 250 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M15 40c35 0 70-22 105-22c42 0 84 22 126 22zM169 40c12 0 24-9 36-9c13 0 26 9 39 9z'/%3e%3c/svg%3e%3csvg width='50%25' viewBox='0 0 230 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M14 40c32 0 64-15 96-15c38 0 76 15 114 15z'/%3e%3c/svg%3e%3csvg x='50%25' width='50%25' viewBox='0 0 300 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M14 40c42 0 84-30 126-30c52 0 104 30 156 30zM10 40c15 0 30-12 45-12c13 0 26 12 39 12z'/%3e%3c/svg%3e%3csvg width='25%25' viewBox='0 0 190 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M11 40c28 0 56-12 84-12c30 0 60 12 90 12z'/%3e%3c/svg%3e%3csvg x='25%25' width='25%25' viewBox='0 0 200 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M5 40c30 0 60-13 90-13c33 0 66 13 99 13z'/%3e%3c/svg%3e%3csvg x='75%25' width='25%25' viewBox='0 0 200 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M9 40c32 0 64-17 96-17c30 0 60 17 90 17z'/%3e%3c/svg%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3c/g%3e%3c/svg%3e")
+        left calc(607px * var(--snow-k)) bottom calc(51px * var(--snow-k)) /
+        max(0px, 50% - 936px * var(--snow-k)) calc(40px * var(--snow-k)) no-repeat,
+      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9'%3e%3cg id='a'%3e%3csvg viewBox='0 0 270 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M21 40c43 0 86-24 129-24c38 0 76 24 114 24zM21 40c13 0 26-10 39-10c15 0 30 10 45 10z'/%3e%3c/svg%3e%3csvg width='50%25' viewBox='0 0 300 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M19 40c47 0 94-28 141-28c45 0 90 28 135 28zM211 40c13 0 26-11 39-11c15 0 30 11 45 11z'/%3e%3c/svg%3e%3csvg x='50%25' width='50%25' viewBox='0 0 220 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M10 40c30 0 60-15 90-15c38 0 76 15 114 15z'/%3e%3c/svg%3e%3csvg width='20%25' viewBox='0 0 170 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M5 40c25 0 50-11 75-11c28 0 56 11 84 11z'/%3e%3c/svg%3e%3csvg x='45%25' width='30%25' viewBox='0 0 210 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M11 40c33 0 66-18 99-18c32 0 64 18 96 18z'/%3e%3c/svg%3e%3csvg x='78%25' width='22%25' viewBox='0 0 180 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M4 40c27 0 54-12 81-12c30 0 60 12 90 12z'/%3e%3c/svg%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3c/g%3e%3c/svg%3e")
+        right calc(544px * var(--snow-k)) bottom calc(51px * var(--snow-k)) /
+        max(0px, 50% - 936px * var(--snow-k)) calc(40px * var(--snow-k)) no-repeat,
+      linear-gradient(
+          #e6ecf5,
+          #e0e7f1 calc(12.5px * var(--snow-k)),
+          #dae2ee calc(27.5px * var(--snow-k)),
+          #ccd6e7 calc(37.5px * var(--snow-k)),
+          #bac7dd calc(46.5px * var(--snow-k)),
+          #aabad5 calc(100% - 1px)
+        )
+        left 0 bottom -1px / 100% calc(54.5px * var(--snow-k) + 1px) no-repeat;
   }
-  @container (width < 273px) {
+  @container (width < 227px) {
     .promo-strip::before {
       clip-path: polygon(
         0 100%,
         0 0,
-        -138px 0,
-        6px 79px,
-        calc(100% - 6px) 79px,
-        calc(100% + 138px) 0,
+        -95px 0,
+        6px 56px,
+        calc(100% - 132px) 56px,
+        calc(100% - 114px) 45px,
+        calc(100% + 76px) 0,
         100% 0,
         100% 100%
       );
     }
   }
-  @container (273px <= width < 292px) {
+  @container (227px <= width < 241px) {
     .promo-strip::before {
       clip-path: polygon(
         0 100%,
         0 0,
-        -123px 0,
-        6px 71px,
-        calc(100% - 160px) 71px,
-        calc(100% - 145px) 79px,
-        calc(100% - 6px) 79px,
-        calc(100% + 138px) 0,
+        -84px 0,
+        6px 50px,
+        calc(100% - 132px) 50px,
+        calc(100% - 123px) 44px,
+        calc(100% + 76px) 0,
         100% 0,
         100% 100%
       );
     }
   }
-  @container (width >= 292px) {
-    .promo-strip::before {
-      clip-path: polygon(
-        0 100%,
-        0 0,
-        calc(50% - 132px) 0,
-        calc(50% + 12px) 79px,
-        calc(50% + 152px) 79px,
-        calc(50% + 296px) 0,
-        100% 0,
-        100% 100%
-      );
+  @media (width < 48rem) and (resolution < 1.5dppx) {
+    @container (width < 227px) {
+      .promo-strip::before {
+        clip-path: polygon(
+          0 100%,
+          0 0,
+          -99px 0,
+          6px 58px,
+          calc(100% - 132px) 58px,
+          calc(100% - 114px) 48px,
+          calc(100% - 6px) 48px,
+          calc(100% + 81px) 0,
+          100% 0,
+          100% 100%
+        );
+      }
+    }
+    @container (227px <= width < 241px) {
+      .promo-strip::before {
+        clip-path: polygon(
+          0 100%,
+          0 0,
+          -88px 0,
+          6px 52px,
+          calc(100% - 132px) 52px,
+          calc(100% - 123px) 47px,
+          calc(100% - 6px) 48px,
+          calc(100% + 81px) 0,
+          100% 0,
+          100% 100%
+        );
+      }
+    }
+    @container (width >= 241px) {
+      .promo-strip::before {
+        clip-path: polygon(
+          0 100%,
+          0 0,
+          calc(50% - 210px) 0,
+          calc(50% + 12px) 48px,
+          calc(50% + 126px) 48px,
+          calc(50% + 213px) 0,
+          100% 0,
+          100% 100%
+        );
+      }
     }
   }
-  @media (min-width: 768px) {
+  @media (width >= 48rem) {
+    .promo-strip::before {
+      background:
+        url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9' viewBox='0 0 366 40'%3e%3cg id='a'%3e%3cpath d='M0 40V30.25l7-.5 10-1.75 38-15.25 9-2.25 9-.75 20 .25 5 .75 10 2 11 3.75 9 2 10 4.5 4 1 9 .25 11 1.5 9 .5 9 1.75 9 .5 10 2.25 26 .5 20-3.25 12-3 12 .75 12-.75 21 2.75 31 8.25 21 3.25 12 .75V40z'/%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3cuse href='%23a' y='22'/%3e%3cuse href='%23a' y='30'/%3e%3c/g%3e%3c/svg%3e")
+          left bottom / calc(366px * var(--snow-k)) calc(40px * var(--snow-k)) no-repeat,
+        url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9' viewBox='-12 0 745 40'%3e%3cg id='a'%3e%3cpath d='M-12 40V40l12-.75 14-1.75 15-3.75 19-2.25 8 0 13 2 12-2.5 4 0 15 2.5 7 0 10-2.5 25-11.75 18-2.5 17 .5 17-1.5 20 1 30-2 19 3.25 11 3.75 10 2 12 6 4 1.25 6-.25 19-5 10-.75 30 5.5 12 3.5 7 1 16-1 11 1.25 6-.25 7-1.5 11-3.75 19-4.75 9-1 20 .75 17 7.5 25 5.5 14 .75 15-.75 14 2.5 15-1.25 15 2.25 26-3.25 18 .5 13 1.25 36-6.25 15-1.5 15 2.5 12 5.5V40z'/%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3cuse href='%23a' y='22'/%3e%3cuse href='%23a' y='30'/%3e%3c/g%3e%3c/svg%3e")
+          calc(50% + 31.5px * var(--snow-k)) bottom / calc(745px * var(--snow-k))
+          calc(40px * var(--snow-k)) no-repeat,
+        url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9' viewBox='-12 0 303 40'%3e%3cg id='a'%3e%3cpath d='M-12 40V40l12-5.5 6-.25 7-2 15-6.25 20-10.75 14-4.75 11-1 27 2.5 27-5.5 7-.75 13 .75 17 2.75 27 11.75 14 1.75 22 8 12 2.5 7-1 18-5 12-2 6-.25 9 2V40z'/%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3cuse href='%23a' y='22'/%3e%3cuse href='%23a' y='30'/%3e%3c/g%3e%3c/svg%3e")
+          calc(100% + max(0px, (917px * var(--snow-k) - 100%) / 2)) bottom /
+          calc(303px * var(--snow-k)) calc(40px * var(--snow-k)) no-repeat,
+        url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9'%3e%3cg id='a'%3e%3csvg viewBox='0 0 250 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M15 40c35 0 70-22 105-22c42 0 84 22 126 22zM169 40c12 0 24-9 36-9c13 0 26 9 39 9z'/%3e%3c/svg%3e%3csvg width='50%25' viewBox='0 0 230 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M14 40c32 0 64-15 96-15c38 0 76 15 114 15z'/%3e%3c/svg%3e%3csvg x='50%25' width='50%25' viewBox='0 0 300 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M14 40c42 0 84-30 126-30c52 0 104 30 156 30zM10 40c15 0 30-12 45-12c13 0 26 12 39 12z'/%3e%3c/svg%3e%3csvg width='25%25' viewBox='0 0 190 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M11 40c28 0 56-12 84-12c30 0 60 12 90 12z'/%3e%3c/svg%3e%3csvg x='25%25' width='25%25' viewBox='0 0 200 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M5 40c30 0 60-13 90-13c33 0 66 13 99 13z'/%3e%3c/svg%3e%3csvg x='75%25' width='25%25' viewBox='0 0 200 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M9 40c32 0 64-17 96-17c30 0 60 17 90 17z'/%3e%3c/svg%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3cuse href='%23a' y='22'/%3e%3cuse href='%23a' y='30'/%3e%3c/g%3e%3c/svg%3e")
+          left calc(354px * var(--snow-k)) bottom / max(0px, 50% - 683px * var(--snow-k))
+          calc(40px * var(--snow-k)) no-repeat,
+        url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23eef3f9'%3e%3cg id='a'%3e%3csvg viewBox='0 0 270 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M21 40c43 0 86-24 129-24c38 0 76 24 114 24zM21 40c13 0 26-10 39-10c15 0 30 10 45 10z'/%3e%3c/svg%3e%3csvg width='50%25' viewBox='0 0 300 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M19 40c47 0 94-28 141-28c45 0 90 28 135 28zM211 40c13 0 26-11 39-11c15 0 30 11 45 11z'/%3e%3c/svg%3e%3csvg x='50%25' width='50%25' viewBox='0 0 220 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M10 40c30 0 60-15 90-15c38 0 76 15 114 15z'/%3e%3c/svg%3e%3csvg width='20%25' viewBox='0 0 170 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M5 40c25 0 50-11 75-11c28 0 56 11 84 11z'/%3e%3c/svg%3e%3csvg x='45%25' width='30%25' viewBox='0 0 210 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M11 40c33 0 66-18 99-18c32 0 64 18 96 18z'/%3e%3c/svg%3e%3csvg x='78%25' width='22%25' viewBox='0 0 180 40' preserveAspectRatio='xMidYMax'%3e%3cpath d='M4 40c27 0 54-12 81-12c30 0 60 12 90 12z'/%3e%3c/svg%3e%3c/g%3e%3cg fill='%237d96be' fill-opacity='.1'%3e%3cuse href='%23a' y='9'/%3e%3cuse href='%23a' y='15'/%3e%3cuse href='%23a' y='22'/%3e%3cuse href='%23a' y='30'/%3e%3c/g%3e%3c/svg%3e")
+          right calc(291px * var(--snow-k)) bottom / max(0px, 50% - 683px * var(--snow-k))
+          calc(40px * var(--snow-k)) no-repeat,
+        linear-gradient(#eef3f9, #eef3f9) bottom / 100% calc(3.5px * var(--snow-k)) no-repeat;
+    }
     @container (width < 721px) {
       .promo-strip::before {
         clip-path: polygon(
@@ -397,6 +489,15 @@
     height: calc(46px * var(--snow-k));
     pointer-events: none;
     opacity: 0;
+  }
+  /*
+   * Телефон: холст — вся картинка эталона (DRIFT_PHONE.band, 98 px узора; 17,6 css px), сугроб в макете стоит
+   * на её нижней части. По высоте холста движок и узнаёт телефон. Порог 48rem — как у --snow-k и высоты полосы.
+   */
+  @media (width < 48rem) {
+    .promo-drift {
+      height: calc(98px * var(--snow-k));
+    }
   }
   .promo-drift.is-ready {
     opacity: 1;
@@ -473,6 +574,39 @@
     background: url('/design/drop-styled-bg.svg') 0 0 / 280px 170px no-repeat;
     opacity: 0.04;
   }
+  /*
+   * Телефон: карточка 90×60 (Figma 37/38.png). Эллипсы — из Figma: A 76×54 в (7, 3), 20 %; B 96×36 в (−3, 44),
+   * выступает на 3 за бока и на 20 ниже карточки. Размытие (в Figma не видно) и прозрачность B — подгонка
+   * по 36.png. Мазок — рамка styled-btn-template 110×70, вектор 288×186 в ней ×0,4 = 115,2×74,4 и вылезает
+   * за неё (как у десктопной карточки). Порог 48rem — как md: у той же карточки. .skin-card--reel страницы
+   * кейса — те же числа (менять вместе).
+   */
+  @media (width < 48rem) {
+    .drop-card__glow-a {
+      left: 7px;
+      top: 3px;
+      width: 76px;
+      height: 54px;
+      opacity: 0.2;
+      filter: blur(18px);
+    }
+    .drop-card__glow-b {
+      left: -3px;
+      top: 44px;
+      width: 96px;
+      height: 36px;
+      opacity: 0.57;
+      filter: blur(11.5px);
+    }
+    .drop-card__brush {
+      left: -3.3px;
+      top: -1.9px;
+      width: 115.2px;
+      height: 74.4px;
+      background-size: 100% 100%;
+      opacity: 0.05;
+    }
+  }
 
   /* Логотип GUNRAID одним цветом (currentColor) через маску — файл кешируется, HTML не раздувается. */
   .logo-mask {
@@ -544,10 +678,16 @@
    * ---------- Кейсы на главной ----------
    * Сетка (макет): карточки 317×317, между ними 48 по горизонтали и ≈96 между рядами, в строке не больше пяти; неполная строка —
    * по центру. На экранах уже 1825px карточки уменьшаются пропорционально (всё внутри задано
-   * в долях карточки через --case-u = ширина / 317), на телефоне — по две в строке.
+   * в долях карточки через --case-u = ширина / 317).
+   * Телефон (< 768, макет 360) — блок после десктопных порогов: карточки 144, не больше двух в строке, между ними 24
+   * по горизонтали и вертикали, от краёв экрана 24 (поля страницы 12 + свои 12). Шире 360 — пара 312 по центру (как
+   * неполная строка на десктопе), уже 360 — карточки пропорционально меньше (320 → 124). Десктопные пороги — в px и не
+   * менялись (с 768 — прежняя сетка), телефон — в rem, как max-md: и блок карточки ниже: при крупном шрифте браузера
+   * телефонная сетка и телефонная карточка включаются вместе.
    */
   .case-grid {
     --cols: 2;
+    --card: 317px;
     --gap: 12px;
     --row-gap: 24px;
     display: flex;
@@ -578,8 +718,18 @@
       --row-gap: 96px;
     }
   }
+  @media (width < 48rem) {
+    .case-grid {
+      --cols: 2;
+      --card: 144px;
+      --gap: 24px;
+      --row-gap: 24px;
+      max-width: calc(144px * 2 + 24px + 24px);
+      padding-inline: 12px;
+    }
+  }
   .case-grid > * {
-    flex: 0 0 min(317px, (100% - (var(--cols) - 1) * var(--gap)) / var(--cols));
+    flex: 0 0 min(var(--card), (100% - (var(--cols) - 1) * var(--gap)) / var(--cols));
   }
 
   /*
@@ -626,6 +776,8 @@
     text-shadow: 0 1px 3px rgb(0 0 0 / 0.8);
   }
   .case-tile__price {
+    /* Высота фигурной плашки (шаблон .shape) — в долях карточки. */
+    --h: calc(48 * var(--case-u));
     position: absolute;
     left: 50%;
     bottom: calc(26 * var(--case-u));
@@ -657,6 +809,50 @@
     bottom: 0;
     transform: translateX(-50%);
   }
+  /*
+   * Телефон (< 768, макет 360): карточка 144 со своими значениями макета, а не уменьшенный десктоп: название DemiBold 12,
+   * пометка 8 в 14 сверху, плашка цены 24 (ширина от 80, поля 6, гем 8×12 через 6, текст 12) на 13 выше низа, уровень
+   * адреналина 130×7 (скругление 2, поля 2, шаги 30×3 со скруглением 1, между ними 2) у низа. Размеры — в долях 144
+   * (--case-u = ширина / 144): уже 360 карточка меньше (320 → 124) и плашка, шкала и зазоры — × 124/144, а кегли,
+   * гем и место пометки под названием — по шкале телефона всегда (длинное название — с многоточием, .truncate).
+   * Стоит до блока «уменьшить движение» — иначе подъём при наведении перебил бы его.
+   */
+  @media (width < 48rem) {
+    .case-tile {
+      --case-u: calc(100cqw / 144);
+    }
+    .case-tile:hover .case-tile__image {
+      transform: translateY(calc(-3 * var(--case-u))) scale(1.03);
+    }
+    .case-tile__name {
+      font-size: 12px;
+    }
+    .case-tile__note {
+      top: 14px;
+      font-size: 8px;
+    }
+    .case-tile__price {
+      --h: calc(24 * var(--case-u));
+      bottom: calc(13 * var(--case-u));
+      gap: calc(6 * var(--case-u));
+      min-width: calc(80 * var(--case-u));
+      padding-inline: calc(6 * var(--case-u));
+      font-size: 12px;
+    }
+    .case-tile__gem {
+      height: 12px;
+    }
+    .case-tile .adrenaline-bar {
+      gap: calc(2 * var(--case-u));
+      width: calc(130 * var(--case-u));
+      height: calc(7 * var(--case-u));
+      padding: calc(2 * var(--case-u));
+      border-radius: calc(2 * var(--case-u));
+    }
+    .case-tile .adrenaline-bar__step {
+      border-radius: calc(1 * var(--case-u));
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .case-tile__image {
       transition: none;
@@ -670,7 +866,8 @@
    * Уровень адреналина (макет): фрейм 268×14 #181821, скругление 4, внутри 4, между шагами 4, шаги 62×6
    * со скруглением 2:
    * низкий #0DFF8A, средний #FFD900, высокий #FF5D00, экстремальный #FF0000; уровень кейса —
-   * 100%, остальные — 30%. Вне карточки кейса — в натуральную величину.
+   * 100%, остальные — 30%. Вне карточки кейса — в натуральную величину. В карточке на телефоне — 130×7,
+   * скругление 2, поля 2, шаги 30×3 со скруглением 1, между ними 2.
    */
   .adrenaline-bar {
     display: flex;
@@ -843,16 +1040,17 @@
     background: var(--rc);
   }
   /*
-   * Совсем маленькая карточка (дорожки рулетки x3…x5 на телефоне, x5 на планшете): текст вышел бы
-   * в 4–8px и не читался. Остаётся плитка скина — картинка во всю рамку по центру по высоте,
-   * свечение и полоса редкости.
+   * Совсем маленькая карточка в дорожках рулетки (x5 на планшете): текст вышел бы в 4–8px и не
+   * читался. Остаётся плитка скина — картинка во всю рамку по центру по высоте, свечение и полоса
+   * редкости. Только в дорожках: карточки телефона 90 (дроплента) и 108 (содержимое, груз) — с текстами
+   * (модификаторы skin-card--reel / skin-card--m в блоке «Страница кейса на телефоне»).
    */
   @container skin-card (max-width: 130px) {
-    .skin-card__info,
-    .skin-card__chance {
+    .case-lane__track .skin-card__info,
+    .case-lane__track .skin-card__chance {
       display: none;
     }
-    .skin-card__image {
+    .case-lane__track .skin-card__image {
       top: calc(35 * var(--u));
       padding: 0;
     }
@@ -898,15 +1096,16 @@
 
   /*
    * ---------- Страница кейса ----------
-   * Отступ над названием кейса — ритм главной: вместе с полем страницы (16 / 24) — 40 / 80 / 120
-   * на телефоне / планшете / от 1280. На низком окне он сжимается вплоть до поля страницы, чтобы
-   * кейс, кнопка открытия и строка под ней поместились на первом экране: 1920×1080 в браузере —
-   * это окно высотой около 950, и при полных 120 кнопка уходила под край. Вычитаемое — высота
-   * верхнего блока, сцены и кнопок до строки под кнопкой открытия, плюс 24 воздуха (на телефоне —
-   * ещё нижняя панель вкладок; на планшете кнопки в три ряда, как на 768).
+   * Отступ над названием кейса. Телефон (< 768, макет 39.png): 36 — вместе с полем main 12 ровно 48 от
+   * низа шапки до прописных названия; шапка там — часть верхнего блока, не липкая. Планшет и от 1280 —
+   * ритм главной: вместе с полем страницы 24 — 80 / 120. На низком окне он сжимается вплоть до поля
+   * страницы, чтобы кейс, кнопка открытия и строка под ней поместились на первом экране: 1920×1080
+   * в браузере — это окно высотой около 950, и при полных 120 кнопка уходила под край. Вычитаемое —
+   * высота верхнего блока, сцены и кнопок до строки под кнопкой открытия, плюс 24 воздуха (на планшете
+   * кнопки в три ряда, как на 768).
    */
   .case-page {
-    padding-top: clamp(0px, 100svh - 893px, 24px);
+    padding-top: 36px;
   }
   @media (min-width: 768px) {
     .case-page {
@@ -925,7 +1124,8 @@
    * Сверху название (DemiBold 36), в 24 под ним — полоса высотой 286: выбранный кейс 286×286 по центру,
    * при x1 — стрелки 72×72 в 163 от кейса и соседние кейсы 234×286 в 24 от краёв контента (их верх —
    * на уровне верха кейса); при x2…x5 — копии кейса 286×286 через 48 по центру. Полоса одной высоты
-   * в любом состоянии, поэтому кнопки под ней (в 12) не прыгают при смене количества.
+   * в любом состоянии, поэтому кнопки под ней (в 12) не прыгают при смене количества. Ярусы ниже —
+   * только от 768; телефон (< 768) — отдельный блок «Страница кейса на телефоне» в конце раздела.
    */
   .case-stage {
     container: case-stage / inline-size;
@@ -1049,24 +1249,14 @@
     }
   }
   /* Планшет: стрелки 48×48 в 24 от кейса, копии через 24; кейс уменьшается, если не помещается. */
-  @container case-stage (max-width: 799.98px) {
-    .case-band {
-      --arrow: 48px;
-      --arrow-gap: 24px;
-      --copy-gap: 24px;
-      --case-size: min(286px, 100cqw - 2 * (48px + 24px));
-    }
-  }
-  /* Телефон: название 24, стрелки в 12 от кейса, копии через 12. */
-  @container case-stage (max-width: 479.98px) {
-    .case-stage__name {
-      font-size: 24px;
-    }
-    .case-band {
-      --arrow-gap: 12px;
-      --copy-gap: 12px;
-      --case-size: min(286px, 100cqw - 2 * (48px + 12px));
-      margin-top: 16px;
+  @media (width >= 48rem) {
+    @container case-stage (max-width: 799.98px) {
+      .case-band {
+        --arrow: 48px;
+        --arrow-gap: 24px;
+        --copy-gap: 24px;
+        --case-size: min(286px, 100cqw - 2 * (48px + 24px));
+      }
     }
   }
 
@@ -1198,13 +1388,14 @@
 
   /*
    * ---------- Кнопки под сценой (в 12 под полосой) ----------
-   * В разметке: количество → «Быстро» (подарок, звук) → кнопка открытия со строкой под ней; это и
+   * В разметке: количество → «Быстро» (подарок) → кнопка открытия со строкой под ней; это и
    * порядок фокуса, поэтому ниже десктопа ряды идут в том же порядке, без перестановки через CSS.
    * Десктоп: сетка «1fr 470 1fr» с промежутками 72 — слева кнопки количества (прижаты вправо: x5
    * ровно под левой стрелкой), по центру кнопка открытия 470×72 (под кейсом), справа «Быстро» (ровно
    * под правой стрелкой). Когда не помещается, промежутки сжимаются до 24, затем кнопка открытия —
    * до 400; ещё уже — два ряда (количество слева от центра, «Быстро» справа, под ними кнопка
-   * открытия), затем три ряда по центру, на телефоне — столбик во всю ширину.
+   * открытия), затем три ряда по центру (ярусы — только от 768). Телефон (< 768) — блок «Страница
+   * кейса на телефоне» ниже: x1…x5 и «Быстро» одним рядом, под ними кнопка 36.
    */
   .case-controls {
     --controls-gap: clamp(24px, (100cqw - 470px - 2 * 384px) / 2, 72px);
@@ -1338,11 +1529,6 @@
     background: #26262f;
     color: #fff;
   }
-  .case-toggle--icon {
-    justify-content: center;
-    width: 72px;
-    padding: 0;
-  }
   /*
    * Строка под кнопкой открытия (в 24): ошибка (#FF2529) или пояснение (белый 50%), Medium 24; место
    * держит всегда. В одну строку по центру кнопки — длинная выходит за её края, а не переносится.
@@ -1359,104 +1545,58 @@
   .case-info[data-tone='error'] {
     color: #ff2529;
   }
-  /*
-   * Два ряда: количество слева от центра, «Быстро» (и подарок) справа — как колонки десктопа, только
-   * сложенные; под ними кнопка открытия 470. Ряд делится ровно по центру, поэтому подарок, который
-   * появляется после загрузки, ничего не сдвигает. Ряд вмещает 384 + 24 + 384 (до 792).
-   */
-  @container case-stage (max-width: 1215.98px) {
-    .case-controls {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 12px 24px;
+  /* Планшет и десктоп (от 768): ярусы раскладки кнопок. */
+  @media (width >= 48rem) {
+    /*
+     * Два ряда: количество слева от центра, «Быстро» (и подарок) справа — как колонки десктопа, только
+     * сложенные; под ними кнопка открытия 470. Ряд делится ровно по центру, поэтому подарок, который
+     * появляется после загрузки, ничего не сдвигает. Ряд вмещает 384 + 24 + 384 (до 792).
+     */
+    @container case-stage (max-width: 1215.98px) {
+      .case-controls {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 12px 24px;
+      }
+      .case-controls__main {
+        grid-column: 1 / -1;
+      }
+      .case-controls__extra {
+        grid-column: 2;
+      }
+      /* Без кнопок количества (бесплатный кейс) «Быстро» — по центру над кнопкой открытия. */
+      .case-controls__extra:first-child {
+        grid-column: 1 / -1;
+        justify-self: center;
+      }
+      .case-open {
+        max-width: 470px;
+      }
     }
-    .case-controls__main {
-      grid-column: 1 / -1;
-    }
-    .case-controls__extra {
-      grid-column: 2;
-    }
-    /* Без кнопок количества (бесплатный кейс) «Быстро» — по центру над кнопкой открытия. */
-    .case-controls__extra:first-child {
-      grid-column: 1 / -1;
-      justify-self: center;
-    }
-    .case-open {
-      max-width: 470px;
-    }
-  }
-  /*
-   * Три ряда по центру: количество, «Быстро», кнопка открытия. «Быстро» стоит по центру, подарок
-   * и звук — справа от него (появление подарка его не сдвигает).
-   */
-  @container case-stage (max-width: 791.98px) {
-    .case-controls {
-      grid-template-columns: minmax(0, 1fr);
-    }
-    .case-controls__counts {
-      grid-column: 1;
-      justify-self: center;
-    }
-    .case-controls__extra,
-    .case-controls__extra:first-child {
-      grid-column: 1;
-      justify-self: stretch;
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    }
-    .case-controls__extra > .case-toggle {
-      grid-column: 2;
-    }
-    .case-controls__more {
-      grid-column: 3;
-    }
-  }
-  /* Телефон: всё во всю ширину — количество (пять равных кнопок), «Быстро» со звуком, кнопка открытия. */
-  @container case-stage (max-width: 599.98px) {
-    .case-controls {
-      gap: 8px;
-    }
-    .case-controls__counts {
-      justify-self: stretch;
-      display: grid;
-      grid-auto-columns: minmax(0, 1fr);
-      grid-auto-flow: column;
-    }
-    .case-controls__extra,
-    .case-controls__extra:first-child {
-      display: flex;
-    }
-    .case-controls__extra > .case-toggle {
-      flex: 1 1 auto;
-      justify-content: center;
-    }
-    .case-controls__main {
-      align-items: stretch;
-    }
-    .case-count,
-    .case-toggle {
-      width: auto;
-      height: 48px;
-      font-size: 20px;
-    }
-    .case-toggle {
-      gap: 12px;
-      padding: 0 16px;
-    }
-    .case-toggle--icon {
-      width: 48px;
-      padding: 0;
-    }
-    .case-open {
-      max-width: none;
-      height: 56px;
-      gap: 16px;
-      font-size: 20px;
-    }
-    .case-info {
-      margin-top: 16px;
-      font-size: 18px;
-      white-space: normal;
-      text-wrap: balance;
+    /*
+     * Три ряда по центру: количество, «Быстро», кнопка открытия. «Быстро» стоит по центру, подарок —
+     * справа от него (появление подарка его не сдвигает).
+     */
+    @container case-stage (max-width: 791.98px) {
+      .case-controls {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .case-controls__counts {
+        grid-column: 1;
+        justify-self: center;
+      }
+      .case-controls__extra,
+      .case-controls__extra:first-child {
+        grid-column: 1;
+        justify-self: stretch;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      }
+      .case-controls__extra > .case-toggle {
+        grid-column: 2;
+      }
+      .case-controls__more {
+        grid-column: 3;
+      }
     }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -1471,6 +1611,353 @@
   }
 
   /*
+   * ---------- Страница кейса на телефоне (окно < 768; макеты 39/40/41.png, ширина 360, поля страницы 12) ----------
+   * Сверху вниз: название DemiBold 16 в 48 от шапки (12 — поле main, 36 — .case-page) → в 12 под базовой линией —
+   * полоса 120: кейс 120×120, стрелки 24×24 в 48 от кейса → в 24 — ряд: x1…x5 (36×36 через 3) от левого края,
+   * «Быстро» у правого → в 12 — кнопка открытия во всю ширину (не шире 470), 36 → в 8 — строка Medium 12 →
+   * в 39 под её базовой линией — дроплента от края до края экрана → в 77 под лентами — содержимое (3 в ряд по 108×72).
+   * Правила кнопок и стрелок — только с контекстом сцены (.case-band, .case-controls): классы .case-open,
+   * .case-info, .case-arrow использует и страница груза. Межстрочный 100 %, текст обрезан по прописным — все
+   * зазоры видимые. Планшет и десктоп этот блок не задевает; телефонных ярусов сцены выше больше нет.
+   */
+  .case-strip {
+    display: none;
+  }
+  @media (width < 48rem) {
+    .case-stage__name {
+      font-size: 16px;
+    }
+    /* Кейс 120×120; стрелки 24×24 в 48 от кейса, по центру кейса по высоте; копии x2…x5 через 12. */
+    .case-band {
+      --arrow: 24px;
+      --arrow-gap: 48px;
+      --copy-gap: 12px;
+      --case-size: 120px;
+      margin-top: 12px;
+    }
+    .case-band .case-arrow {
+      border-radius: 4px;
+      transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        opacity 0.2s ease;
+    }
+    .case-band .case-arrow svg {
+      width: 8px;
+      height: 8px;
+    }
+    /*
+     * Пока идёт открытие (запрос и прокрутка дропленты), кейс на месте, а стрелки неактивны — как и ряд кнопок
+     * (.case-controls[data-spinning]).
+     */
+    .case-band .case-arrow[inert] {
+      opacity: 0.5;
+    }
+    /*
+     * Ряд: x1…x5 слева, «Быстро» (с подарком) прижато вправо; кнопка открытия и строка — следующей строкой через 12.
+     * Во всю ширину контента, но не шире 470 (кнопка десктопа; так же у груза) — шире 494 блок по центру под кейсом.
+     * Не помещается (окно уже 316, с подарком — уже 355) — группа «Быстро» переносится строкой ниже, тоже вправо.
+     */
+    .case-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 3px;
+      max-width: 470px;
+      margin: 24px auto 0;
+    }
+    .case-controls__counts,
+    .case-controls__extra,
+    .case-controls__more {
+      display: flex;
+      gap: 3px;
+    }
+    .case-controls__extra {
+      margin-left: auto;
+    }
+    /* Пустая группа (нет подарка) не должна добавлять зазор 3 справа от «Быстро». */
+    .case-controls__more:empty {
+      display: none;
+    }
+    /*
+     * Подарок (бесплатные открытия по бонусу) — квадрат 36 с иконкой 12; число — значком в правом верхнем углу, в 3 от
+     * краёв: высота 12, DemiBold 8, #121117 на #B7FF00, обводка 2 цветом кнопки отделяет значок от иконки (как точка
+     * непрочитанного у «Меню»). Число видно при любой строке под кнопкой (нехватка гемов, тираж, блокировка). Подарок
+     * появляется после загрузки (сервер пользователя не знает): с числом в строку ряд переносился на окне уже 379, и всё
+     * ниже уезжало на 48. Квадратом он помещается в ряд с 355: 192 + 3 + 97 + 3 + 36 = 331; значок ряд не меняет.
+     */
+    .case-controls .case-controls__more .case-toggle {
+      position: relative;
+      justify-content: center;
+      width: 36px;
+      padding: 0;
+    }
+    .case-controls .case-controls__more .case-toggle > span {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      min-width: 12px;
+      /* Строка обрезана по прописным (1cap) — поровну сверху и снизу до высоты 12. */
+      padding: calc((12px - 1cap) / 2) 3px;
+      border-radius: 6px;
+      background: var(--color-lime);
+      box-shadow: 0 0 0 2px #26262f;
+      color: #121117;
+      font-size: 8px;
+      text-align: center;
+    }
+    .case-controls__main {
+      flex: 1 0 100%;
+      align-items: stretch;
+    }
+    .case-controls .case-count {
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+    /* «Быстро», подарок и кнопка открытия: 36, поля 12 слева и 16 справа, иконка 12, через 12 — DemiBold 12. */
+    .case-controls .case-toggle,
+    .case-controls .case-open {
+      height: 36px;
+      gap: 12px;
+      padding: 0 16px 0 12px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+    .case-controls .case-toggle svg,
+    .case-controls .case-open svg {
+      width: 12px;
+      height: 12px;
+    }
+    .case-controls .case-open__sum {
+      text-decoration-thickness: 1px;
+      text-underline-offset: 2.5px;
+    }
+    /* Строка в 8 под кнопкой; место держит всегда (min-height 1cap), поэтому дроплента не прыгает. */
+    .case-controls .case-info {
+      margin-top: 8px;
+      font-size: 12px;
+      white-space: normal;
+      text-wrap: balance;
+    }
+
+    /*
+     * Дроплента (макет 40.png): от края до края экрана, N лент через 12. Лента 66 = метка 3 + 3 + карточки 60.
+     * Карточки 90×60 через 3 (шаг 93); в покое под меткой карточка --idle (сдвиг — здесь, без JS: SSR рисует так же).
+     * Метка 274×3 (прозрачный → #C6FF00 → прозрачный) и шип 6 → 1 длиной 20.5 от верха метки; края ленты гаснут
+     * на 24 % ширины (метка не гаснет — она вне окна).
+     */
+    .case-strip {
+      --strip-card: 90px;
+      --strip-gap: 3px;
+      display: block;
+      margin: 39px -12px 0;
+    }
+    .case-strip__lane {
+      position: relative;
+      height: 66px;
+      container-type: inline-size;
+    }
+    .case-strip__lane + .case-strip__lane {
+      margin-top: 12px;
+    }
+    .case-strip__window {
+      position: absolute;
+      inset: 6px 0 0;
+      overflow: hidden;
+      mask-image: linear-gradient(90deg, transparent, #000 24%, #000 76%, transparent);
+    }
+    .case-strip__track {
+      display: flex;
+      gap: var(--strip-gap);
+      width: max-content;
+      height: 100%;
+      transform: translateX(
+        calc(
+          50cqw - var(--idle, 5) * (var(--strip-card) + var(--strip-gap)) - var(--strip-card) / 2
+        )
+      );
+      will-change: transform;
+    }
+    .case-strip__track > .skin-card {
+      flex: none;
+      width: var(--strip-card);
+    }
+    .case-strip__marker {
+      position: absolute;
+      z-index: 1;
+      left: 50%;
+      top: 0;
+      width: 274px;
+      height: 3px;
+      translate: -50% 0;
+      background: linear-gradient(90deg, transparent, var(--color-accent) 50%, transparent);
+      pointer-events: none;
+    }
+    .case-strip__marker::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 6px;
+      height: 20.5px;
+      translate: -50% 0;
+      background: var(--color-accent);
+      clip-path: polygon(0 0, 100% 0, 58.33% 100%, 41.67% 100%);
+    }
+
+    /*
+     * Карточка дропленты 90×60 — та же, что карточка ленты дропов верхнего блока (часть 1): скругление 6, рамка скина
+     * 80×40 в 6 сверху по центру (скин — во внутреннем поле 13 %, как на десктопе), полоса 60×1. Свечение и мазок —
+     * как у .drop-card на телефоне (менять вместе): эллипсы 76×54 @ 7,3 (20 %, blur 18) и 96×36 @ −3,44 (57 %,
+     * blur 11.5), мазок drop-styled-bg в своей пропорции 115.2×74.4 @ −3.3,−1.9 (5 %) — рамка Figma 110×70, вектор
+     * из неё выступает. Тексты 8: «Шанс» и шанс справа сверху, тип, скин и цена (#B7FF00) слева снизу; от краёв 4,
+     * строки через 3, гем 8.
+     */
+    .skin-card--reel {
+      aspect-ratio: 3 / 2;
+      border-radius: 6px;
+    }
+    .skin-card--reel .skin-card__body {
+      border-radius: 6px;
+    }
+    .skin-card--reel .skin-card__glow-a {
+      left: 7px;
+      top: 3px;
+      width: 76px;
+      height: 54px;
+      opacity: 0.2;
+      filter: blur(18px);
+    }
+    .skin-card--reel .skin-card__glow-b {
+      left: -3px;
+      top: 44px;
+      width: 96px;
+      height: 36px;
+      opacity: 0.57;
+      filter: blur(11.5px);
+    }
+    .skin-card--reel .skin-card__brush {
+      left: -3.3px;
+      top: -1.9px;
+      width: 115.2px;
+      height: 74.4px;
+      opacity: 0.05;
+    }
+    .skin-card--reel .skin-card__image {
+      left: 5px;
+      top: 6px;
+      width: 80px;
+      height: 40px;
+      padding: 5.2px 10.4px;
+    }
+    .skin-card--reel .skin-card__chance {
+      top: 4px;
+      right: 4px;
+      gap: 3px;
+      font-size: 8px;
+    }
+    .skin-card--reel .skin-card__info {
+      left: 4px;
+      right: 4px;
+      bottom: 4px;
+      gap: 3px;
+      font-size: 8px;
+    }
+    .skin-card--reel .skin-card__price {
+      gap: 3px;
+    }
+    .skin-card--reel .skin-card__gem {
+      width: calc(8px * 2 / 3);
+      height: 8px;
+    }
+    .skin-card--reel .skin-card__bar {
+      width: 60px;
+      height: 1px;
+      border-radius: 1px;
+    }
+
+    /*
+     * Карточка содержимого 108×72 (макет 41.png): скругление 6, рамка скина 96×48 в 6 от верха, левого и правого края,
+     * тексты 8 через 4, от краёв 4, гем 8, полоса 72×1; свечение и мазок — как у карточки дропленты ×1.2 (108 / 90;
+     * сверка с 41.png — RMSE 1.53 из 255).
+     * Рамки, картинка и зазоры — в долях ширины (--u = ширина / 108): на 360…767 карточка 108, уже — пропорционально
+     * меньше; тексты и гем — всегда 8 (шкала телефона 16 / 12 / 8; длинные строки обрезаются, .truncate).
+     * Модификатор общий: им же пользуется груз на телефоне (приз и окно итога, CARGO.md §6).
+     */
+    .skin-card--m {
+      --u: calc(100cqw / 108);
+      aspect-ratio: 3 / 2;
+      border-radius: 6px;
+    }
+    .skin-card--m .skin-card__body {
+      border-radius: calc(6 * var(--u));
+    }
+    .skin-card--m .skin-card__glow-a {
+      left: calc(8.4 * var(--u));
+      top: calc(3.6 * var(--u));
+      width: calc(91.2 * var(--u));
+      height: calc(64.8 * var(--u));
+      opacity: 0.2;
+      filter: blur(calc(21.6 * var(--u)));
+    }
+    .skin-card--m .skin-card__glow-b {
+      left: calc(-3.6 * var(--u));
+      top: calc(52.8 * var(--u));
+      width: calc(115.2 * var(--u));
+      height: calc(43.2 * var(--u));
+      opacity: 0.57;
+      filter: blur(calc(13.8 * var(--u)));
+    }
+    .skin-card--m .skin-card__brush {
+      left: calc(-3.96 * var(--u));
+      top: calc(-2.28 * var(--u));
+      width: calc(138.24 * var(--u));
+      height: calc(89.28 * var(--u));
+      opacity: 0.05;
+    }
+    .skin-card--m .skin-card__image {
+      left: calc(6 * var(--u));
+      top: calc(6 * var(--u));
+      width: calc(96 * var(--u));
+      height: calc(48 * var(--u));
+      padding: calc(6.26 * var(--u)) calc(12.52 * var(--u));
+    }
+    .skin-card--m .skin-card__chance {
+      top: calc(4 * var(--u));
+      right: calc(4 * var(--u));
+      gap: calc(4 * var(--u));
+      font-size: 8px;
+    }
+    .skin-card--m .skin-card__info {
+      left: calc(4 * var(--u));
+      right: calc(4 * var(--u));
+      bottom: calc(4 * var(--u));
+      gap: calc(4 * var(--u));
+      font-size: 8px;
+    }
+    .skin-card--m .skin-card__price {
+      gap: calc(3.6 * var(--u));
+    }
+    .skin-card--m .skin-card__gem {
+      width: calc(8px * 2 / 3);
+      height: 8px;
+    }
+    .skin-card--m .skin-card__bar {
+      width: calc(72 * var(--u));
+      height: max(1px, calc(1 * var(--u)));
+      border-radius: calc(1 * var(--u));
+    }
+
+    /* Содержимое кейса: 3 в ряд по 108×72 через 6, сетка по центру (как на главной); уже 360 — карточки меньше. */
+    .skin-grid {
+      grid-template-columns: repeat(3, min(108px, (100% - 12px) / 3));
+      gap: 6px;
+    }
+  }
+
+  /*
    * ---------- Страница груза (макет 1920) ----------
    * Сцена на всю ширину экрана: .cargo-page снимает поля страницы (12 / 24), всё, что выходит за края
    * (фон 1920, тень), обрезается её краями. Верхнее поле на низком окне сжимается, как у .case-page, но
@@ -1479,13 +1966,15 @@
    * 1920 — 1584 + 24 ≈ 1609 (getBoundingClientRect у .cargo-info). Секция выше 1080
    * по замыслу макета (≈ 1300 px до кнопки), поэтому на 1920×1080 поле — 24: кнопка на первый экран не
    * попадает и не должна.
+   * Телефон (< 768): поле 36 — с полем main 12 это 48 под шапкой, как над названием кейса (SPEC3); «Ё» при
+   * 16 выступает на ~3 — запас есть.
    */
   .cargo-page {
     position: relative;
     isolation: isolate;
     overflow: clip;
     margin-inline: -12px;
-    padding: 24px 12px 0;
+    padding: 36px 12px 0;
   }
   @media (min-width: 768px) {
     .cargo-page {
@@ -1581,8 +2070,9 @@
 
   /*
    * Сцена: контейнер — вся ширина контента W (на 1920 — 1872), раскладка зависит от неё (container
-   * queries, пять ярусов: ≥ 1470 — как макет; 1245–1469 — «Как это работает?» под кнопкой; 976–1244 —
-   * оба боковых блока под кнопкой в ряд; 600–975 — груз ×0.75, блоки столбиком; < 600 — телефон). Особый
+   * queries, четыре яруса: ≥ 1470 — как макет; 1245–1469 — «Как это работает?» под кнопкой; 976–1244 —
+   * оба боковых блока под кнопкой в ряд; ≤ 975 — груз ×0.75, блоки столбиком). Телефон (окно < 768) —
+   * отдельный блок @media в конце раздела: он перекрывает всё, что задают ярусы. Особый
    * груз (data-wide) шире остальных: колонка «Как это работает?» у него меньше, оба блока под кнопкой — при
    * W ≤ 1371.
    * Все величины сцены — в долях --cu (1 px макета при грузе 744); --cu — длина, не путать с --u.
@@ -2070,9 +2560,9 @@
     }
   }
   /*
-   * 600–975 (планшет): груз 558 (×0.75), стрелки 56, название 56 / 36; блоки столбиком, приз сверху.
-   * Порядок DOM (и фокуса) — «Как это работает?», затем приз: здесь видимый порядок расходится с ним на
-   * два элемента — осознанно, ради приза на первом месте.
+   * ≤ 975 (планшет; на окне от 768 W ≥ 705): груз 558 (×0.75), стрелки 56, название 56 / 36; блоки столбиком,
+   * приз сверху. Порядок DOM (и фокуса) — «Как это работает?», затем приз: здесь видимый порядок расходится с
+   * ним на два элемента — осознанно, ради приза на первом месте.
    */
   @container cargo (max-width: 975.98px) {
     .cargo-stage__inner {
@@ -2094,62 +2584,209 @@
       width: min(480px, 100%);
     }
   }
-  /* < 600 (телефон): груз во всю ширину (до 400), таймер 72, текст мельче, кнопка во всю ширину 56. */
-  @container cargo (max-width: 599.98px) {
+  /*
+   * Телефон (окно < 768): та же сцена ровно ×0.5 — груз 372 (1 cu = 0.5 px), таймер, плашки, тень и фон
+   * пропорционально; кегли — по шкале телефона 16 / 12 / 8, как у страницы кейса: название 16 (свой стиль —
+   * ExtraBold Italic, прописные), «Упадёт через» 12 в 6 под ним, таймер в 12 под «Упадёт через», цифры 16, подписи 8,
+   * заголовки 16, текст 12; уже 360 кегли не уменьшаются, длинное название переносится. Кнопка, стрелки и строка под
+   * кнопкой — как у страницы кейса на телефоне: 36 во всю ширину (не шире 470, поля 12 / 16), стрелки 24×24
+   * (скругление 4, иконка 8), строка в 8, Medium 12. Блоки — под кнопкой столбиком через 48: приз (карточка
+   * содержимого кейса skin-card--m 108×72), затем «Как это работает?» со строками как в макете. Блок стоит после
+   * ярусов сцены: на телефоне (W < 976) они тоже совпадают — всё, что они задают, здесь перекрыто или не мешает
+   * (justify-content и поле снизу у .cargo-side). От верха прописных названия T (360, название в одну строку):
+   * «Упадёт через» T + 17.2, таймер T + 37.6, стрелки T + 315.3, плашки T + 392.35, «Доступно мест» T + 422.35,
+   * центр тени T + 447.85, кнопка T + 466.75, строка T + 510.75, «Супер-приз:» T + 567.15.
+   */
+  @media (width < 48rem) {
     .cargo-stage__inner {
-      --cargo: min(400px, 100cqw);
-      --title: 32px;
-      --sub: 20px;
+      --cargo: 372px;
+      --title: 16px;
+      --sub: 12px;
       --head-gap: 12px;
-      --frame: 72px;
-      --frame-r: 14px;
-      --digits: 28px;
-      --unit: 14px;
-      --unit-gap: 8px;
-      --arrow: 48px;
-      --avail: 18px;
-      --shadow-gap: 12px;
-      --buy-gap: 44px;
+      --frame: 48px;
+      --frame-r: 9px;
+      --digits: 16px;
+      --unit: 8px;
+      --unit-gap: 6px;
+      --arrow: 24px;
+      --avail: 12px;
+      --shadow-gap: 8.1px;
+      --buy-gap: 36px;
       --buy-w: 100%;
-      --buy-h: 56px;
-      --buy-font: 20px;
+      --buy-h: 36px;
+      --buy-font: 12px;
     }
+    /*
+     * «Упадёт через» — в 6 под названием, а --head-gap (12) остаётся зазором до таймера, как «заголовок → 12 → кейс»
+     * на странице кейса. Формула top у .cargo-how / .cargo-prize здесь не действует: на телефоне они в потоке.
+     */
+    .cargo-subtitle {
+      margin-top: 6px;
+    }
+    /* Особый груз (видимая часть — до 355 cu от оси) уже 360 уменьшается: боковые купола не режет край экрана. */
+    .cargo-stage__inner[data-wide] {
+      --cargo: min(372px, (100cqw + 20px) * 744 / 710);
+    }
+    /* Сцена не шире контента (max-width: 100%), картинка 372 бывает шире — ставим её по оси сцены. */
+    .cargo-image {
+      left: calc(50% - var(--cargo) / 2 + 2 * var(--cu));
+    }
+    /* Таймер ×0.5: кадры 48 через 3, скругление 9, размытие 6 (Figma) → 3 (CSS). */
+    .cargo-timer {
+      gap: 3px;
+    }
+    .cargo-timer__frame {
+      backdrop-filter: blur(3px);
+    }
+    /* Стрелки — как на странице кейса: 24×24, скругление 4, иконка 8; у краёв сцены (до 395 — в полях 12). */
+    .cargo-arrow {
+      border-radius: 4px;
+    }
+    .cargo-arrow svg {
+      width: 8px;
+      height: 8px;
+    }
+    /* Центр тени от верха плашек: плашки 24 + 6 + прописные «Доступно мест» + 8.1 + 18 cu. */
+    .cargo-controls {
+      --shadow-cy: calc(24px + 6px + var(--avail) * 0.7 + var(--shadow-gap) + 18 * var(--cu));
+    }
+    .cargo-badges {
+      gap: 3px;
+      min-height: 24px;
+    }
+    /* Цена места 80×24: гем 8×12, через 6 — DemiBold 12, поля 6 (срез и скругления — из шаблона по --h). */
+    .cargo-price {
+      --h: 24px;
+      gap: 6px;
+      width: 80px;
+      padding-inline: 6px;
+      font-size: 12px;
+    }
+    .cargo-price__gem {
+      width: 8px;
+      height: 12px;
+    }
+    /* Выбор количества 80×24: «−» и «+» по 24×24 (минимум для пальца), число от 28, поля 2, иконки 12. */
+    .cargo-qty {
+      --h: 24px;
+      grid-template-columns: 24px minmax(28px, auto) 24px;
+      min-width: 80px;
+      padding-inline: 2px;
+      backdrop-filter: blur(3px);
+    }
+    .cargo-qty__step {
+      height: 24px;
+    }
+    .cargo-qty__step svg {
+      width: 12px;
+      height: 12px;
+    }
+    .cargo-qty__step:focus-visible {
+      outline-offset: -2px;
+    }
+    /*
+     * Поле количества — <input>: при шрифте меньше 16 iOS Safari увеличивает страницу при фокусе. Шрифт 16, видно 12
+     * (scale 0.75 от центра); ширина и высота — видимые / 0.75, отрицательные поля возвращают раскладке видимый размер
+     * (28×24, пока в числе не больше трёх цифр).
+     */
+    .cargo-qty__value {
+      --w: max(28px / 0.75, calc(var(--n) * 0.64em + 4px / 0.75));
+      width: var(--w);
+      height: 32px;
+      margin: -4px calc(var(--w) * -0.125);
+      font-size: 16px;
+      scale: 0.75;
+    }
+    .cargo-qty__value:focus-visible {
+      outline-width: calc(1px / 0.75);
+      outline-offset: -4px;
+    }
+    .cargo-available {
+      margin-top: 6px;
+    }
+    /*
+     * Кнопка — как «Открыть» кейса: во всю ширину контента (не шире 470), 36, скругление 6, поля 12 / 16, иконка 12 + 12;
+     * сумма подчёркнута линией 1 в 2.5 под базовой — тоже как у кейса.
+     */
     .cargo-buy {
-      gap: 16px;
+      max-width: 470px;
+      gap: 12px;
+      padding-inline: 12px 16px;
+      border-radius: 6px;
     }
+    .cargo-buy svg {
+      width: 12px;
+      height: 12px;
+    }
+    .cargo-buy__sum {
+      text-decoration-thickness: 1px;
+      text-underline-offset: 2.5px;
+    }
+    /* Строка под кнопкой — в 8, Medium 12 (как текст ошибки на странице кейса). */
     .cargo-info {
-      margin-top: 16px;
-      font-size: 18px;
+      margin-top: 8px;
+      font-size: 12px;
     }
+    .cargo-info__link,
+    .cargo-how__link {
+      text-underline-offset: 2px;
+    }
+    /* Блоки под кнопкой столбиком через 48: сначала приз, затем «Как это работает?». */
     .cargo-side {
-      gap: 40px;
-      margin-top: 56px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 48px;
+      margin-top: 48px;
+    }
+    .cargo-how,
+    .cargo-prize {
+      position: static;
+    }
+    .cargo-prize {
+      order: -1;
+      gap: 12px;
+      width: auto;
+    }
+    .cargo-prize__title {
+      font-size: 16px;
+    }
+    /* Мобильная карточка содержимого кейса 108×72 — модификатор skin-card--m (блок «Страница кейса на телефоне»). */
+    .cargo-prize__card {
+      width: 108px;
+    }
+    /*
+     * Колонка — по содержимому (240 при 12 px), строки — как в макете, только по <br>. Контейнер снят: иначе
+     * ширина не считалась бы по содержимому, а запрос cargo-how (уже 480) прятал бы переносы.
+     */
+    .cargo-how {
+      container-type: normal;
+      width: max-content;
+      max-width: 100%;
     }
     .cargo-how__head {
-      gap: 16px;
+      gap: 12px;
     }
     .cargo-how__icon {
-      width: 28px;
-      height: 28px;
+      width: 16px;
+      height: 16px;
     }
-    .cargo-how__title,
-    .cargo-prize__title {
-      font-size: 24px;
+    .cargo-how__title {
+      font-size: 16px;
     }
     .cargo-how__list {
-      gap: 24px;
-      margin-top: 24px;
-      font-size: 18px;
+      gap: 18px;
+      margin-top: 18px;
+      font-size: 12px;
     }
     .cargo-how__item {
-      grid-template-columns: 28px minmax(0, 1fr);
+      grid-template-columns: 18px minmax(0, 1fr);
     }
     .cargo-how__num {
       padding-left: 4px;
     }
-    .cargo-prize {
-      gap: 16px;
-      width: 100%;
+    .cargo-how__text {
+      white-space: nowrap;
     }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -2162,16 +2799,17 @@
   /*
    * ---------- Футер (макет 1920) ----------
    * Фон — вертикальный градиент #121117 → #0E0D11. Поля внутрь: сверху 48, слева и справа 72 (планшет —
-   * 48, телефон — 24), снизу 24 (на телефоне — ещё нижнее меню и безопасная зона экрана). Логотип высотой
-   * 40, белый → 24 → описание и ссылки (Medium 18, белый 30%) → 24 → разделитель 1px → 24 → копирайт.
-   * Ряд под логотипом в макете — Auto layout «Space between» (скрин выравнивания): описание (блок 435),
+   * 48, телефон — 24), снизу 24 (на телефоне — ещё нижнее меню, безопасная зона экрана и плашка cookie, пока
+   * она видна). Логотип высотой 40, белый → 24 → описание и ссылки (Medium 18, белый 30%) → 24 →
+   * разделитель 1px → 24 → копирайт. Ряд под логотипом в макете — Auto layout «Space between» (скрин выравнивания): описание (блок 435),
    * разделы сайта (по ширине текста) и два столбца документов (блоки по 350) с равными промежутками — так
    * от 1660px. 1280–1659 — тот же ряд, но описание уже (340), а столбцы — по ширине текста; планшет —
    * столбцы под описанием, тоже с равными промежутками; телефон — всё одним столбцом, текст 16.
    */
   .site-footer {
     margin-top: 64px;
-    padding: 48px 24px calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 24px);
+    padding: 48px 24px
+      calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--cookie-space, 0px) + 24px);
     background: linear-gradient(180deg, #121117, #0e0d11);
     font-size: 16px;
     font-weight: 500;
@@ -2422,4 +3060,42 @@
 }
 .gr-toast {
   animation: gr-toast-in 0.2s ease-out;
+}
+/*
+ * Шторка «Меню» телефона: выезжает справа (0,26 с) и уходит вправо (0,18 с) за свой край и поле 12; подложка
+ * проявляется (gr-overlay) и гаснет. Отдельные классы — оверлеи окон входа и пополнения не задеваются.
+ * При «меньше движения» общее правило выше сокращает анимации до 0,01 мс — Radix дожидается их конца.
+ */
+@keyframes gr-drawer-in {
+  from {
+    transform: translateX(calc(100% + 12px));
+  }
+}
+@keyframes gr-drawer-out {
+  to {
+    transform: translateX(calc(100% + 12px));
+  }
+}
+@keyframes gr-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+.gr-drawer[data-state='open'] {
+  animation: gr-drawer-in 0.26s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+.gr-drawer[data-state='closed'] {
+  animation: gr-drawer-out 0.18s ease-in forwards;
+}
+.gr-drawer-overlay[data-state='closed'] {
+  animation: gr-fade-out 0.18s ease-in forwards;
+}
+/*
+ * Тосты телефона сверху (ui/toast.tsx); пока шторка открыта — ниже её строки аккаунта: шторка с 12, поле 12,
+ * строка 36, зазор 12 → с 72. Поверх строки они закрывали ник и «Закрыть меню» и перехватывали нажатие.
+ */
+@media (width < 48rem) {
+  body:has(.gr-drawer[data-state='open']) .gr-toaster {
+    top: calc(env(safe-area-inset-top) + 72px);
+  }
 }

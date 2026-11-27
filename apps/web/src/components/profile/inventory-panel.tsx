@@ -176,8 +176,10 @@ export function InventoryPanel({ game }: { game: string }) {
         </div>
       )}
 
+      {/* Телефон: над нижним меню (безопасная зона экрана — под ним), а пока видна плашка cookie — над ней
+          (--cookie-space, globals.css). От 768 — у нижнего края, с полем на безопасную зону. */}
       {selected.size > 0 && (
-        <div className="pb-safe fixed inset-x-0 bottom-[var(--tabbar-h)] z-30 border-t border-line bg-surface-1/95 backdrop-blur md:bottom-0">
+        <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom)+var(--cookie-space,0px))] z-30 border-t border-line bg-surface-1/95 backdrop-blur md:bottom-0 md:pb-[env(safe-area-inset-bottom)]">
           <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-3">
             <div className="text-sm">
               <span className="text-muted">

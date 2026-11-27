@@ -149,7 +149,12 @@ export function BattleList({ game, initial }: { game: string; initial: BattleLis
             {me.data && <TabsTrigger value="mine">{t('tabs.mine')}</TabsTrigger>}
           </TabsList>
         </div>
-        <div className="no-scrollbar -mx-3 flex gap-1.5 overflow-x-auto px-3 sm:-mx-5 sm:px-5 lg:mx-0 lg:px-0">
+        {/*
+          Ряд форматов прокручивается и в поле страницы: до 768 поле 12 (-mx-3 — ровно до края экрана), с 768
+          поле 24 (ряд заходит в него на 20), с 1024 — по ширине контента. Порог md, а не sm: на 640–767 поле
+          тоже 12, и -mx-5 прокручивал страницу вбок.
+        */}
+        <div className="no-scrollbar -mx-3 flex gap-1.5 overflow-x-auto px-3 md:-mx-5 md:px-5 lg:mx-0 lg:px-0">
           <button type="button" className={chip(format === 'all')} onClick={() => setFormat('all')}>
             {t('all')}
           </button>

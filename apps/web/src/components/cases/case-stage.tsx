@@ -50,10 +50,12 @@ function Arrow({
   game,
   side,
   neighbour,
+  inert,
 }: {
   game: string;
   side: 'prev' | 'next';
   neighbour: CaseNeighbour;
+  inert: boolean;
 }) {
   const t = useTranslations('case');
   const ref = useRef<HTMLAnchorElement>(null);
@@ -72,6 +74,7 @@ function Arrow({
       className={cn('case-arrow', `case-arrow--${side}`)}
       aria-label={label}
       title={label}
+      inert={inert}
       // detail === 0 — нажатие с клавиатуры (Enter), а не мышью.
       onClick={(e) => {
         keyboardArrow = e.detail === 0 ? side : null;
@@ -86,7 +89,10 @@ function Arrow({
 /**
  * Сцена в покое: x1 — кейс 286×286 по центру, стрелки и соседние кейсы (если кейс есть в каталоге
  * главной); x2…x5 — N копий кейса через 48 по центру, стрелок и соседей нет. Размеры и видимость
- * соседей — в CSS (.case-band, container queries по ширине сцены).
+ * соседей — в CSS (.case-band, container queries по ширине сцены; телефон — кейс 120, стрелки 24×24).
+ * На телефоне сцена остаётся в покое и во время прокрутки (крутится дроплента под кнопкой). Пока идёт
+ * запрос к серверу и прокрутка, стрелки неактивны (inert): уйти на соседний кейс, не увидев выигрыш,
+ * нельзя (на десктопе во время прокрутки стрелок нет вовсе).
  */
 export function CaseStageIdle({
   game,
@@ -94,12 +100,14 @@ export function CaseStageIdle({
   imageUrl,
   count,
   neighbours,
+  inert = false,
 }: {
   game: string;
   name: string;
   imageUrl: string | null;
   count: number;
   neighbours: CaseNeighbours | null;
+  inert?: boolean;
 }) {
   return (
     <>
@@ -128,8 +136,8 @@ export function CaseStageIdle({
         <>
           <NeighbourCard game={game} side="prev" neighbour={neighbours.prev} />
           <NeighbourCard game={game} side="next" neighbour={neighbours.next} />
-          <Arrow game={game} side="prev" neighbour={neighbours.prev} />
-          <Arrow game={game} side="next" neighbour={neighbours.next} />
+          <Arrow game={game} side="prev" neighbour={neighbours.prev} inert={inert} />
+          <Arrow game={game} side="next" neighbour={neighbours.next} inert={inert} />
         </>
       ) : null}
     </>

@@ -11,8 +11,8 @@ import {
 } from '@/components/ui/dropdown';
 import { ChevronDownIcon, SoundOffIcon, SoundOnIcon } from '@/components/icons/design-icons';
 import { cn } from '@/lib/cn';
-import { usePrefToggles } from '@/lib/prefs';
-import { usePrefs, usePrefsHydrated } from '@/lib/store';
+import { LANGUAGES } from '@/lib/languages';
+import { useSoundPref } from '@/lib/prefs';
 import { GameMenuContent, useGameSelect } from './game-switcher';
 import { LiveFeed } from './live-feed';
 
@@ -49,8 +49,6 @@ function GameSelect() {
     </Dropdown>
   );
 }
-
-const LANGUAGES = [{ code: 'ru', short: 'RU', flag: '/design/flags/ru.svg' }] as const;
 
 /**
  * Выбор языка: флаг 28×20 + код DemiBold 24 + стрелка, отступы 24 и 12 → 158×72; углы 12, но на
@@ -92,10 +90,7 @@ function LanguageSelect() {
 /** Звуки сайта: 85×72, иконка белая 30%. */
 function SoundToggle() {
   const t = useTranslations('topBar');
-  const hydrated = usePrefsHydrated();
-  const sound = usePrefs((s) => s.sound);
-  const { setSound } = usePrefToggles();
-  const on = !hydrated || sound;
+  const { sound, setSound, on } = useSoundPref();
   return (
     <button
       type="button"
@@ -116,10 +111,12 @@ function SoundToggle() {
 /**
  * Ряд под промо-полосой: слева выбор игры, языка и звука (249×150), справа лента
  * последних дропов до правого края экрана, поверх неё — плашка онлайна и затемнение.
+ * Телефон (< 768): только плитка онлайна и лента (выбор игры, языка и звука — в мобильном меню);
+ * лента тоже до края экрана — за поле страницы 12.
  */
 export function TopBar() {
   return (
-    <div className="flex gap-[6px] md:-mr-6">
+    <div className="-mr-3 flex gap-[6px] md:-mr-6">
       <div className="hidden w-[249px] shrink-0 flex-col gap-[6px] md:flex">
         <GameSelect />
         <div className="flex gap-[6px]">

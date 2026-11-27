@@ -4,8 +4,9 @@
  *   const stop = startSnowDrift(canvas, { measure, watch, onReady, onStale });
  *   stop(); // отменяет отложенную работу, отключает наблюдателей и очищает холст
  *
- * - Холст — полоса внизу промо-полосы высотой DRIFT_LAYOUT.band px узора (46 css px, на телефоне в
- *   0,693 раза меньше): нарисованное не выше ~37 px, холст в 2,8 раза меньше всей полосы.
+ * - Холст — полоса внизу промо-полосы высотой DRIFT_LAYOUT.band px узора (46 css px): нарисованное не выше
+ *   ~37 px узора, холст в 2,8 раза ниже полосы. На телефоне — DRIFT_PHONE.band (вся картинка эталона, 98 px
+ *   узора) в масштабе 0,1795: 17,6 css px при полосе 60, плотность пикселей холста — до 3 (maxDprCompact).
  * - Композиция — из эталона. Силуэт сугроба снят с исходной картинки (макет 10.png) и хранится
  *   ломаными (DRIFT_L / DRIFT_C / DRIFT_R, ~100 узлов, ошибка 0,13–0,21 px). Части привязаны так же,
  *   как стоят текст, кнопка и фон: L (сугроб под фонарём) — к левому краю, C (холм под «…ОКОДУ» и
@@ -14,15 +15,19 @@
  *   холмы из гнёзд (DRIFT_GAP_*: размер и место — доли щели), уже — части перекрываются (берётся
  *   максимум), а R на узкой полосе отъезжает вправо, чтобы сугроб не лез под кнопку. Тот же силуэт
  *   (и те же тихие зоны) рисует CSS-заглушка .promo-strip::before (snow-drift-css.ts) — до JS и без него.
+ * - Телефон (макет 36.png) — эталон целиком, как в макете: края картинки (DRIFT_EDGE_*) у краёв полосы,
+ *   части — на своих местах в картинке, без отъезда R; силуэт поднят на DRIFT_PHONE.lift — под сугробами
+ *   сплошной слой снега. Телефон движок узнаёт по высоте холста (её задаёт CSS).
  * - С той же картинки сняты (только для холста) волнистость гребня 6–30 px (DRIFT_DETAIL; в щелях —
  *   такой же шум) и передний вал — ближний слой (DRIFT_NEAR_*: низкий вал перед сугробами, в низинах
  *   совпадает с дальним слоем). Объём высоких сугробов — модель, подобранная по той же картинке
  *   (VOLUME: правый склон и тело темнее, левый склон светлее), плюс голубовато-серые пятна.
  * - Тихие зоны — по измерениям: measure() отдаёт прямоугольники строк текста и кнопки; сугроб
  *   опускается (мягко, только где нужно) так, чтобы не подходить к их низу ближе clearance (6 px,
- *   на телефоне 4 px). При раскладке макета ничего не меняется.
+ *   на телефоне 2,5 px). При раскладке макета на десктопе ничего не меняется.
  * - Тело слоя — путь, залитый бесшовной текстурой «крупы»; глубже ~7 px под краем снег темнеет и
- *   синеет (карта затенения, как у фото). Край — цепочки пушистых комьев разного размера со случайным
+ *   синеет (карта затенения, как у фото; на телефоне — не темнее предела, а сплошной слой темнеет к низу
+ *   полосы, как в эталоне: DEPTH_PHONE). Край — цепочки пушистых комьев разного размера со случайным
  *   шагом и острые кристаллы поверх; при плотности пикселей ниже 1,5 — едва заметный ореол.
  * - Работа порезана на мелкие шаги (генераторы, до ~0,5 мс): первый кадр и смена масштаба — в простое
  *   кусками до 6 мс, без простоя (занятая страница, медленный ЦП) — по 2 мс, падающий снег не теряет
@@ -136,6 +141,28 @@ export const DRIFT_LAYOUT = {
   band: 46,
 } as const;
 
+/**
+ * Телефон (макет 36.png): эталон целиком, ×0,1795 = 336/1872 (на 360 полоса узора Wp = 1872). На десктопе низ
+ * полосы срезает нижние 53 px эталона — на телефоне их видно: силуэт поднят на lift (53 − 1,9: низ эталона
+ * в макете на 0,34 css ниже полосы). Части стоят как в эталоне: края edge (по 253 px, DRIFT_EDGE_*), L с 253,
+ * C от середины, R до Wp − 253, без отъезда R (slide); band — высота холста (вся картинка). Зазор до низа
+ * текста и кнопки — SNOW_DRIFT_DEFAULTS.clearanceCompact = 2,5 (в макете снег под кнопкой в 2,6 от её низа).
+ */
+export const DRIFT_PHONE = { k: 0.1795, band: 98, lift: 51, edge: 253 } as const;
+/**
+ * Края эталона, которых нет в DRIFT_L / DRIFT_R (картинка x 0…253 и 1619…1872), той же разметкой: [x от начала
+ * края, высота − 53], сняты тем же способом (альфа > 0,17, σ = 5, Дуглас–Пекер 0,45; ошибка до 0,41 px).
+ * Стыки совпадают: DRIFT_EDGE_L(253) = DRIFT_L(0), DRIFT_EDGE_R(0) = DRIFT_R(291).
+ */
+export const DRIFT_EDGE_L: readonly number[] = [
+  0, 7.75, 11, 8.25, 35, 12.75, 54, 13.25, 64, 14.5, 79, 12, 88, 11, 100, 7, 107, 5.5, 135, 7.25,
+  162, 5.25, 175, 6.25, 187, 9, 199, 10.5, 213, 15.75, 219, 16.75, 253, 9.75,
+];
+export const DRIFT_EDGE_R: readonly number[] = [
+  0, 13, 10, 10.5, 15, 10, 36, 12.5, 50, 8.5, 111, 1.25, 116, 2, 130, 6.25, 160, 7.75, 165, 8.75,
+  179, 13.5, 194, 14.75, 204, 13.75, 216, 10.75, 226, 9.5, 242, 5.75, 253, 5.5,
+];
+
 /** Прямоугольник, к низу которого сугроб не подходит (строка текста, кнопка), css px от левого и верхнего края холста. */
 export interface DriftAvoid {
   left: number;
@@ -147,20 +174,25 @@ export interface DriftAvoid {
 export interface SnowDriftOptions {
   /** Сид мелкой детализации (комья, кристаллы, рябь); силуэт задан данными. */
   seed: number;
-  /** Масштаб узора; undefined — высота холста / refHeight в пределах [minScale, maxScale]. */
+  /**
+   * Масштаб узора; undefined — высота холста / refHeight в пределах [minScale, maxScale], на телефоне
+   * (высота холста / refHeight ниже compactScale) — высота холста / DRIFT_PHONE.band.
+   */
   scale: number | undefined;
-  /** Высота холста при масштабе 1, css px (DRIFT_LAYOUT.band; на телефоне холст в 0,693 раза ниже). */
+  /** Высота холста при масштабе 1, css px (DRIFT_LAYOUT.band; на телефоне холст — DRIFT_PHONE.band × 0,1795). */
   refHeight: number;
   minScale: number;
   maxScale: number;
   /** Потолок плотности пикселей холста. */
   maxDpr: number;
+  /** То же на телефоне (профиль DRIFT_PHONE): холст маленький, а фактура снега мельче пикселя при 2×. */
+  maxDprCompact: number;
   /** Ореол снежной пыли над краем при плотности пикселей ниже 1,5. */
   halo: boolean;
   /** Зазор до низа текста и кнопки, css px: широкая полоса / низкая (телефон). */
   clearance: number;
   clearanceCompact: number;
-  /** Масштаб узора ниже этого — низкая полоса (телефон). */
+  /** Высота холста / refHeight (или scale) ниже этого — телефон: профиль DRIFT_PHONE. */
   compactScale: number;
   /** Прямоугольники строк текста и кнопки; вызывается перед каждым кадром. */
   measure: (() => readonly DriftAvoid[]) | undefined;
@@ -179,9 +211,10 @@ export const SNOW_DRIFT_DEFAULTS: SnowDriftOptions = {
   minScale: 0.5,
   maxScale: 1.25,
   maxDpr: 2,
+  maxDprCompact: 3,
   halo: true,
   clearance: 6,
-  clearanceCompact: 4,
+  clearanceCompact: 2.5,
   compactScale: 0.85,
   measure: undefined,
   watch: undefined,
@@ -218,17 +251,31 @@ const UNDULATE = { cells: [9, 21], amps: [0.75, 0.65] } as const;
 /**
  * Видимый край над линией слоя (замерено на живой странице): комья и кристаллы поднимают видимый верх
  * в среднем на drop px узора над линией слоя, ореол (DPR < 1,5) — ещё на haloDrop css px; линия слоя
- * ниже силуэта на столько же, и видимый верх в среднем совпадает с силуэтом эталона.
+ * ниже силуэта на столько же, и видимый верх в среднем совпадает с силуэтом эталона. На телефоне спрайты
+ * крупнее узора (не мельче 0,5 px экрана на px узора, комья — от 2 px экрана, узор — 0,1795·DPR): комья
+ * поднимают видимый верх ещё на compactDrop px экрана (замер при DPR 2 и 3); при ореоле опускание под него
+ * и так больше.
  */
-const EDGE = { drop: 0.65, haloDrop: 1.45 } as const;
+const EDGE = { drop: 0.65, haloDrop: 1.45, compactDrop: 1 } as const;
 /**
  * Тихие зоны (их же повторяет CSS-заглушка — snow-drift-css.ts): потолок видимой высоты над низом —
  * «низ элемента − зазор − spread» (spread, css px — запас на самые высокие комья: средний видимый верх
  * под потолком на spread ниже, самые высокие комья — на зазор от элемента), ровный над элементом
  * с запасом pad css px по краям (комья цепочки у края потолка не залезают под элемент) и поднимающийся
  * в стороны с крутизной slope; мягкое колено knee (px узора) — до потолка − knee сугроб не меняется.
+ * Телефон (замер на живой странице при DPR 1–3): без ореола (DPR от 1,5) комья мельче — spreadCompact
+ * (по нему и заглушка телефона: у неё комьев нет), с ореолом комья в 2–3 px экрана и стоят с точностью до
+ * пикселя экрана (при DPR 1 — до 0,5 css) — spreadCompactHalo: видимый верх снега (край 50 %) не ближе
+ * clearanceCompact к низу кнопки на окнах 280–767 при DPR 1–1,4.
  */
-export const DRIFT_CAP = { knee: 1.2, slope: 0.55, pad: 6, spread: 1.6 } as const;
+export const DRIFT_CAP = {
+  knee: 1.2,
+  slope: 0.55,
+  pad: 6,
+  spread: 1.6,
+  spreadCompact: 0.8,
+  spreadCompactHalo: 3.2,
+} as const;
 /** Радиусы комьев края. */
 const LUMP_R = [1.7, 2.3, 3, 3.8, 4.7] as const;
 /** Вариантов кома; вариантов цепочки на наклон; наклонов (i − 3) / 4 от −0,75 до 0,75. */
@@ -262,6 +309,11 @@ const GRAIN: Tone = [
 ];
 const GRAIN_MEAN = 0.78;
 const GRAIN_AO = [1.1, 0.3] as const;
+/**
+ * Зерно телефона: тайл там мельче пикселя экрана (0,5–0,55 px на px узора) и мелочь сливается — без смягчения
+ * и с контрастом ×GRAIN_PHONE (фактура как в макете 36.png).
+ */
+const GRAIN_PHONE = 2;
 /** Тайл текстуры тела, бесшовный по обеим осям (px узора). */
 const TILE = [192, 40] as const;
 /**
@@ -283,6 +335,13 @@ const DEPTH = {
 } as const;
 const DEPTH_COLOR: Rgb = [125, 150, 190];
 /**
+ * Телефон: видна вся картинка эталона (глубина до ~85 px). В эталоне тело сугробов глубже ~30 px темнее не
+ * становится — затенение глубины не больше depth, а сплошной слой внизу темнеет к низу картинки независимо от
+ * высоты сугроба над ним — ground·e^(−v/fall), v — px узора над низом полосы; берётся большее (подобрано по
+ * эталону и макету 36.png: средний цвет строк 64–71 css совпадает в пределах 3 единиц на канал).
+ */
+export const DEPTH_PHONE = { depth: 0.19, ground: 0.68, fall: 23 } as const;
+/**
  * Объём высоких сугробов (подобрано по картинке-эталону МНК: остаток яркости тела против среднего на той же
  * глубине, RMS 8,1 → 5,5): сугроб выше нижней огибающей на minH…minH + rampH, тело глубже start (за
  * ramp px), наклон силуэта по ±reach px × slopeK (свет слева сверху): правый склон темнее на gain, левый
@@ -303,8 +362,11 @@ const PATCH = { amp: 0.08, cell: 18, start: 3, ramp: 5 } as const;
 /** Тексель карты затенения, px узора. */
 const MAP_X = 3;
 const MAP_Y = 1.5;
-/** Ореол над комьями края: ступени [css px от кромки, непрозрачность]; только при DPR < maxPx. */
-const HALO = {
+/**
+ * Ореол над комьями края: ступени [css px от кромки, непрозрачность]; только при DPR < maxPx (по нему же
+ * заглушка телефона берёт свою обрезку для холста с ореолом — snow-drift-css.ts).
+ */
+export const HALO = {
   steps: [
     [1.2, 0.16],
     [0.6, 0.4],
@@ -405,22 +467,35 @@ const PARTS = [
   { nodes: DRIFT_R, detail: DRIFT_DETAIL.R, near: DRIFT_NEAR_R },
 ] as const;
 
-/** Начала частей L, C, R (px узора от левого края полосы шириной Wp). */
-const partOffsets = (Wp: number) => {
+/**
+ * Начала частей L, C, R (px узора от левого края полосы шириной Wp). Телефон — как в эталоне: L после
+ * левого края картинки, R до правого, без отъезда.
+ */
+const partOffsets = (Wp: number, phone: boolean) => {
   const L = DRIFT_LAYOUT;
+  if (phone) return [DRIFT_PHONE.edge, Wp / 2 + L.centre, Wp - L.right - DRIFT_PHONE.edge] as const;
   return [0, Wp / 2 + L.centre, Wp - L.right + Math.max(0, (L.slide - Wp) / 2)] as const;
 };
 
-/** Силуэт (видимый верх, px узора над низом полосы) на сетке x = x0 + i для полосы шириной Wp px узора. */
-export function driftSilhouette(out: Float32Array, x0: number, Wp: number): void {
+/**
+ * Силуэт (видимый верх, px узора над низом полосы; на телефоне — без подъёма DRIFT_PHONE.lift) на сетке
+ * x = x0 + i для полосы шириной Wp px узора. Телефон: ещё края эталона у краёв полосы; щели — между частями
+ * и краями (на 360 их нет, шире растут холмы гнёзд).
+ */
+export function driftSilhouette(out: Float32Array, x0: number, Wp: number, phone = false): void {
   const L = DRIFT_LAYOUT;
   out.fill(-99);
-  const offs = partOffsets(Wp);
+  const offs = partOffsets(Wp, phone);
   PARTS.forEach((p, i) => polyMax(out, x0, p.nodes, offs[i]!));
-  const g = Wp / 2 - L.ref / 2;
+  const e = phone ? DRIFT_PHONE.edge : 0;
+  if (phone) {
+    polyMax(out, x0, DRIFT_EDGE_L, 0);
+    polyMax(out, x0, DRIFT_EDGE_R, Wp - e);
+  }
+  const g = Wp / 2 - L.ref / 2 - e;
   if (g > 0) {
-    gapMax(out, x0, DRIFT_GAP_LEFT, L.left, g);
-    gapMax(out, x0, DRIFT_GAP_RIGHT, Wp - L.right - g, g);
+    gapMax(out, x0, DRIFT_GAP_LEFT, L.left + e, g);
+    gapMax(out, x0, DRIFT_GAP_RIGHT, Wp - L.right - e - g, g);
   }
 }
 
@@ -663,6 +738,8 @@ interface Sprites {
   doc: Document;
   /** Пикселей экрана на px узора (с шагом 0,05). */
   s: number;
+  /** Зерно телефона (GRAIN_PHONE). */
+  phone: boolean;
   grain: HTMLCanvasElement;
   chains: Atlas;
   crystals: Atlas;
@@ -846,9 +923,9 @@ function* buildCrystals(doc: Document, s: number): Work<Atlas | null> {
 /**
  * Бесшовный тайл текстуры тела: мягкие крупные комья (объём), неравномерные по плотности и размеру
  * комочки 1–3 px (свет сверху, тень снизу), мелкая крупа, искры. Средняя яркость (без искр) приводится
- * к GRAIN_MEAN — текстура не меняет средний цвет, его задают тона и затенение глубины.
+ * к GRAIN_MEAN — текстура не меняет средний цвет, его задают тона и затенение глубины. Телефон — GRAIN_PHONE.
  */
-function* buildGrain(doc: Document, s: number): Work<HTMLCanvasElement | null> {
+function* buildGrain(doc: Document, s: number, phone: boolean): Work<HTMLCanvasElement | null> {
   const tw = Math.round(TILE[0] * s);
   const th = Math.round(TILE[1] * s);
   const n = tw * th;
@@ -931,8 +1008,8 @@ function* buildGrain(doc: Document, s: number): Work<HTMLCanvasElement | null> {
     if (i % (ROWS_PX * 2) === ROWS_PX * 2 - 1) yield;
   }
   yield;
-  // на 1× фото мягче: лёгкое размытие яркости (искры остаются чёткими)
-  if (s < 1.5) {
+  // на 1× фото мягче: лёгкое размытие яркости (искры остаются чёткими); на телефоне зерно и так мельче пикселя
+  if (s < 1.5 && !phone) {
     const softRows = yield* boxBlur(lum, tw, th, 1, true);
     yield;
     const soft = yield* boxBlur(softRows, tw, th, 1, false);
@@ -946,7 +1023,8 @@ function* buildGrain(doc: Document, s: number): Work<HTMLCanvasElement | null> {
     sum += lum[i]!;
     cnt++;
   }
-  const shift = GRAIN_MEAN - sum / Math.max(1, cnt);
+  const mean = sum / Math.max(1, cnt);
+  const shift = GRAIN_MEAN - mean;
   yield;
   const made = canvasOf(doc, tw, th);
   if (!made) return null;
@@ -957,7 +1035,8 @@ function* buildGrain(doc: Document, s: number): Work<HTMLCanvasElement | null> {
     if (i && i % ROWS_PX === 0) yield;
     const gl = glint[i]!;
     // искра — плавно к белому от яркости зерна (без ступеньки по краю)
-    const base = Math.max(0, Math.min(1, lum[i]! + shift));
+    const v = phone ? GRAIN_MEAN + (lum[i]! - mean) * GRAIN_PHONE : lum[i]! + shift;
+    const base = Math.max(0, Math.min(1, v));
     const b = gl > 0 ? base + (2 - base) * Math.min(1, gl) : base;
     paint(img.data, i * 4, b, GRAIN, 255);
   }
@@ -974,21 +1053,21 @@ let running = 0;
 /** Пикселей экрана на px узора, с шагом 0,05 (ключ кеша спрайтов). */
 const spriteScale = (k: number, px: number) => Math.max(0.5, Math.round(k * px * 20) / 20);
 
-function cached(doc: Document, s: number): Sprites | null {
-  return cache.find((c) => c.doc === doc && c.s === s) ?? null;
+function cached(doc: Document, s: number, phone: boolean): Sprites | null {
+  return cache.find((c) => c.doc === doc && c.s === s && c.phone === phone) ?? null;
 }
 
-function* buildSprites(doc: Document, s: number): Work<Sprites | null> {
-  const hit = cached(doc, s);
+function* buildSprites(doc: Document, s: number, phone: boolean): Work<Sprites | null> {
+  const hit = cached(doc, s, phone);
   if (hit) return hit;
-  const grain = yield* buildGrain(doc, s);
+  const grain = yield* buildGrain(doc, s, phone);
   if (!grain) return null;
   const chains = yield* buildChains(doc, s);
   if (!chains) return null;
   const crystals = yield* buildCrystals(doc, s);
   const scratch = canvasOf(doc, 64, 16);
   if (!crystals || !scratch) return null;
-  const sp: Sprites = { doc, s, grain, chains, crystals, scratch };
+  const sp: Sprites = { doc, s, phone, grain, chains, crystals, scratch };
   cache.unshift(sp);
   if (cache.length > 2) cache.length = 2;
   return sp;
@@ -996,7 +1075,7 @@ function* buildSprites(doc: Document, s: number): Work<Sprites | null> {
 
 // ---------------------------------------------------------------- кадр
 
-interface Geometry {
+export interface Geometry {
   /** css px холста. */
   W: number;
   H: number;
@@ -1012,13 +1091,31 @@ interface Geometry {
   /** Сетка u = u0 + i (px узора от середины полосы), u0 кратно 6 — одно место рисуется одинаково. */
   u0: number;
   len: number;
+  /** Телефон: профиль DRIFT_PHONE (эталон целиком, подъём, зазор clearanceCompact). */
+  phone: boolean;
 }
 
-function geometry(W: number, H: number, bw: number, bh: number, o: SnowDriftOptions): Geometry {
-  const k = o.scale ?? Math.min(o.maxScale, Math.max(o.minScale, H / o.refHeight));
+/** Телефон (профиль DRIFT_PHONE): масштаб — заданный или высота холста / refHeight — ниже compactScale. */
+const compactOf = (H: number, o: SnowDriftOptions) => (o.scale ?? H / o.refHeight) < o.compactScale;
+
+/**
+ * Масштаб и сетка кадра. Телефон узнаётся по высоте холста: CSS задаёт 98·k (при k 0,1795 — 17,6 css px)
+ * против 46 на десктопе; там масштаб — высота холста / DRIFT_PHONE.band.
+ */
+export function geometry(
+  W: number,
+  H: number,
+  bw: number,
+  bh: number,
+  o: SnowDriftOptions,
+): Geometry {
+  const wide = H / o.refHeight;
+  const phone = compactOf(H, o);
+  const k =
+    o.scale ?? (phone ? H / DRIFT_PHONE.band : Math.min(o.maxScale, Math.max(o.minScale, wide)));
   const Wp = W / k;
   const u0 = Math.floor((-Wp / 2 - 24) / 6) * 6;
-  return { W, H, bw, bh, k, px: bw / W, py: bh / H, Wp, u0, len: Math.ceil(Wp + 48) + 14 };
+  return { W, H, bw, bh, k, px: bw / W, py: bh / H, Wp, u0, len: Math.ceil(Wp + 48) + 14, phone };
 }
 
 interface Fields {
@@ -1036,7 +1133,9 @@ interface Fields {
  * Силуэт → края слоёв. Дальний — силуэт эталона с волнистостью гребня (части — данные картинки, щели —
  * шум). Ближний — передний вал: у частей — снятый с картинки (DRIFT_NEAR_*), в щелях — нижняя огибающая
  * силуэта; в низинах (силуэт ниже NEAR.low) совпадает с дальним — один гребень; не ниже подложки.
- * Потолки тихих зон (измеренные прямоугольники) — мягко, по видимой высоте (с комьями).
+ * Потолки тихих зон (измеренные прямоугольники) — мягко, по видимой высоте (с комьями). Телефон: края
+ * эталона — как щели (волнистость — шум, вал — нижняя огибающая); края слоёв и верх подняты на
+ * DRIFT_PHONE.lift, потолки считаются для неподнятого силуэта; sil и prom — без подъёма (нужны разности).
  */
 function* fieldsFor(
   geo: Geometry,
@@ -1045,15 +1144,16 @@ function* fieldsFor(
   halo: boolean,
   seed: number,
 ): Work<Fields> {
-  const { len, u0, Wp, k, H } = geo;
+  const { len, u0, Wp, k, H, phone } = geo;
+  const lift = phone ? DRIFT_PHONE.lift : 0;
   const x0 = u0 + Wp / 2;
   const sil = new Float32Array(len);
-  driftSilhouette(sil, x0, Wp);
+  driftSilhouette(sil, x0, Wp, phone);
   yield;
-  // какая часть даёт силуэт в столбце (иначе — холм щели или ничего) и x от её начала
+  // какая часть даёт силуэт в столбце (иначе — холм щели, край эталона или ничего) и x от её начала
   const which = new Int8Array(len).fill(-1);
   const rel = new Float32Array(len);
-  const offs = partOffsets(Wp);
+  const offs = partOffsets(Wp, phone);
   for (let pi = 0; pi < PARTS.length; pi++) {
     const nodes = PARTS[pi]!.nodes;
     const ox = offs[pi]!;
@@ -1089,8 +1189,14 @@ function* fieldsFor(
   boxMean(env, tmp, NEAR.smooth);
   yield;
   const caps = new Float32Array(len).fill(Infinity);
+  // запас на самые высокие комья (DRIFT_CAP): на телефоне свой — от размера комьев на экране
+  const spread = !phone
+    ? DRIFT_CAP.spread
+    : halo
+      ? DRIFT_CAP.spreadCompactHalo
+      : DRIFT_CAP.spreadCompact;
   for (const r of avoid) {
-    const floor = (H - r.bottom - clearance - DRIFT_CAP.spread) / k;
+    const floor = (H - r.bottom - clearance - spread) / k - lift;
     if (!(floor < 60)) continue;
     const a = (r.left - DRIFT_CAP.pad) / k - Wp / 2;
     const b = (r.right + DRIFT_CAP.pad) / k - Wp / 2;
@@ -1106,7 +1212,9 @@ function* fieldsFor(
   const near = new Float32Array(len);
   const top = new Float32Array(len);
   const prom = new Float32Array(len);
-  const drop = EDGE.drop + (halo ? EDGE.haloDrop / k : 0);
+  // на телефоне комья крупнее узора (EDGE.compactDrop, px экрана); ореол опускает край и так сильнее
+  const drop =
+    EDGE.drop + Math.max(halo ? EDGE.haloDrop / k : 0, phone ? EDGE.compactDrop / (k * geo.px) : 0);
   for (let i = 0; i < len; i++) {
     const s0 = sil[i]!;
     const s = s0 + waveS[i]!;
@@ -1116,9 +1224,9 @@ function* fieldsFor(
     const cap = caps[i]!;
     const f = (cap === Infinity ? s : softCap(s, cap)) - drop;
     const nn = (cap === Infinity ? nv : softCap(nv, cap)) - drop;
-    far[i] = f;
-    near[i] = nn;
-    top[i] = Math.max(f, nn);
+    far[i] = f + lift;
+    near[i] = nn + lift;
+    top[i] = Math.max(f, nn) + lift;
     prom[i] = s0 - tmp[i]!;
   }
   return { far, near, top, sil, prom };
@@ -1189,7 +1297,10 @@ function clipTo(ctx: CanvasRenderingContext2D, a: number, b: number, bh: number,
   ctx.restore();
 }
 
-/** Затенение глубины и объёма слоя поверх уже нарисованного (source-atop) — карта MAP_X × MAP_Y. */
+/**
+ * Затенение глубины и объёма слоя поверх уже нарисованного (source-atop) — карта MAP_X × MAP_Y; на телефоне —
+ * с пределом глубины и затенением низа (DEPTH_PHONE).
+ */
 function* shadeDepth(
   ctx: CanvasRenderingContext2D,
   sp: Sprites,
@@ -1283,6 +1394,7 @@ function* shadeDepth(
     const fy = v / ny - gy0;
     const yi = Math.min(gh - 2, Math.max(0, Math.floor(fy)));
     const ty = smooth(clamp01(fy - yi));
+    const ground = geo.phone ? DEPTH_PHONE.ground * Math.exp(-v / DEPTH_PHONE.fall) : 0;
     const hy = v / py2 - hy0;
     const hyi = Math.min(hh - 2, Math.max(0, Math.floor(hy)));
     const hty = smooth(clamp01(hy - hyi));
@@ -1313,6 +1425,7 @@ function* shadeDepth(
         const m1 = patches[q2 + hw]! + (patches[q2 + hw + 1]! - patches[q2 + hw]!) * htx;
         a += PATCH.amp * (m0 + (m1 - m0) * hty) * smooth(clamp01((d - PATCH.start) / PATCH.ramp));
       }
+      if (geo.phone) a = Math.max(Math.min(a, DEPTH_PHONE.depth), ground);
       if (a <= 0) continue;
       const fx = u / nx - gx0;
       const xi = Math.min(gw - 2, Math.max(0, Math.floor(fx)));
@@ -1418,6 +1531,8 @@ function* drawFrame(
   sp: Sprites,
 ): Work<boolean> {
   const { W, H, bw, bh, k, px, py, u0, len } = geo;
+  // пороги по высоте края (комья, гребни, кристаллы) — для неподнятого силуэта
+  const lift = geo.phone ? DRIFT_PHONE.lift : 0;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = 'source-over';
   ctx.globalAlpha = 1;
@@ -1427,7 +1542,7 @@ function* drawFrame(
   const f = yield* fieldsFor(
     geo,
     avoid,
-    k < o.compactScale ? o.clearanceCompact : o.clearance,
+    geo.phone ? o.clearanceCompact : o.clearance,
     haloOn,
     seed,
   );
@@ -1464,7 +1579,7 @@ function* drawFrame(
       const u = lay[j]!;
       const v = at(h, u);
       const c = at(cover, u);
-      if (v < -1 || v < c - 2.5 || (li === 0 && v < c + 1.2)) continue;
+      if (v - lift < -1 || v < c - 2.5 || (li === 0 && v < c + 1.2)) continue;
       edge.push(
         slopeCol(h, u) * CHAIN_VARIANTS + lay[j + 1]!,
         Math.round(X(u) - chains.cw / 2),
@@ -1478,7 +1593,7 @@ function* drawFrame(
         const rand = rng(hash3(seed ^ 0x7e57, li + 1, j));
         const u = (j + rand()) * STEP;
         const v = at(h, u) - lerp(INNER.depth, rand());
-        if (rand() > INNER.share || v < 3 || v < at(cover, u)) continue;
+        if (rand() > INNER.share || v - lift < 3 || v < at(cover, u)) continue;
         inner.push(
           slopeCol(h, u) * CHAIN_VARIANTS + ((rand() * CHAIN_VARIANTS) | 0),
           Math.round(X(u) - chains.cw / 2),
@@ -1495,7 +1610,8 @@ function* drawFrame(
         const u = (j + rand()) * cs;
         const v = at(h, u);
         const c = at(cover, u);
-        if (rand() > CRYSTAL.share || v < 0 || v < c - 1.5 || (li === 0 && v < c + 1.2)) continue;
+        if (rand() > CRYSTAL.share || v - lift < 0 || v < c - 1.5 || (li === 0 && v < c + 1.2))
+          continue;
         shards.push(
           (rand() * CRYSTAL.variants) | 0,
           Math.round(X(u) - crystals.cw / 2),
@@ -1610,7 +1726,7 @@ export function drawSnowDrift(
   const H = options?.height ?? canvas.height / dpr;
   if (!(W > 0 && H > 0 && canvas.width > 0 && canvas.height > 0)) return false;
   const geo = geometry(W, H, canvas.width, canvas.height, o);
-  const sp = finish(buildSprites(canvas.ownerDocument, spriteScale(geo.k, geo.px)));
+  const sp = finish(buildSprites(canvas.ownerDocument, spriteScale(geo.k, geo.px), geo.phone));
   if (!sp) return false;
   return finish(drawFrame(ctx, geo, o, options?.avoid ?? o.measure?.() ?? [], sp));
 }
@@ -1648,7 +1764,8 @@ const avoidKey = (list: readonly DriftAvoid[]) =>
 
 /**
  * Держит сугроб нарисованным на холсте, размер которого задан стилями (полоса внизу промо-полосы:
- * position:absolute; bottom:0; width:100%; height — DRIFT_LAYOUT.band css px в масштабе узора). Первый
+ * position:absolute; bottom:0; width:100%; height — DRIFT_LAYOUT.band css px в масштабе узора, на телефоне —
+ * DRIFT_PHONE.band: по высоте холста движок выбирает профиль и потолок плотности пикселей). Первый
  * кадр и смена масштаба — в простое кусками (холст скрыт, видна заглушка); одиночная смена размера при
  * готовых спрайтах и смена прямоугольников — сразу, если кадр дешёвый. Возвращает остановку.
  */
@@ -1741,7 +1858,7 @@ export function startSnowDrift(
   function* fullJob(geo: Geometry, list: readonly DriftAvoid[]): Work<boolean> {
     sizeBacking();
     yield;
-    const sp = yield* buildSprites(doc, spriteScale(geo.k, geo.px));
+    const sp = yield* buildSprites(doc, spriteScale(geo.k, geo.px), geo.phone);
     if (!sp) return false;
     yield;
     framing = true;
@@ -1818,7 +1935,7 @@ export function startSnowDrift(
     const burst = t - lastChange < BURST_MS;
     lastChange = t;
     const geo = geometry(W, H, bw, bh, o);
-    const sp = cached(doc, spriteScale(geo.k, geo.px));
+    const sp = cached(doc, spriteScale(geo.k, geo.px), geo.phone);
     cancelIdle();
     cancelSettle();
     job = null;
@@ -1842,12 +1959,14 @@ export function startSnowDrift(
 
   function resize(cssW: number, cssH: number, devW: number, devH: number) {
     const ratio = w.devicePixelRatio || 1;
-    const dpr = Math.min(ratio, o.maxDpr);
+    // телефон (по высоте холста, как в geometry) — свой потолок плотности
+    const cap = compactOf(cssH, o) ? o.maxDprCompact : o.maxDpr;
+    const dpr = Math.min(ratio, cap);
     let nextBw = Math.round(cssW * dpr);
     let nextBh = Math.round(cssH * dpr);
     // точный размер в пикселях экрана (1:1), если он согласуется с DPR
     if (
-      ratio <= o.maxDpr &&
+      ratio <= cap &&
       devW > 0 &&
       devH > 0 &&
       Math.abs(devW - cssW * ratio) < 1.5 &&

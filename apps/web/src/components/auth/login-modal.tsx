@@ -181,6 +181,11 @@ export function LoginModal() {
         <Dialog.Content
           onOpenAutoFocus={focus.onOpenAutoFocus}
           onCloseAutoFocus={focus.onCloseAutoFocus}
+          // Нажатие по тосту (он над подложкой) — не «мимо окна»: закрывается тост, а не окно (как в Modal).
+          onPointerDownOutside={(e) => {
+            const target = e.detail.originalEvent.target;
+            if (target instanceof Element && target.closest('.gr-toast')) e.preventDefault();
+          }}
           className="gr-dialog fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 outline-none"
           data-testid="login-modal"
         >

@@ -42,22 +42,32 @@ export default async function GameHome({ params }: { params: Promise<{ game: str
     <div className="space-y-6 sm:space-y-8">
       <div className="space-y-3 md:space-y-6">
         <BonusBanner game={game} freeCaseSlug={freeCase?.slug ?? null} />
-        <div id="cases" className="scroll-mt-24 space-y-2">
+        {/* Телефон: шапка не липкая — ссылка «Кейсы» (ModeGrid) прокручивает к плашке фильтров с полем 12. */}
+        <div id="cases" className="scroll-mt-3 space-y-2 md:scroll-mt-24">
           {home?.categories.length ? (
             <CaseBrowser game={game} categories={home.categories} />
           ) : (
-            <EmptyState icon={<Package size={40} />} text={t('casesEmpty')} />
+            <EmptyState
+              icon={<Package size={40} className="max-md:size-6" />}
+              text={t('casesEmpty')}
+              className="max-md:[&_p]:text-[12px]"
+            />
           )}
-          <div className="flex justify-end">
+          {/* Телефон: текст 12, правый край — по краю карточек (сетка .case-grid: не шире 336, поля 12). */}
+          <div className="flex justify-end max-md:mx-auto max-md:max-w-[336px] max-md:px-3">
             <Link
               href={`/${game}/items`}
-              className="text-sm font-semibold text-accent hover:underline"
+              className="text-sm font-semibold text-accent hover:underline max-md:text-[12px]"
             >
               {t('allItems')} →
             </Link>
           </div>
         </div>
       </div>
+      {/*
+        Блоки ниже в мобильном макете не описаны: на телефоне вид и кегли прежние — исключение из шкалы
+        телефона 16 / 12 / 8 (у ModeGrid исправлена только прокрутка вбок на узких окнах).
+      */}
       {home && <Banners banners={home.banners} />}
       <ModeGrid game={game} />
       <StatsStrip stats={stats} />

@@ -38,6 +38,8 @@
     "amount": "{count, plural, one {# гем} few {# гема} many {# гемов} other {# гема}}",
     "rate": "{gems, plural, one {# гем} few {# гема} many {# гемов} other {# гема}} = ${usd}",
     "balance": "Баланс",
+    "balanceValue": "Баланс: {count, plural, one {# гем} few {# гема} many {# гемов} other {# гема}}",
+    "balanceValueShort": "Баланс: {short} ({count, plural, one {# гем} few {# гема} many {# гемов} other {# гема}})",
     "deposit": "Пополнить",
     "rateTitle": "Курс гемов",
     "rateHint": "Гемы — внутренняя валюта сайта. Все цены, бонусы и выигрыши — в гемах. Вывести гемы деньгами нельзя: выводятся только предметы."
@@ -65,7 +67,17 @@
     "online": "{count, plural, one {# онлайн} few {# онлайн} many {# онлайн} other {# онлайн}}",
     "selectGame": "Выбрать игру",
     "games": "Игры",
-    "level": "Ур. {level}"
+    "level": "Ур. {level}",
+    "menu": "Меню"
+  },
+  "mobileMenu": {
+    "close": "Закрыть меню",
+    "sections": "Разделы сайта",
+    "preferences": "Язык и звук",
+    "game": "Выбрать игру: {name}",
+    "language": "Язык сайта: {name}",
+    "sound": "Звуки сайта",
+    "unread": "{count, plural, one {# новое уведомление} few {# новых уведомления} many {# новых уведомлений} other {# нового уведомления}}"
   },
   "feed": {
     "title": "Последние дропы",
@@ -162,8 +174,10 @@
     "filters": {
       "label": "Фильтры кейсов",
       "category": "Категория кейсов",
+      "categoryShort": "Категория",
       "allCategories": "Все категории",
       "search": "Поиск по названию",
+      "searchShort": "Поиск",
       "priceFrom": "Цена от, гемов",
       "priceTo": "Цена до, гемов",
       "adrenaline": "Уровень адреналина",
@@ -175,6 +189,8 @@
         "extreme": "Экстремальный"
       },
       "reset": "Сбросить фильтры",
+      "more": "Расширенные фильтры",
+      "moreActive": "Расширенные фильтры: заданы",
       "empty": "Нет кейсов по этим фильтрам"
     }
   },
@@ -1971,6 +1987,7 @@
     "empty": "Пока ничего нового",
     "readAll": "Прочитать все",
     "open": "Уведомления",
+    "new": "Новое",
     "types": {
       "deposit_succeeded": "Баланс пополнен на {gems}",
       "level_up": "Новый уровень: {level}! Награда уже начислена",

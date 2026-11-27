@@ -7,21 +7,17 @@ import {
   type CaseDetailDto,
   type CaseOpenResultDto,
   type CaseSupplyPayload,
+  type ItemDto,
   type SellResultDto,
 } from '@gunraid/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Coins, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { useCallback, useId, useRef, useState, type ReactNode } from 'react';
-import {
-  FastIcon,
-  GiftIcon,
-  OpenIcon,
-  SoundOffIcon,
-  SoundOnIcon,
-} from '@/components/icons/design-icons';
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { FastIcon, GiftIcon, OpenIcon } from '@/components/icons/design-icons';
 import { ItemTile } from '@/components/items/item-tile';
+import { SkinCard } from '@/components/items/skin-card';
 import { Button } from '@/components/ui/button';
 import { Countdown } from '@/components/ui/countdown';
 import { GemAmount } from '@/components/ui/gem';
@@ -32,13 +28,15 @@ import type { CaseNeighbours } from '@/lib/case-page';
 import { cn } from '@/lib/cn';
 import { useErrorMessage } from '@/lib/errors';
 import { useMe } from '@/lib/me';
+import { PHONE_MEDIA, useMediaQuery } from '@/lib/media';
+import { prefersReducedMotion } from '@/lib/motion';
 import { usePrefToggles } from '@/lib/prefs';
 import { useInvalidateWallet } from '@/lib/queries';
 import { useRoom, useSocketEvent } from '@/lib/socket';
 import { sound } from '@/lib/sound';
 import { usePrefs, usePrefsHydrated, useUi } from '@/lib/store';
 import { CaseStageIdle } from './case-stage';
-import { CaseRoulette } from './roulette';
+import { CaseRoulette, CaseStrip } from './roulette';
 
 function tierOf(price: number, casePrice: number): number {
   const base = Math.max(casePrice, 1);
@@ -52,6 +50,13 @@ function tierOf(price: number, casePrice: number): number {
 type Phase = 'idle' | 'spinning' | 'result';
 
 /**
+ * Где крутится лента: band — рулетка на месте кейса (планшет и десктоп), strip — дроплента под кнопкой
+ * открытия (телефон, < 768; кейс остаётся на месте). Решается в момент открытия по ширине окна; окно перешло
+ * через 768 посреди прокрутки (поворот телефона) — прокрутка доводится сразу в месте новой раскладки.
+ */
+type SpinPlace = 'band' | 'strip';
+
+/**
  * Состояние кнопки открытия: ready — #B7FF00 (хватает баланса, гость — откроется вход),
  * insufficient — #FF2529 (не хватает — откроется пополнение), blocked — #26262F (кейс недоступен),
  * loading — пока неизвестно, вошёл ли пользователь и что ему доступно: приглушена, как во время
@@ -61,8 +66,9 @@ type OpenState = 'ready' | 'insufficient' | 'blocked' | 'loading';
 
 /**
  * Страница кейса (макет «сцена»): название, полоса 286 с кейсом / копиями / рулеткой, под ней
- * кнопки количества, открытия (под ней — строка ошибки или пояснения) и «Быстро». Сервер решает
- * выигрыш; рулетка только показывает его.
+ * кнопки количества, открытия (под ней — строка ошибки или пояснения) и «Быстро»; на телефоне
+ * (макет 39.png) — полоса 120 с кейсом, ряд кнопок 36 и ниже дроплента, которая и крутится. Сервер
+ * решает выигрыш; рулетка и дроплента только показывают его.
  */
 export function CaseOpener({
   game,
@@ -82,8 +88,7 @@ export function CaseOpener({
   const openDeposit = useUi((s) => s.openDeposit);
   const prefsHydrated = usePrefsHydrated();
   const fast = usePrefs((s) => s.fast);
-  const soundOn = usePrefs((s) => s.sound);
-  const { setFast, setSound } = usePrefToggles();
+  const { setFast } = usePrefToggles();
   const infoId = useId();
   /** Кнопка открытия: на неё возвращается фокус после окна результата. */
   const openRef = useRef<HTMLButtonElement>(null);
@@ -104,6 +109,14 @@ export function CaseOpener({
   const [result, setResult] = useState<CaseOpenResultDto | null>(null);
   const [spinId, setSpinId] = useState(0);
   const [sold, setSold] = useState<Set<string>>(new Set());
+  const [spinPlace, setSpinPlace] = useState<SpinPlace>('band');
+  /** Раскладка телефона (< 768) сейчас; на сервере и при гидратации — нет (окно итога в это время закрыто). */
+  const phone = useMediaQuery(PHONE_MEDIA);
+  /** Прокрутка доводится без анимации, как в быстром режиме: окно перешло через 768 посреди прокрутки. */
+  const [settleNow, setSettleNow] = useState(false);
+  /** Выигрыши последней прокрутки на телефоне: дроплента держит их под меткой до нового открытия или смены количества. */
+  const [stripWinners, setStripWinners] = useState<ItemDto[] | null>(null);
+  const stripRef = useRef<HTMLDivElement>(null);
   /** Остановившиеся дорожки текущей прокрутки (Set — повторный вызов в StrictMode не считается). */
   const finished = useRef<Set<number>>(new Set());
   const resultRef = useRef<CaseOpenResultDto | null>(null);
@@ -177,10 +190,17 @@ export function CaseOpener({
       );
       if (useBonus) setCount(1);
       void qc.invalidateQueries({ queryKey: ['entitlements'] });
+      const place: SpinPlace =
+        typeof window.matchMedia === 'function' && window.matchMedia(PHONE_MEDIA).matches
+          ? 'strip'
+          : 'band';
       finished.current = new Set();
       resultRef.current = res;
       setSold(new Set());
       setResult(res);
+      setSettleNow(false);
+      setSpinPlace(place);
+      setStripWinners(place === 'strip' ? res.results.map((r) => r.item) : null);
       setSpinId((x) => x + 1);
       setPhase('spinning');
       if (!fast) sound.open();
@@ -198,7 +218,41 @@ export function CaseOpener({
     }
   };
 
-  /** Окно результата закрыто — сцена возвращается в покой. */
+  /**
+   * Новое количество: дроплента возвращается к витрине (лент — по количеству). Повторное нажатие на уже
+   * выбранное ничего не сбрасывает — выигрыш остаётся под меткой.
+   */
+  const chooseCount = (n: number) => {
+    if (n === count) return;
+    setCount(n);
+    setStripWinners(null);
+  };
+
+  // Прокрутка на телефоне: ленты (при x5 — 378 в высоту) должны быть на экране целиком — докручиваем,
+  // если нужно (scroll-padding-bottom у html учитывает нижнее меню).
+  useEffect(() => {
+    if (phase !== 'spinning' || spinPlace !== 'strip') return;
+    stripRef.current?.scrollIntoView({
+      block: 'nearest',
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    });
+  }, [phase, spinPlace, spinId]);
+
+  // Окно перешло через 768 посреди прокрутки (поворот телефона): лента прежнего места скрыта (дроплента от 768)
+  // или посчитана по чужой геометрии (рулетка сцены в полосе 120 телефона). Прокрутка доводится сразу, как в
+  // быстром режиме, лентой новой раскладки: выигрыш встаёт под метку, открывается окно итога. Скрытая дроплента
+  // (ландшафт) доезжает сама и остаётся на выигрыше.
+  useEffect(() => {
+    const res = resultRef.current;
+    if (phase !== 'spinning' || !res) return;
+    const place: SpinPlace = phone ? 'strip' : 'band';
+    if (place === spinPlace) return;
+    setSettleNow(true);
+    setSpinPlace(place);
+    if (place === 'strip') setStripWinners(res.results.map((r) => r.item));
+  }, [phone, phase, spinPlace]);
+
+  /** Окно результата закрыто — сцена возвращается в покой (дроплента остаётся на выигрыше). */
   const closeResult = () => {
     setPhase('idle');
     setResult(null);
@@ -231,7 +285,9 @@ export function CaseOpener({
     result?.results.filter((r) => !sold.has(r.userItemId)).reduce((s, r) => s + r.item.price, 0) ??
     0;
 
-  // Строка под кнопкой: причина недоступности, нехватка средств, остаток тиража или подсказка.
+  // Строка под кнопкой: причина недоступности, нехватка средств, остаток тиража или подсказка. Подарок (бонусные
+  // открытия, «Открыть бесплатно») открывает один кейс по праву, без гемов, и при нехватке баланса; «Открыть за N»
+  // бонус не тратит: не хватает гемов — открывает пополнение.
   let info: { text: ReactNode; tone: 'muted' | 'error' } | null = null;
   if (blocked) {
     const why =
@@ -260,6 +316,19 @@ export function CaseOpener({
           why
         ),
     };
+  } else if (insufficient && phone && a.freeOpens > 0) {
+    // Телефон: гемов не хватает, но подарок (бонусное открытие) открывает кейс сейчас же — красное «Недостаточно
+    // средств» (оно про кнопку открытия за гемы) читалось бы как «открыть нельзя». Видно число бонусных открытий,
+    // как без нехватки; о нехватке говорят красная кнопка (нажатие — пополнение) и для читалок скрытый текст.
+    info = {
+      tone: 'muted',
+      text: (
+        <>
+          <span className="sr-only">{t('case.insufficient')}.</span>{' '}
+          {t('case.bonusCount', { count: a.freeOpens })}
+        </>
+      ),
+    };
   } else if (insufficient) {
     info = { tone: 'error', text: t('case.insufficient') };
   } else if (supply) {
@@ -287,7 +356,14 @@ export function CaseOpener({
     </span>
   );
   const fastOn = prefsHydrated && fast;
-  const soundShown = !prefsHydrated || soundOn;
+  /**
+   * Окно результата на телефоне: по шкале телефона — Modal phoneScale, кнопки size="phone", выигрыш карточками
+   * 108×72. По текущей ширине окна, а не по месту прокрутки: после поворота окно перерисовывается в нужной шкале.
+   */
+  const phoneResult = phone;
+  const resultCount = result?.results.length ?? 0;
+  /** Карточек в ряду окна на телефоне: до трёх; ширина — 108, уже 360 меньше (поля окна 12, зазор 6). */
+  const resultCols = Math.min(3, resultCount);
 
   return (
     <section
@@ -301,30 +377,33 @@ export function CaseOpener({
         {c.name}
       </h1>
 
+      {/* Рулетка сцены — только в раскладке планшета и десктопа: в полосе 120 телефона её геометрия чужая. */}
       <div className="case-band" data-testid="case-band">
-        {phase === 'idle' || !result ? (
+        {phase === 'idle' || !result || spinPlace === 'strip' || phone ? (
           <CaseStageIdle
             game={game}
             name={c.name}
             imageUrl={c.imageUrl}
             count={openCount}
             neighbours={neighbours}
+            // Во время запроса и прокрутки уйти на соседний кейс нельзя: показ выигрыша не потеряется.
+            inert={spinning || busy}
           />
         ) : (
           <CaseRoulette
             pool={c.items}
             winners={result.results.map((r) => r.item)}
             spinId={spinId}
-            fast={fast}
+            fast={fast || settleNow}
             onLaneDone={onLaneDone}
           />
         )}
       </div>
 
       {/*
-        Порядок в разметке = порядок фокуса во всех раскладках: количество → «Быстро» (подарок,
-        звук) → открытие. На десктопе кнопки стоят в колонках сетки (открытие — по центру), ниже
-        десктопа — рядами в том же порядке, без перестановки через CSS.
+        Порядок в разметке = порядок фокуса во всех раскладках: количество → «Быстро» (подарок) →
+        открытие. На десктопе кнопки стоят в колонках сетки (открытие — по центру), ниже десктопа —
+        рядами в том же порядке, на телефоне — x1…x5 и «Быстро» одним рядом, без перестановки через CSS.
       */}
       <div className="case-controls" data-spinning={spinning ? '' : undefined}>
         {!free && c.maxOpenCount > 1 ? (
@@ -336,7 +415,7 @@ export function CaseOpener({
                 className="case-count"
                 aria-pressed={count === n}
                 disabled={spinning || busy}
-                onClick={() => setCount(n)}
+                onClick={() => chooseCount(n)}
                 data-testid={`case-count-${n}`}
               >
                 <span>x{n}</span>
@@ -357,7 +436,7 @@ export function CaseOpener({
             <FastIcon className="shrink-0" />
             <span>{t('case.fast')}</span>
           </button>
-          {/* Подарок и звук — отдельной группой: на планшете «Быстро» стоит по центру, они — справа. */}
+          {/* Подарок — отдельной группой: на планшете «Быстро» стоит по центру, он — справа. */}
           <div className="case-controls__more">
             {me.data && a.freeOpens > 0 && !free ? (
               <button
@@ -375,18 +454,6 @@ export function CaseOpener({
                 <span>{a.freeOpens}</span>
               </button>
             ) : null}
-            {/* На телефоне и планшете переключателя звука в верхнем блоке нет — он здесь, компактный. */}
-            <button
-              type="button"
-              className="case-toggle case-toggle--icon md:hidden"
-              aria-pressed={soundShown}
-              aria-label={t('case.sound')}
-              title={t('case.sound')}
-              onClick={() => setSound(!soundOn)}
-              data-testid="case-sound"
-            >
-              {soundShown ? <SoundOnIcon /> : <SoundOffIcon />}
-            </button>
           </div>
         </div>
 
@@ -439,66 +506,155 @@ export function CaseOpener({
         </div>
       </div>
 
+      <CaseStrip
+        ref={stripRef}
+        pool={c.items}
+        count={openCount}
+        winners={stripWinners}
+        spinId={spinId}
+        fast={fast || settleNow}
+        onLaneDone={onLaneDone}
+      />
+
       <Modal
         open={phase === 'result' && Boolean(result)}
         onOpenChange={(v) => !v && closeResult()}
         title={t('case.resultTitle', { count: result?.results.length ?? 1 })}
-        size={result && result.results.length > 2 ? 'lg' : 'md'}
+        // На телефоне выигрыш — карточки 108: окну с 640 (по центру) хватает ширины md.
+        size={!phoneResult && resultCount > 2 ? 'lg' : 'md'}
+        phoneScale={phoneResult}
         returnFocusRef={openRef}
       >
         {result && (
-          <div className="space-y-5">
-            <div
-              className={cn(
-                'grid gap-2.5',
-                result.results.length > 2 ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2',
-              )}
-            >
-              {result.results.map((r) => (
-                <ItemTile
-                  key={r.userItemId}
-                  item={r.item}
-                  stLabel={t('items.stattrakBadge')}
-                  svLabel={t('items.souvenirBadge')}
-                  dimmed={sold.has(r.userItemId)}
-                  footer={
-                    sold.has(r.userItemId) ? (
-                      <span className="mt-2 text-[11px] font-semibold uppercase text-dim">
+          <div className={phoneResult ? 'flex flex-col gap-3' : 'space-y-5'}>
+            {phoneResult ? (
+              // Телефон: карточки 108×72, как в содержимом кейса (без шанса), до трёх в ряд через 6 (список не
+              // шире 3 · 108 + 2 · 6 = 336, по центру), неполный ряд — по центру. Под каждой — «Продать» (иконка
+              // 12, через 12 — Medium 12, как в кнопках окна) или «Продано»; область нажатия — 28 (строка 12 и
+              // по 8 сверху и снизу). Ширина карточки — от списка в cqw: с процентами Chromium теряет 1/64 px
+              // (107.98 вместо 108).
+              <ul className="@container mx-auto flex w-full max-w-[336px] flex-wrap justify-center gap-x-[6px] gap-y-3">
+                {result.results.map((r) => (
+                  <li
+                    key={r.userItemId}
+                    className="flex flex-col items-center gap-2"
+                    style={{
+                      width: `min(108px, calc((100cqw - ${(resultCols - 1) * 6}px) / ${resultCols}))`,
+                    }}
+                  >
+                    <SkinCard
+                      item={r.item}
+                      className={cn('skin-card--m w-full', sold.has(r.userItemId) && 'opacity-40')}
+                      data-testid="result-item"
+                    />
+                    {sold.has(r.userItemId) ? (
+                      // Высота 12, как у строки «Продать» с иконкой: текст на той же линии, окно не прыгает.
+                      <span className="inline-flex h-3 items-center text-[12px] font-medium text-white/50">
                         {t('case.sold')}
                       </span>
                     ) : (
                       <button
                         type="button"
-                        className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold uppercase text-dim hover:text-accent"
+                        className="-my-2 inline-flex items-center gap-3 py-2 text-[12px] font-medium text-white/50 transition-colors hover:text-lime"
                         onClick={() => void sell([r.userItemId])}
                       >
-                        <Coins size={12} /> {t('case.sellOne')}
+                        <Coins size={12} aria-hidden="true" /> {t('case.sellOne')}
                       </button>
-                    )
-                  }
-                />
-              ))}
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted">{t('case.total')}</span>
-              <GemAmount value={resultValue} size="lg" className="text-accent" />
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div
+                className={cn(
+                  'grid gap-2.5',
+                  result.results.length > 2 ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2',
+                )}
+              >
+                {result.results.map((r) => (
+                  <ItemTile
+                    key={r.userItemId}
+                    item={r.item}
+                    stLabel={t('items.stattrakBadge')}
+                    svLabel={t('items.souvenirBadge')}
+                    dimmed={sold.has(r.userItemId)}
+                    footer={
+                      sold.has(r.userItemId) ? (
+                        <span className="mt-2 text-[11px] font-semibold uppercase text-dim">
+                          {t('case.sold')}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold uppercase text-dim hover:text-accent"
+                          onClick={() => void sell([r.userItemId])}
+                        >
+                          <Coins size={12} /> {t('case.sellOne')}
+                        </button>
+                      )
+                    }
+                  />
+                ))}
+              </div>
+            )}
+            <div
+              className={cn(
+                'flex items-center justify-between',
+                phoneResult ? 'text-[12px] font-medium' : 'text-sm',
+              )}
+            >
+              <span className={phoneResult ? 'text-white/50' : 'text-muted'}>
+                {t('case.total')}
+              </span>
+              {/* Телефон: лайм сайта #B7FF00, как цены на карточках окна; гем 8×12, через 6 — цифры (как в шапке). */}
+              <GemAmount
+                value={resultValue}
+                size={phoneResult ? 'xs' : 'lg'}
+                className={phoneResult ? 'gap-[6px] text-lime' : 'text-accent'}
+              />
             </div>
             {/* «Продать всё за N» — во всю ширину: в три колонки подписи не помещались и переносились. */}
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div
+              className={
+                phoneResult ? 'grid gap-[6px] sm:grid-cols-2' : 'grid gap-2 sm:grid-cols-2'
+              }
+            >
               <Button
                 variant="secondary"
+                size={phoneResult ? 'phone' : 'md'}
                 className="whitespace-nowrap sm:col-span-2"
                 disabled={!unsoldIds.length}
                 onClick={() => void sell(unsoldIds)}
                 data-testid="result-sell-all"
               >
-                {t('case.sellAll')} <GemAmount value={resultValue} size="sm" />
-              </Button>
-              <Button variant="secondary" className="whitespace-nowrap" onClick={closeResult}>
-                {t('case.keep')}
+                {phoneResult ? (
+                  // Зазор кнопки телефона (12) — между иконкой и текстом; сумма к тексту ближе — через 6,
+                  // гем → цифры — тоже 6.
+                  <span className="inline-flex items-center gap-[6px]">
+                    {t('case.sellAll')}{' '}
+                    <GemAmount value={resultValue} size="xs" className="gap-[6px]" />
+                  </span>
+                ) : (
+                  <>
+                    {t('case.sellAll')} <GemAmount value={resultValue} size="sm" />
+                  </>
+                )}
               </Button>
               <Button
+                variant="secondary"
+                size={phoneResult ? 'phone' : 'md'}
                 className="whitespace-nowrap"
+                onClick={closeResult}
+              >
+                {t('case.keep')}
+              </Button>
+              {/* Телефон: лайм сайта #B7FF00, как у кнопки «Открыть» страницы (primary окна — #C6FF00). */}
+              <Button
+                size={phoneResult ? 'phone' : 'md'}
+                className={cn(
+                  'whitespace-nowrap',
+                  phoneResult && 'bg-lime hover:bg-lime hover:brightness-110',
+                )}
                 onClick={() => {
                   closeResult();
                   void open();
@@ -506,14 +662,19 @@ export function CaseOpener({
                 disabled={blocked || free}
                 data-testid="result-open-again"
               >
-                <RotateCcw size={16} /> {t('case.openAgain')}
+                <RotateCcw size={phoneResult ? 12 : 16} /> {t('case.openAgain')}
               </Button>
             </div>
             <Link
               href={`/provably-fair?opening=${result.results[0]?.openingId ?? ''}`}
-              className="flex items-center justify-center gap-2 text-xs text-dim hover:text-text"
+              className={cn(
+                'flex items-center justify-center gap-2 text-xs text-dim hover:text-text',
+                // Телефон: Medium 12, иконка 12, через 12 — текст; область нажатия 28 (по 8 сверху и снизу) при
+                // прежнем зазоре 12 над ссылкой.
+                phoneResult && '-my-2 gap-3 py-2 font-medium',
+              )}
             >
-              <ShieldCheck size={14} /> {t('case.fair')}
+              <ShieldCheck size={phoneResult ? 12 : 14} /> {t('case.fair')}
             </Link>
           </div>
         )}

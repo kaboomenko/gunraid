@@ -38,8 +38,10 @@ export function Toaster() {
   const items = useToasts((s) => s.items);
   const remove = useToasts((s) => s.remove);
   return (
+    // Телефон (< 768): сверху, в 8 от безопасной зоны (шапка телефона не липкая, снизу — нижнее меню);
+    // от 768 — снизу справа. gr-toaster — при открытой шторке «Меню» тосты ниже её строки аккаунта (globals.css).
     <div
-      className="pointer-events-none fixed inset-x-0 top-[calc(var(--header-h)+8px)] z-[60] flex flex-col items-center gap-2 px-4 sm:inset-x-auto sm:bottom-5 sm:right-5 sm:top-auto sm:items-end"
+      className="gr-toaster pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+8px)] z-[60] flex flex-col items-center gap-2 px-4 md:inset-x-auto md:bottom-5 md:right-5 md:top-auto md:items-end"
       aria-live="polite"
     >
       {items.map((t) => {

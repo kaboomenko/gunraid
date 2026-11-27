@@ -33,9 +33,14 @@ export default async function CargoIndex({ params }: { params: Promise<{ game: s
   if (first) redirect(`/${game}/cargo/${first.slug}`);
   const t = await getTranslations('cargo');
   return (
-    // EmptyState не принимает data-testid — он на обёртке.
-    <div className="mt-10" data-testid="cargo-empty">
-      <EmptyState icon={<CargoIcon size={40} />} text={t('empty')} />
+    // EmptyState не принимает data-testid — он на обёртке. Телефон (шкала 16 / 12 / 8), как у cargo-gone:
+    // иконка 24, текст 12; сверху 36 — с полем main 12 это 48 под шапкой, как у названия груза.
+    <div className="mt-10 max-md:mt-9" data-testid="cargo-empty">
+      <EmptyState
+        icon={<CargoIcon size={40} className="max-md:size-6" />}
+        text={t('empty')}
+        className="max-md:[&_p]:text-[12px]"
+      />
     </div>
   );
 }

@@ -23,10 +23,15 @@ const MODES: Array<{
   { key: 'promo', path: '/bonuses', icon: Ticket },
 ];
 
+/**
+ * Режимы игры плитками. Вне мобильного макета: на телефоне вид и кегли прежние (исключение из шкалы телефона,
+ * как Banners и StatsStrip). Уже 440 — одна колонка: плитка с заголовком капсом («ПРОМОКОДЫ») не сжимается
+ * уже ≈ 188, и две колонки на 320–340 прокручивали страницу вбок.
+ */
 export async function ModeGrid({ game }: { game: string }) {
   const t = await getTranslations('modes');
   return (
-    <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-1 gap-2.5 min-[440px]:grid-cols-2 sm:gap-3 md:grid-cols-3 xl:grid-cols-6">
       {MODES.map((m) => (
         <Link
           key={m.key}

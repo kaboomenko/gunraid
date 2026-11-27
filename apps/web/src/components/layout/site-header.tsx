@@ -23,6 +23,7 @@ import { BalancePill } from './balance';
 import { GameSwitcher } from './game-switcher';
 import { isActive } from './nav-items';
 import { NotificationsBell } from './notifications-bell';
+import { PhoneHeader } from './phone-header';
 import { UserMenu } from './user-menu';
 
 /** Пункты главного меню: четыре из макета и «Грузы» (иконка 24 + текст DemiBold 24). */
@@ -45,8 +46,9 @@ const DESKTOP_NAV: Array<{
  * Плашка — сетка «1fr auto 1fr»: меню всегда ровно по центру шапки, а если правый блок шире своей
  * колонки (большой баланс), сетка сдвигает меню влево, и оно не наезжает ни на логотип, ни на кнопки.
  * Подписи меню — от 1720px; ниже остаются иконки с подсказкой (title). Между пунктами: ниже 1280px —
- * 24, 1280–1719 — 48, 1720–1879 — 32, от 1880 — 48. Телефон и планшет — компактная липкая шапка
- * (макета пока нет).
+ * 24, 1280–1719 — 48, 1720–1879 — 32, от 1880 — 48. Планшет (768–1023) — компактная липкая шапка над
+ * верхним блоком (макета пока нет). Телефон (< 768) — PhoneHeader под верхним блоком (макет 36.png),
+ * разделы, выбор игры, профиль и уведомления — в его шторке «Меню».
  */
 export function SiteHeader() {
   const t = useTranslations();
@@ -125,8 +127,8 @@ export function SiteHeader() {
         </div>
       </header>
 
-      {/* На телефоне шапка идёт первой (order-first), над промо-полосой и лентой. */}
-      <header className="sticky top-0 z-40 order-first h-[var(--header-h)] border-b border-line bg-bg/85 backdrop-blur-md lg:hidden">
+      {/* Планшет: шапка идёт первой (order-first), над промо-полосой и лентой. */}
+      <header className="sticky top-0 z-40 order-first hidden h-[var(--header-h)] border-b border-line bg-bg/85 backdrop-blur-md md:block lg:hidden">
         <div className="flex h-full items-center gap-1.5 px-3 sm:gap-3 sm:px-5">
           <Link
             href={`/${game}`}
@@ -167,6 +169,8 @@ export function SiteHeader() {
           </div>
         </div>
       </header>
+
+      <PhoneHeader />
     </>
   );
 }

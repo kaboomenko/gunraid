@@ -498,12 +498,17 @@ export function CargoStage({
   if (gone)
     return (
       <section className="cargo-stage" data-testid="cargo-stage">
-        <div className="mt-10" data-testid="cargo-gone">
+        {/* Телефон (шкала 16 / 12 / 8): иконка 24, текст и ссылка 12; сверху 48 под шапкой, как у названия. */}
+        <div className="mt-10 max-md:mt-0" data-testid="cargo-gone">
           <EmptyState
-            icon={<CargoIcon size={40} />}
+            icon={<CargoIcon size={40} className="max-md:size-6" />}
             text={t('cargo.gone')}
+            className="max-md:[&_p]:text-[12px]"
             action={
-              <Link href={`/${game}/cargo`} className="text-accent underline underline-offset-4">
+              <Link
+                href={`/${game}/cargo`}
+                className="text-accent underline underline-offset-4 max-md:text-[12px] max-md:underline-offset-2"
+              >
                 {t('cargo.toList')}
               </Link>
             }
@@ -528,11 +533,12 @@ export function CargoStage({
         <p className="cargo-subtitle">{t('cargo.fallsIn')}</p>
 
         <div className="cargo-scene">
+          {/* Ширина груза: телефон (< 48rem, как max-md:) — 372, планшет — 558, десктоп — 744. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={d.imageUrl}
             srcSet={cargoImageSrcSet(d.imageUrl)}
-            sizes="(max-width: 623px) min(400px, 100vw), (max-width: 1039px) 558px, 744px"
+            sizes="(width < 48rem) 372px, (max-width: 1039px) 558px, 744px"
             alt=""
             width={744}
             height={744}
@@ -661,11 +667,12 @@ export function CargoStage({
           {round ? (
             <div className="cargo-prize" data-testid="cargo-prize-block">
               <h2 className="cargo-prize__title">{t('cargo.superPrize')}</h2>
+              {/* Телефон — карточка содержимого кейса 108×72 (skin-card--m); от 768 класс не действует. */}
               <SkinCard
                 item={round.prize}
                 chance={chance}
                 href={`/${game}/items/${round.prize.id}`}
-                className="cargo-prize__card"
+                className="cargo-prize__card skin-card--m"
                 data-testid="cargo-prize"
               />
             </div>

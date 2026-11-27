@@ -35,10 +35,11 @@ export async function generateMetadata({
 }
 
 /**
- * Страница кейса: сцена с кнопками (CaseOpener) и содержимое кейса — сетка карточек 286×185.
- * Отступы — ритм главной: над названием и между сценой и сеткой 40 / 80 / 120 (телефон / планшет /
- * от 1280); над названием на низком экране меньше (.case-page), чтобы кнопка открытия была видна.
- * Соседние кейсы — по каталогу главной (тот же запрос, что у главной, из кэша).
+ * Страница кейса: сцена с кнопками (CaseOpener) и содержимое кейса — сетка карточек 286×185
+ * (на телефоне — 108×72 по три в ряд, skin-card--m). Отступы: телефон (< 768, макет 39.png) — 48 от
+ * шапки до названия и 77 от дропленты до сетки; планшет / от 1280 — ритм главной 80 / 120 над названием
+ * и между сценой и сеткой (над названием на низком экране меньше — .case-page, чтобы кнопка открытия
+ * была видна). Соседние кейсы — по каталогу главной (тот же запрос, что у главной, из кэша).
  */
 export default async function CasePage({
   params,
@@ -54,11 +55,11 @@ export default async function CasePage({
   const t = await getTranslations('case');
   const neighbours = home ? caseNeighbours(home.categories, c.slug) : null;
   return (
-    // Поле страницы сверху уже есть (16 / 24) — .case-page добавляет до 40 / 80 / 120.
+    // Поле страницы сверху уже есть (12 / 24) — .case-page добавляет 36 (телефон) / до 80 / до 120.
     <div className="case-page">
       <CaseOpener key={c.slug} game={game} initial={c} neighbours={neighbours} />
       <section
-        className="case-contents mt-10 md:mt-20 xl:mt-[120px]"
+        className="case-contents mt-[77px] md:mt-20 xl:mt-[120px]"
         aria-labelledby="case-contents-title"
         data-testid="case-contents"
       >
@@ -72,6 +73,7 @@ export default async function CasePage({
               item={entry.item}
               chance={entry.chance}
               href={`/${game}/items/${entry.item.id}`}
+              className="skin-card--m"
               data-testid="case-item"
             />
           ))}

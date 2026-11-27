@@ -47,8 +47,12 @@ export default async function PublicProfile({
     <div className="space-y-5">
       <Card cut="lg" className="stripes flex items-center gap-4 p-5 sm:p-6">
         <Avatar src={user.avatarUrl} name={user.nickname} size="xl" />
-        <div className="space-y-1.5">
-          <h1 className="font-display text-2xl font-extrabold">{user.nickname}</h1>
+        {/*
+          min-w-0 — колонка сжимается, и длинный ник (до 24 символов) режется многоточием, а не уводит
+          страницу вбок; пока ник помещается, ничего не меняется.
+        */}
+        <div className="min-w-0 space-y-1.5">
+          <h1 className="truncate font-display text-2xl font-extrabold">{user.nickname}</h1>
           <div className="flex flex-wrap items-center gap-2 text-xs text-dim">
             <Badge tone="accent">{t('level', { level: user.level })}</Badge>
             <span>{t('id', { id: user.shortId })}</span>

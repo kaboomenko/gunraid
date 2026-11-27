@@ -654,7 +654,8 @@ test.describe('Страница груза', () => {
     const paid = (await cargoList(api)).find((c) => !c.isFree)!;
     await page.goto(`/${GAME}/cargo/${paid.slug}`);
     await expect(page.getByTestId('cargo-title')).toHaveText(paid.name);
-    const width = await page.evaluate(() => document.documentElement.clientWidth);
+    // С isMobile Chromium растягивает clientWidth под переполнение — берём заданную ширину окна.
+    const width = page.viewportSize()!.width;
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       width,
     );
@@ -677,6 +678,57 @@ test.describe('Страница груза', () => {
         const box = (await page.getByTestId(id).boundingBox())!;
         expect(box.y, id).toBeGreaterThanOrEqual(b.y + b.height);
       }
+      // Шкала телефона, как у страницы кейса: название ExtraBold Italic 16 в 48 под шапкой, в 6 под ним —
+      // «Упадёт через» DemiBold Italic 12, таймер — в 12 под ним.
+      const head = await page.evaluate(() => {
+        const box = (el: Element | null) => el!.getBoundingClientRect();
+        const font = (el: Element | null) => {
+          const s = getComputedStyle(el!);
+          return `${s.fontSize}/${s.fontWeight}/${s.fontStyle}/${s.textTransform}`;
+        };
+        const headers = [...document.querySelectorAll('header')].filter(
+          (h) => h.getClientRects().length,
+        );
+        const title = document.querySelector('[data-testid="cargo-title"]');
+        const sub = document.querySelector('.cargo-subtitle');
+        return {
+          title: font(title),
+          sub: font(sub),
+          header: box(title).top - box(headers[headers.length - 1]!).bottom,
+          sub6: box(sub).top - box(title).bottom,
+          timer12: box(document.querySelector('[data-testid="cargo-timer"]')).top - box(sub).bottom,
+        };
+      });
+      expect(head.title).toBe('16px/800/italic/uppercase');
+      expect(head.sub).toBe('12px/600/italic/uppercase');
+      expect(head.header).toBeCloseTo(48, 0);
+      expect(head.sub6).toBeCloseTo(6, 0);
+      expect(head.timer12).toBeCloseTo(12, 0);
+      // Мобильный стандарт (< 768): кнопка 36 во всю ширину контента (не шире 470), плашки 24,
+      // стрелки 24×24 в полях 12.
+      expect(b.height).toBeCloseTo(36, 0);
+      expect(b.width).toBeCloseTo(Math.min(width - 24, 470), 0);
+      for (const id of ['cargo-price', 'cargo-qty'])
+        expect((await page.getByTestId(id).boundingBox())!.height, id).toBeCloseTo(24, 0);
+      // Поле количества — шрифт не меньше 16 (видно 12, scale 0.75): иначе iOS увеличивает страницу
+      // при фокусе.
+      expect(
+        await page
+          .getByTestId('cargo-qty')
+          .evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
+      ).toBeGreaterThanOrEqual(16);
+      for (const id of ['cargo-arrow-prev', 'cargo-arrow-next']) {
+        const a = (await page.getByTestId(id).boundingBox())!;
+        expect(a.width, id).toBeCloseTo(24, 0);
+        expect(a.x, id).toBeGreaterThanOrEqual(11.5);
+        expect(a.x + a.width, id).toBeLessThanOrEqual(width - 11.5);
+      }
+      // Приз — карточка содержимого кейса 108×72 (skin-card--m), с текстами, а не «плитка».
+      const card = page.getByTestId('cargo-prize');
+      const c = (await card.boundingBox())!;
+      expect(c.width).toBeCloseTo(108, 0);
+      expect(c.height).toBeCloseTo(72, 0);
+      await expect(card.getByTestId('skin-card-skin')).toBeVisible();
     }
   });
 

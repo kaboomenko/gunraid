@@ -4,7 +4,7 @@ import type { MeDto, UpdateSettingsBody } from '@gunraid/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 import { ME_KEY } from './me';
-import { usePrefs } from './store';
+import { usePrefs, usePrefsHydrated } from './store';
 
 /**
  * Переключатели звука и «Быстро»: выбор действует сразу (локальные настройки), а у вошедшего ещё и
@@ -37,4 +37,15 @@ export function usePrefToggles() {
       save({ fastModeDefault: v });
     },
   };
+}
+
+/**
+ * Звуки сайта для переключателя (ряд под промо-полосой, мобильное меню): on — включены; пока настройки
+ * не восстановлены из localStorage — «включены», как в первом рендере на сервере.
+ */
+export function useSoundPref() {
+  const hydrated = usePrefsHydrated();
+  const sound = usePrefs((s) => s.sound);
+  const { setSound } = usePrefToggles();
+  return { sound, setSound, on: !hydrated || sound };
 }

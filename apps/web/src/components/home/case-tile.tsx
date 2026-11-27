@@ -13,7 +13,10 @@ const LEVEL_COLORS: Record<AdrenalineLevel, string> = {
   extreme: '#FF0000',
 };
 
-/** Уровень адреналина: четыре шага, уровень кейса — 100%, остальные — 30% (стили — .adrenaline-bar). */
+/**
+ * Уровень адреналина: четыре шага, уровень кейса — 100%, остальные — 30% (стили — .adrenaline-bar).
+ * В карточке на телефоне — 130×7, шаги 30×3.
+ */
 export function AdrenalineBar({
   level,
   className,
@@ -44,6 +47,7 @@ export function AdrenalineBar({
 /**
  * Карточка кейса на главной (макет): 317×317, картинка на всю карточку, название сверху,
  * уровень адреналина снизу, над ним в 12px — плашка с ценой. Стили — .case-tile в globals.css.
+ * Телефон (< 768): 144×144 — название DemiBold 12, плашка 24, шкала 130×7 (globals.css).
  */
 export function CaseTile({ game, c }: { game: string; c: CaseCardDto }) {
   const t = useTranslations('case');
@@ -76,10 +80,7 @@ export function CaseTile({ game, c }: { game: string; c: CaseCardDto }) {
       ) : null}
       <span className="case-tile__name truncate">{c.name}</span>
       {notes.length ? <span className="case-tile__note truncate">{notes.join(' · ')}</span> : null}
-      <span
-        className="case-tile__price shape"
-        style={{ '--h': 'calc(48 * var(--case-u))' } as CSSProperties}
-      >
+      <span className="case-tile__price shape">
         {/* Текст — в <span>: голый текст во flex-контейнере не получает обрезку по прописным
             и встаёт выше центра плашки. Цифры читаются вслух с единицей: «49 гемов». */}
         {c.kind === 'free' ? (

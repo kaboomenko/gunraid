@@ -61,16 +61,18 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <NextIntlClientProvider>
           <Providers config={config}>
             {/*
-             * Поля страницы — 24px со всех сторон (макет 1920: контент 1872). Промо-полоса, ряд с лентой
-             * и шапка — один блок: между ними 6px, внешние углы блока 36, соприкасающиеся — 12.
+             * Поля страницы — 24px со всех сторон (макет 1920: контент 1872), на телефоне — 12. Промо-полоса,
+             * ряд с лентой и шапка — один блок: между ними 6px (телефон — 3), внешние углы блока 36
+             * (телефон — 18), соприкасающиеся — 12 (телефон — 6). Под шапкой страница начинается через 24
+             * (телефон — 12: на 360 контент с y 210).
              */}
             <div className="flex min-h-dvh flex-col">
-              <div className="space-y-[6px] px-3 pt-3 md:px-6 md:pt-6">
+              <div className="space-y-[3px] px-3 pt-3 md:space-y-[6px] md:px-6 md:pt-6">
                 <PromoStrip />
                 <TopBar />
               </div>
               <SiteHeader />
-              <main className="min-h-[60vh] flex-1 px-3 pt-4 md:px-6 md:pt-6">{children}</main>
+              <main className="min-h-[60vh] flex-1 px-3 pt-3 md:px-6 md:pt-6">{children}</main>
               <SiteFooter />
             </div>
             <MobileTabBar />

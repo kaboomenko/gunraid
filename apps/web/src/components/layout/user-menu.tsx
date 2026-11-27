@@ -21,13 +21,15 @@ import { useGameCode } from '@/lib/game';
 import { ME_KEY } from '@/lib/me';
 import { reconnectSocket } from '@/lib/socket';
 
-export function UserMenu({ me, large }: { me: MeDto; large?: boolean }) {
+/**
+ * Выход: сессия на сервере закрывается, профиль в кэше обнуляется, данные перечитываются, сокет
+ * переподключается гостем. Общий для меню профиля и мобильного меню.
+ */
+export function useLogout() {
   const t = useTranslations();
-  const game = useGameCode();
   const qc = useQueryClient();
   const router = useRouter();
-
-  const logout = async () => {
+  return async () => {
     await api.post('/auth/logout').catch(() => undefined);
     qc.setQueryData(ME_KEY, null);
     await qc.invalidateQueries();
@@ -35,6 +37,12 @@ export function UserMenu({ me, large }: { me: MeDto; large?: boolean }) {
     toast.info(t('auth.loggedOut'));
     router.refresh();
   };
+}
+
+export function UserMenu({ me, large }: { me: MeDto; large?: boolean }) {
+  const t = useTranslations();
+  const game = useGameCode();
+  const logout = useLogout();
 
   return (
     <Dropdown>

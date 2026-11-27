@@ -64,15 +64,20 @@ export function GameImage({ game, size = 36 }: { game: GameDto; size?: number })
  * Меню выбора игры (макет): панель #181821, поля 12, между строками 6, скругления 24, левый верхний — 6.
  * Строка: поля 6 (справа 12), картинка игры 36×36 (скругление 6), отступ 12, название DemiBold 24 белым капслоком,
  * скругление 12, фон #26262F, под курсором или клавиатурным фокусом — #3E3E50.
+ * compact — то же меню в мобильных размерах (шторка «Меню» телефона; один вид со всеми выпадающими меню
+ * телефона): панель шириной с кнопку, скругление 12 (левый верхний 3), поля 6, между строками 3; строка 36 —
+ * поля 6 (справа 12), картинка 24, отступ 12, название Medium 12 капслоком, скругление 6.
  */
 export function GameMenuContent({
   games,
   current,
   onSelect,
+  compact,
 }: {
   games: GameDto[];
   current: string;
   onSelect: (code: string) => void;
+  compact?: boolean;
 }) {
   return (
     <DropdownMenu.Portal>
@@ -80,12 +85,16 @@ export function GameMenuContent({
         align="start"
         sideOffset={6}
         collisionPadding={12}
-        className="gr-pop z-50 rounded-[24px] rounded-tl-[6px] bg-surface-1 p-3 shadow-[0_18px_48px_rgb(0_0_0/0.55)] outline-none"
+        className={
+          compact
+            ? 'gr-pop z-50 w-[var(--radix-dropdown-menu-trigger-width)] rounded-[12px] rounded-tl-[3px] bg-surface-1 p-[6px] shadow-[0_18px_48px_rgb(0_0_0/0.55)] outline-none'
+            : 'gr-pop z-50 rounded-[24px] rounded-tl-[6px] bg-surface-1 p-3 shadow-[0_18px_48px_rgb(0_0_0/0.55)] outline-none'
+        }
       >
         <DropdownMenu.RadioGroup
           value={current}
           onValueChange={onSelect}
-          className="flex flex-col gap-[6px]"
+          className={compact ? 'flex flex-col gap-[3px]' : 'flex flex-col gap-[6px]'}
         >
           {games.map((g) => (
             <DropdownMenu.RadioItem
@@ -93,12 +102,19 @@ export function GameMenuContent({
               value={g.code}
               aria-label={g.name}
               className={cn(
-                'flex cursor-pointer select-none items-center gap-3 rounded-[12px] bg-[#26262f] py-[6px] pl-[6px] pr-3 outline-none transition-colors duration-100',
+                'flex cursor-pointer select-none items-center gap-3 bg-[#26262f] pl-[6px] pr-3 outline-none transition-colors duration-100',
+                compact ? 'h-9 rounded-[6px]' : 'rounded-[12px] py-[6px]',
                 'data-[highlighted]:bg-[#3e3e50]',
               )}
             >
-              <GameImage game={g} />
-              <span className="whitespace-nowrap text-[24px] font-semibold uppercase text-white">
+              <GameImage game={g} size={compact ? 24 : 36} />
+              <span
+                className={
+                  compact
+                    ? 'min-w-0 truncate text-[12px] font-medium uppercase text-white'
+                    : 'whitespace-nowrap text-[24px] font-semibold uppercase text-white'
+                }
+              >
                 {g.name.replace(/-/g, ' ')}
               </span>
             </DropdownMenu.RadioItem>
@@ -109,7 +125,7 @@ export function GameMenuContent({
   );
 }
 
-/** Компактный переключатель игры (мобильная шапка); меню — то же, что на десктопе. */
+/** Компактный переключатель игры (планшетная шапка, 768–1023); меню — то же, что на десктопе. */
 export function GameSwitcher() {
   const t = useTranslations('header');
   const { current, games, select } = useGameSelect();

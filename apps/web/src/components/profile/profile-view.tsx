@@ -120,11 +120,23 @@ function ProfileHeader({ me }: { me: MeDto }) {
   return (
     <Card cut="lg" className="stripes p-5 sm:p-6">
       <div className="flex flex-col gap-5 md:flex-row md:items-center">
-        <div className="flex items-center gap-4">
+        {/*
+          От 768 (строка) минимум этого блока — весь ник, и ник из 24 широких букв уводил «Способы входа» вбок.
+          Блок не шире строки без зазора 20 и минимума «Способов входа» (кнопка «Привязать Steam», 136): такой ник
+          режется многоточием. min-w-0 здесь не годится — с ним ник делил бы нехватку места со «Способами входа»
+          и резался бы и там, где помещается (22 символа на 768); пока помещается, ограничение не достаётся.
+        */}
+        <div className="flex items-center gap-4 md:max-w-[calc(100%-9.75rem)]">
           <Avatar src={me.avatarUrl} name={me.nickname} size="xl" />
           <div className="min-w-0 space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="truncate font-display text-2xl font-extrabold">{me.nickname}</h1>
+              {/*
+                min-w-0: .truncate проекта режет через overflow-x: clip, а у такого flex-элемента минимум — вся
+                строка; без него длинный ник на телефоне не сжимался и страница уходила вбок.
+              */}
+              <h1 className="min-w-0 max-w-full truncate font-display text-2xl font-extrabold">
+                {me.nickname}
+              </h1>
               {me.role !== 'user' && <Badge tone="soft">{t(`roles.${me.role}`)}</Badge>}
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-dim">
