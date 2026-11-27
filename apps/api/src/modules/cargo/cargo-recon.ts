@@ -4,13 +4,15 @@ import { sql } from 'drizzle-orm';
 
 /**
  * Сверка грузов с ledger (D39). LedgerService.reconcile() сверяет только кошельки с записями и не видит
- * места без списания, списание не того игрока или возврат не того раунда — это ловят пять проверок ниже:
+ * места без списания, списание не того игрока или возврат не того раунда — это ловят шесть проверок ниже:
  *
  * 1. `purchase_ledger` — у платной покупки нет своей записи `cargo_entry` на −paid того же игрока и раунда;
  * 2. `entry_orphan` — запись `cargo_entry`, на которую не ссылается ни одна покупка (списание без мест);
  * 3. `refund_sum` — по (раунд, игрок) сумма `cargo_refund` ≠ сумме оплаты у раунда с возвратом и ≠ 0 у прочих;
  * 4. `refunded_at` — отметка возврата у покупки не совпадает с «раунд с возвратом и paid > 0»;
- * 5. `seats` — покупки раунда идут не подряд с места 1 или не покрывают ровно seats_sold мест.
+ * 5. `seats` — покупки раунда идут не подряд с места 1 или не покрывают ровно seats_sold мест;
+ * 6. `price` — оплата покупки ≠ цена места раунда × мест (недоплата, бесплатные места в платном раунде: с ledger
+ *    такая покупка согласована, проверки 1–5 её не видят). Цена места раунда — снимок, после открытия не меняется.
  *
  * «Раунд с возвратом» (D1) — `cancelled` или `expired` с проданными местами (минимум продаж, D36).
  * Одним запросом: зовут CargoService, часовая сверка воркера (MaintenanceService) и тесты.
@@ -78,6 +80,11 @@ export async function reconcileCargo(db: DbOrTx, limit = 100): Promise<CargoMism
         select round_id, max(seat_to) as max_to from cargo_purchases group by round_id
       ) m on m.round_id = r.id
       where coalesce(m.max_to, 0) <> r.seats_sold or r.id in (select round_id from seat_gaps)
+      union all
+      select 'price', p.round_id::text, p.user_id::text, p.id::text
+      from cargo_purchases p
+      join cargo_rounds r on r.id = p.round_id
+      where p.paid <> r.seat_price * p.count
     ) x
     limit ${limit}
   `);

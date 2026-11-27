@@ -263,7 +263,12 @@ export function CargoStage({
                   sold: r.seatsSold,
                 })
               : r.status === 'cancelled'
-                ? t('cargo.result.noteCancelled')
+                ? // Без возврата — бесплатный груз или отмена до первой покупки.
+                  t(
+                    r.refunded
+                      ? 'cargo.result.noteCancelled'
+                      : 'cargo.result.noteCancelledNoRefund',
+                  )
                 : t('cargo.result.noteMin', { min: r.minSeatsToLand ?? 0 }),
         },
       };

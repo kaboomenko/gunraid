@@ -33,9 +33,9 @@ export function cargoProofOutcome(
 
 /**
  * Проверки по порядку показа: хэш server seed, места подряд, client seed раунда, место победителя
- * (`seat`) или место, которое выиграло бы (`void`).
+ * (`seat`) или место, которое выиграло бы (`void`), условие закрытия (`reason`).
  */
-export type CargoProofCheckKey = 'hash' | 'seats' | 'client' | 'seat' | 'void';
+export type CargoProofCheckKey = 'hash' | 'seats' | 'client' | 'seat' | 'void' | 'reason';
 
 export interface CargoProofCheck {
   key: CargoProofCheckKey;
@@ -58,9 +58,43 @@ export interface CargoProofVerdict {
 }
 
 /**
+ * Условие закрытия сходится с числами раунда (W5). Причину сервер выбирает сам, и без этой проверки он мог бы
+ * незаметно аннулировать неудобный раунд «по минимуму» или посадить груз до распродажи и до срока:
+ * - приземлился, «все места проданы» — продано ровно столько, сколько мест;
+ * - приземлился «по таймеру» — срок вышел (finishedAt ≥ endsAt), минимум продаж (если задан) набран;
+ * - закрыт по минимуму — срок вышел, минимум задан, продано меньше него;
+ * - без продаж — срок вышел.
+ * Отмену админ делает когда угодно (она публична, D33) — её условие не проверяется (null), как и у идущего раунда.
+ */
+export function cargoReasonOk(
+  p: Pick<CargoProofDto, 'landReason' | 'seatsTotal' | 'minSeatsToLand' | 'endsAt' | 'finishedAt'>,
+  outcome: CargoProofOutcome,
+  sold: number,
+): boolean | null {
+  const ends = Date.parse(p.endsAt);
+  const finished = p.finishedAt === null ? Number.NaN : Date.parse(p.finishedAt);
+  // NaN (нет срока или времени закрытия) — ложь: пропущенное поле не делает проверку зелёной.
+  const byTimer = finished >= ends;
+  const min = p.minSeatsToLand;
+  switch (outcome) {
+    case 'landed':
+      if (p.landReason === 'sold_out') return sold === p.seatsTotal;
+      if (p.landReason === 'deadline') return byTimer && (min === null || sold >= min);
+      return false;
+    case 'minSeats':
+      return p.landReason === 'min_seats' && byTimer && min !== null && sold > 0 && sold < min;
+    case 'noSales':
+      return p.landReason === 'deadline' && byTimer;
+    default:
+      return null;
+  }
+}
+
+/**
  * Проверка раунда груза в браузере кодом game-core (D4): хэш раскрытого server seed, места подряд с №1,
  * client seed раунда = SHA-256 списка покупок и место = floor(float × проданных) + 1. Место считается от
- * пересчитанных client seed и числа мест, а не от присланных сервером: их сверяют отдельные проверки.
+ * пересчитанных client seed и числа мест, а не от присланных сервером: их сверяют отдельные проверки. Последняя —
+ * условие закрытия (cargoReasonOk).
  */
 export function verifyCargoProof(p: CargoProofDto): CargoProofVerdict {
   const outcome = cargoProofOutcome(p);
@@ -79,7 +113,11 @@ export function verifyCargoProof(p: CargoProofDto): CargoProofVerdict {
     key: 'hash',
     ok: serverSeed !== null && sha256Hex(serverSeed) === p.serverSeedHash,
   });
-  if (outcome === 'noSales' || outcome === 'cancelledEmpty') return verdict;
+  if (outcome === 'cancelledEmpty') return verdict;
+  if (outcome === 'noSales') {
+    verdict.checks.push({ key: 'reason', ok: cargoReasonOk(p, outcome, 0) === true });
+    return verdict;
+  }
 
   try {
     verdict.sold = cargoSeatsSold(p.purchases);
@@ -106,6 +144,8 @@ export function verifyCargoProof(p: CargoProofDto): CargoProofVerdict {
     key: outcome === 'landed' ? 'seat' : 'void',
     ok: verdict.seat !== null && verdict.seat === expected,
   });
+  const reason = cargoReasonOk(p, outcome, sold);
+  if (reason !== null) verdict.checks.push({ key: 'reason', ok: reason });
   return verdict;
 }
 
@@ -120,6 +160,20 @@ export function cargoPreimageHead(purchases: readonly CargoSeatRange[], count = 
 
 /** Сколько первых покупок список держит в DOM, пока не нажали «Показать все». */
 export const CARGO_PROOF_HEAD = 200;
+
+/**
+ * Строк в группе полного списка («Показать все», до 10 000 покупок — D38). content-visibility — на группе, а не на
+ * каждой строке: браузер на каждом кадре прокрутки пересчитывает видимость всех таких элементов, и 10 000 строк
+ * с ним прокручивались рывками; 100 групп — нет, а строки вне окна списка по-прежнему не раскладываются.
+ */
+export const CARGO_PROOF_GROUP = 100;
+
+/** Список частями по `size` подряд (группы полного списка покупок). */
+export function cargoProofChunks<T>(list: readonly T[], size = CARGO_PROOF_GROUP): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+}
 
 export type CargoProofRow = { kind: 'row'; index: number } | { kind: 'gap'; count: number };
 

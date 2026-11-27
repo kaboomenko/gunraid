@@ -33,6 +33,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import {
   cargoApiFieldErrors,
+  cargoCancelState,
   cargoConflictKey,
   cargoDraftBody,
   cargoDraftErrors,
@@ -44,10 +45,14 @@ import {
   firstErrorField,
   fitSeatPrice,
   formatCargoRanges,
+  mergeCargoDraft,
   newCargoDraft,
   nextSortOrder,
   sameCargoDraft,
+  sameCargoField,
+  takeCargoFields,
   type CargoDraft,
+  type CargoDraftKey,
   type CargoField,
   type CargoFieldErrors,
 } from '@/app/admin/cargo/cargo-form';
@@ -103,6 +108,24 @@ const editHref = (id: string, game: string) => `/admin/cargo/${id}?game=${game}`
 /** У отменённого и закрытого по минимуму раунда оплата вернулась участникам. */
 const refundedRound = (r: { status: CargoRoundStatus; landReason: string | null }) =>
   r.status === 'cancelled' || (r.status === 'expired' && r.landReason === 'min_seats');
+
+/** Подпись поля черновика (admin.cargo.fields.*) — в предупреждении о чужой правке. */
+const DRAFT_LABEL: Record<CargoDraftKey, string> = {
+  name: 'name',
+  slug: 'slug',
+  imageUrl: 'image',
+  sortOrder: 'sortOrder',
+  isActive: 'isActive',
+  prize: 'prize',
+  free: 'free',
+  seatsTotal: 'seatsTotal',
+  seatPrice: 'seatPrice',
+  perUserLimit: 'perUserLimit',
+  durationMinutes: 'durationMinutes',
+  minSeatsToLand: 'minSeatsToLand',
+  minLevel: 'minLevel',
+  depositWithinDays: 'depositWithinDays',
+};
 
 const ROUND_TONES: Record<CargoRoundStatus, 'soft' | 'info' | 'neutral' | 'warning'> = {
   open: 'soft',
@@ -411,22 +434,31 @@ export function AdminCargoEditor({ id, game: gameParam }: { id: string | null; g
   const [busy, setBusy] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  /** Поля, которые правили и здесь, и в другом окне (W1): при сохранении значения формы заменят чужие. */
+  const [conflicts, setConflicts] = useState<CargoDraftKey[]>([]);
   const loaded = useRef<string | null>(null);
   /** Шаблон, из которого форма заполнена последний раз; null — заполнить заново (после своего сохранения). */
   const base = useRef<CargoDraft | null>(null);
 
   useEffect(() => {
     if (!cargo) return;
-    // Форма заполняется заново, только когда изменился сам шаблон, а не на каждом опросе продаж. Чужая правка
-    // (другая вкладка, другой админ) не затирает несохранённые изменения: форма остаётся как есть.
+    // Форма заполняется заново, только когда изменился сам шаблон, а не на каждом опросе продаж.
     const stamp = `${cargo.id}:${cargo.updatedAt}`;
     if (loaded.current === stamp) return;
     loaded.current = stamp;
     const next = cargoDraftFrom(cargo);
     const prev = base.current;
     base.current = next;
-    if (prev && !sameCargoDraft(draftRef.current, prev)) return;
+    const mine = draftRef.current;
+    if (prev && !sameCargoDraft(mine, prev)) {
+      // Чужая правка (другая вкладка, другой админ) при несохранённых своих: нетронутые поля — из новой версии
+      // (иначе «Сохранить» молча откатило бы её), тронутые остаются; где правили оба — предупреждение.
+      setDraft(mergeCargoDraft(prev, mine, next).draft);
+      setConflicts((known) => mergeCargoDraft(prev, mine, next, known).conflicts);
+      return;
+    }
     setDraft(next);
+    setConflicts([]);
     setServerErrors({});
     setShowErrors(false);
   }, [cargo]);
@@ -450,6 +482,9 @@ export function AdminCargoEditor({ id, game: gameParam }: { id: string | null; g
   }, [roundId, id, qc]);
 
   const clientErrors = useMemo(() => cargoDraftErrors(draft), [draft]);
+  // Последняя версия шаблона на сервере: поле, которое правили оба, снова совпало — предупреждать не о чем.
+  const saved = useMemo(() => (cargo ? cargoDraftFrom(cargo) : null), [cargo]);
+  const conflicted = saved ? conflicts.filter((k) => !sameCargoField(k, draft, saved)) : [];
   const errors: CargoFieldErrors = showErrors ? { ...clientErrors, ...serverErrors } : serverErrors;
   const errorOf = (f: CargoField): string | undefined => {
     const e = errors[f];
@@ -486,12 +521,27 @@ export function AdminCargoEditor({ id, game: gameParam }: { id: string | null; g
     setBusy(true);
     try {
       if (id) {
+        // Свежая версия перед записью: правку из другого окна за последние секунды (до опроса) не затереть молча.
+        // Изменилась — форма сливается с ней (эффект выше), а админ смотрит и сохраняет ещё раз.
+        const fresh = await api.get<AdminCargoDetailDto>(`/admin/cargo/${id}`);
+        if (loaded.current !== `${fresh.id}:${fresh.updatedAt}`) {
+          qc.setQueryData(['admin', 'cargo-template', id], fresh);
+          toast.error(t('staleSave'));
+          return;
+        }
         const updated = await api.put<AdminCargoDetailDto>(
           `/admin/games/${game}/cargo/${id}`,
           body,
         );
-        // Своё сохранение — форма заполняется ответом сервера (нормализованные значения: лимит 1 у бесплатного).
-        base.current = null;
+        // Своё сохранение — форма заполняется ответом сервера (нормализованные значения: лимит 1 у бесплатного)
+        // сразу, а не эффектом: опрос мог принести эту версию раньше ответа PUT, и эффект её бы пропустил.
+        const next = cargoDraftFrom(updated);
+        base.current = next;
+        loaded.current = `${updated.id}:${updated.updatedAt}`;
+        setDraft(next);
+        setConflicts([]);
+        setServerErrors({});
+        setShowErrors(false);
         qc.setQueryData(['admin', 'cargo-template', id], updated);
       } else {
         const created = await api.post<AdminCargoDetailDto>(`/admin/games/${game}/cargo`, body);
@@ -504,8 +554,10 @@ export function AdminCargoEditor({ id, game: gameParam }: { id: string | null; g
       const fields =
         err instanceof ApiError ? cargoApiFieldErrors(err.code, err.details, draft) : {};
       setServerErrors(fields);
-      toast.error(errorText(err));
       const f = firstErrorField(fields);
+      // Ошибка про поле — текст под полем; тост — общий «Проверьте поля формы» (а не «Конфликт данных — обновите
+      // страницу» у занятого адреса: обновление стёрло бы новую форму).
+      toast.error(f ? t('errors.form') : errorText(err));
       if (f) focusField(f);
       if (err instanceof ApiError && err.status === 409) {
         void qc.invalidateQueries({ queryKey: ['admin', 'cargo-template', id] });
@@ -611,6 +663,46 @@ export function AdminCargoEditor({ id, game: gameParam }: { id: string | null; g
           {t('archivedHint')}
         </p>
       )}
+      {!readOnly && saved && conflicted.length > 0 && (
+        <div
+          role="alert"
+          className="clip-cut flex flex-wrap items-center gap-3 bg-warning/10 p-3 text-sm text-warning [--cut:6px]"
+          data-testid="admin-cargo-conflict"
+        >
+          <p className="flex min-w-0 flex-1 basis-80 items-start gap-2">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <span className="min-w-0">
+              {t('conflict', {
+                fields: conflicted.map((k) => t(`fields.${DRAFT_LABEL[k]}`)).join(', '),
+              })}
+            </span>
+          </p>
+          <span className="flex flex-wrap gap-2">
+            <Button
+              className={FOCUS}
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setDraft((d) => takeCargoFields(d, saved, conflicted));
+                setConflicts([]);
+                setServerErrors({});
+              }}
+              data-testid="admin-cargo-conflict-take"
+            >
+              {t('conflictTake')}
+            </Button>
+            <Button
+              className={FOCUS}
+              size="sm"
+              variant="secondary"
+              onClick={() => setConflicts([])}
+              data-testid="admin-cargo-conflict-keep"
+            >
+              {t('conflictKeep')}
+            </Button>
+          </span>
+        </div>
+      )}
 
       <Card className="space-y-5 p-4">
         <fieldset disabled={readOnly} className="min-w-0 space-y-5">
@@ -631,19 +723,27 @@ export function AdminCargoEditor({ id, game: gameParam }: { id: string | null; g
                 label={t('fields.slug')}
                 htmlFor={fieldId('slug')}
                 error={errorOf('slug')}
-                hint={draft.slug ? t('slugHint', { game, slug: draft.slug }) : undefined}
+                hint={
+                  !draft.slug
+                    ? undefined
+                    : id
+                      ? t('slugFixedHint', { game, slug: draft.slug })
+                      : t('slugHint', { game, slug: draft.slug })
+                }
               >
+                {/* Адрес после создания не меняется (API — 409): по нему сид узнаёт свои грузы. */}
                 <Input
                   id={fieldId('slug')}
                   value={draft.slug}
                   maxLength={80}
                   autoComplete="off"
                   spellCheck={false}
+                  readOnly={Boolean(id)}
                   invalid={Boolean(errorOf('slug'))}
                   onChange={(e) =>
                     set('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))
                   }
-                  className={cn('h-10 font-mono', DISABLED)}
+                  className={cn('h-10 font-mono read-only:text-muted', DISABLED)}
                 />
               </Field>
               <Field
@@ -771,7 +871,9 @@ export function AdminCargoEditor({ id, game: gameParam }: { id: string | null; g
                 {intInput('minSeatsToLand')}
               </Field>
             </div>
-            <p className="text-xs text-dim">{t('minSeatsHint')}</p>
+            <p className="text-xs text-dim">
+              {t(draft.free ? 'minSeatsHintFree' : 'minSeatsHint')}
+            </p>
           </FormBlock>
 
           <FormBlock title={t('sections.conditions')}>
@@ -1265,7 +1367,8 @@ export function CargoCurrentRound({ cargo }: { cargo: AdminCargoDetailDto }) {
 /**
  * Отмена раунда с возвратом гемов (D33): сумма возврата, предупреждение о публичности (server seed раскроется — на
  * странице проверки будет видно, какое место выиграло бы), причина от 5 символов. Без idempotency key: повтор —
- * 409 CARGO_ROUND_NOT_OPEN.
+ * 409 CARGO_ROUND_NOT_OPEN. Отменяется раунд, выбранный кнопкой (`round`), а текст — по живой сводке из опроса
+ * детальной (`cargo.round`): пока админ пишет причину, места докупают (cargoCancelState).
  */
 function CancelRoundModal({
   cargo,
@@ -1287,9 +1390,13 @@ function CancelRoundModal({
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   useEffect(() => {
-    if (open) setReason('');
-  }, [open]);
+    if (!open) return;
+    setReason('');
+    // Сводка на момент открытия окна — свежая, дальше её обновляет опрос детальной.
+    void qc.invalidateQueries({ queryKey: ['admin', 'cargo-template', cargo.id] });
+  }, [open, qc, cargo.id]);
   const trimmed = reason.trim();
+  const state = cargoCancelState(round, cargo.round);
   const refresh = () =>
     Promise.all([
       qc.invalidateQueries({ queryKey: ['admin', 'cargo-template', cargo.id] }),
@@ -1301,10 +1408,12 @@ function CancelRoundModal({
     if (!round || trimmed.length < 5) return;
     setBusy(true);
     try {
-      await api.post<AdminCargoRoundDetailDto>(`/admin/cargo-rounds/${round.id}/cancel`, {
-        reason: trimmed,
-      });
-      toast.success(t('cancelled'));
+      const done = await api.post<AdminCargoRoundDetailDto>(
+        `/admin/cargo-rounds/${round.id}/cancel`,
+        { reason: trimmed },
+      );
+      // Оплаты не было (бесплатный груз, мест не купили) — и «гемы возвращены» не про этот раунд.
+      toast.success(t(done.revenue > 0 ? 'cancelled' : 'cancelledNoRefund'));
       // Сначала свежие данные, потом закрыть: фокус вернётся на кнопку, если раунд остался (груз включён), иначе —
       // на блок раунда.
       await refresh();
@@ -1319,16 +1428,19 @@ function CancelRoundModal({
       setBusy(false);
     }
   };
-  const text = !round
+  const live = state.round;
+  const text = !live
     ? ''
-    : round.seatsSold === 0
-      ? t('cancelTextEmpty')
-      : round.revenue === 0
-        ? t('cancelTextFree', { participants: round.participants })
-        : t('cancelText', {
-            participants: round.participants,
-            gems: tg('amount', { count: round.revenue }),
-          });
+    : state.kind === 'gone'
+      ? t('cancelGone', { number: live.number })
+      : state.kind === 'empty'
+        ? t('cancelTextEmpty')
+        : state.kind === 'free'
+          ? t('cancelTextFree', { participants: live.participants })
+          : t('cancelText', {
+              participants: live.participants,
+              gems: tg('amount', { count: live.revenue }),
+            });
   return (
     <Modal
       open={open}
@@ -1388,11 +1500,11 @@ function CancelRoundModal({
             className={FOCUS}
             variant="danger"
             loading={busy}
-            disabled={trimmed.length < 5}
+            disabled={trimmed.length < 5 || state.kind === 'gone'}
             onClick={() => void submit()}
             data-testid="admin-cargo-cancel-confirm"
           >
-            {t('cancelConfirm')}
+            {t(state.kind === 'paid' ? 'cancelConfirm' : 'cancelConfirmNoRefund')}
           </Button>
         </div>
       </div>
@@ -1427,6 +1539,9 @@ function ReasonCell({ round, full }: { round: AdminCargoRoundRowDto; full?: bool
       </span>
     );
   }
+  // Бесплатный груз закрылся по минимуму — «гемы вернули» к нему не относится.
+  if (round.landReason === 'min_seats' && round.revenue === 0)
+    return <>{t('landReasonMinSeatsFree')}</>;
   return <>{round.landReason ? t(`landReasons.${round.landReason}`) : tc('none')}</>;
 }
 

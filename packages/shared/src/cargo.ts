@@ -177,7 +177,7 @@ export interface CargoBuyResultDto {
 
 /** Строка сверки грузов (D39): reconcileCargo в API, ручка сверки админки (этап A). */
 export interface CargoMismatchDto {
-  check: 'purchase_ledger' | 'entry_orphan' | 'refund_sum' | 'refunded_at' | 'seats';
+  check: 'purchase_ledger' | 'entry_orphan' | 'refund_sum' | 'refunded_at' | 'seats' | 'price';
   roundId: string | null;
   userId: string | null;
   ref: string | null;
@@ -220,6 +220,8 @@ export interface CargoProofDto {
   purchases: Array<{ seatFrom: number; seatTo: number; clientSeed: string; mine: boolean }>;
   seatsSold: number;
   seatsTotal: number;
+  /** Цена места в раунде (снимок); 0 — бесплатный груз: при отмене и закрытии по минимуму гемы не возвращаются. */
+  seatPrice: number;
   minSeatsToLand: number | null;
   landReason: CargoLandReason | null;
   winningSeat: number | null;
@@ -228,5 +230,7 @@ export interface CargoProofDto {
   winner: { shortId: number; nickname: string } | null;
   prize: { itemId: string; name: string; price: number; imageUrl: string | null };
   startedAt: string;
+  /** Срок раунда: «по таймеру» (приземление, минимум продаж, без продаж) — не раньше него (проверка причины). */
+  endsAt: string;
   finishedAt: string | null;
 }

@@ -9,6 +9,8 @@ import {
   ledgerEntries,
   newId,
   outboxEvents,
+  seedAll,
+  users,
 } from '@gunraid/db';
 import { cargoClientSeed, cargoWinningSeat, verifyServerSeed } from '@gunraid/game-core';
 import type {
@@ -681,7 +683,7 @@ describe('cargo admin (integration)', () => {
       expect(notes).toHaveLength(1);
       expect(notes[0]!.payload).toMatchObject({
         params: { gems: 300, cargo: 'Груз админки', why: 'cancelled' },
-        link: `/cs2/cargo/${c.slug}`,
+        link: `/provably-fair?cargo=${c.round!.id}`,
       });
     }
     // XP за возвращённые гемы не начисляется (D12).
@@ -1035,6 +1037,153 @@ describe('cargo admin (integration)', () => {
     const unknown = await admin.delete<Err>(`${A}/cargo/${newId()}`);
     expect(unknown.status).toBe(404);
     expect(unknown.body.error.code).toBe('CARGO_NOT_FOUND');
+  });
+
+  it('slug is immutable after creation (409); a seed cargo keeps its slug, so the next seed recreates nothing', async () => {
+    const c = await createCargo();
+    const renamed = await admin.put<Err>(
+      `${A}/games/cs2/cargo/${c.id}`,
+      cargoBody({ slug: `${c.slug}-x`, name: 'Новое имя' }),
+    );
+    expect(renamed.status).toBe(409);
+    expect(renamed.body.error).toMatchObject({
+      code: 'CONFLICT',
+      details: { field: 'slug', reason: 'immutable' },
+    });
+    const kept = (await admin.get<AdminCargoDetailDto>(`${A}/cargo/${c.id}`)).body;
+    expect(kept).toMatchObject({ slug: c.slug, name: c.name, updatedAt: c.updatedAt });
+    expect(await auditOf('cargo.update', c.id)).toHaveLength(0);
+    // Тот же slug — обычная правка.
+    expect((await edit(c, { name: 'Новое имя' })).status).toBe(200);
+
+    // Сидовый груз: переименовать нельзя — иначе выкладка (migrate-and-seed → seedAll) создала бы его заново,
+    // и тикер сразу открыл бы новому шаблону платный раунд.
+    const cs2 = await gameId(app, 'cs2');
+    const light = (await admin.get<AdminCargoRowDto[]>(`${A}/games/cs2/cargo`)).body.find(
+      (x) => x.slug === 'light',
+    )!;
+    expect(light).toBeDefined();
+    const audits = (await auditOf('cargo.update', light.id)).length;
+    const res = await admin.put<Err>(`${A}/games/cs2/cargo/${light.id}`, {
+      slug: 'light-renamed',
+      name: light.name,
+      imageUrl: light.imageUrl,
+      prizeItemId: light.prize.id,
+      seatsTotal: light.seatsTotal,
+      seatPrice: light.seatPrice,
+      perUserLimit: light.perUserLimit,
+      durationMinutes: light.durationMinutes,
+      minLevel: light.minLevel,
+      depositWithinDays: light.depositWithinDays,
+      minSeatsToLand: light.minSeatsToLand,
+      isActive: light.isActive,
+      sortOrder: light.sortOrder,
+    } satisfies AdminCargoBody);
+    expect(res.status).toBe(409);
+    expect(res.body.error.details).toEqual({ field: 'slug', reason: 'immutable' });
+    expect(await auditOf('cargo.update', light.id)).toHaveLength(audits);
+    const templates = () =>
+      db(app)
+        .select({ id: cargoTemplates.id, slug: cargoTemplates.slug })
+        .from(cargoTemplates)
+        .where(eq(cargoTemplates.gameId, cs2));
+    const before = await templates();
+    await seedAll(db(app), { demo: true });
+    const after = await templates();
+    expect(after).toHaveLength(before.length);
+    expect(after.filter((t) => t.slug === 'light')).toEqual([{ id: light.id, slug: 'light' }]);
+    expect(after.find((t) => t.slug === 'light-renamed')).toBeUndefined();
+  });
+
+  it('refund notice after «disable → cancel → archive» links to the round proof, which still opens', async () => {
+    const c = await createCargo({ seatsTotal: 10 });
+    const p = await playerWith(1_000);
+    expect((await buy(p.client, c.slug, c.round!.id, 2)).status).toBe(200);
+    expect((await edit(c, { isActive: false })).status).toBe(200);
+    expect((await cancel(c.round!.id, 'Убираем груз в архив')).status).toBe(200);
+    expect((await admin.delete(`${A}/cargo/${c.id}`)).status).toBe(200);
+    const notes = (await outbox('notification.create', 'userId', p.me.id)).filter(
+      (e) => (e.payload as { type: string }).type === 'cargo_refund',
+    );
+    expect(notes).toHaveLength(1);
+    const link = (notes[0]!.payload as { link: string }).link;
+    expect(link).toBe(`/provably-fair?cargo=${c.round!.id}`);
+    // Страницы груза больше нет (выключен и в архиве), а проверка раунда по ссылке открывается.
+    const guest = new TestClient(app);
+    expect((await guest.get(`/api/v1/games/cs2/cargo/${c.slug}`)).status).toBe(404);
+    const roundId = new URLSearchParams(link.split('?')[1]).get('cargo');
+    const proof = await guest.get<CargoProofDto>(`/api/v1/fair/proof/cargo/${roundId}`);
+    expect(proof.status).toBe(200);
+    expect(proof.body).toMatchObject({
+      id: c.round!.id,
+      status: 'cancelled',
+      revealed: true,
+      // Цена места и срок раунда — для текстов (бесплатный груз) и проверки причины закрытия на странице.
+      seatPrice: 100,
+      endsAt: c.round!.endsAt,
+    });
+    expect(await userBalance(app, p.me.id)).toBe(1_000);
+  });
+
+  it('NUL and unpaired surrogates in text → 400 VALIDATION_ERROR (not 500); nothing is written', async () => {
+    const bad = async (res: TestResponse<Err>, path: string) => {
+      expect(res.status, JSON.stringify(res.body)).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toEqual([
+        expect.objectContaining({ path, code: 'invalid_text' }),
+      ]);
+    };
+    const cases: Array<[Partial<AdminCargoBody>, string]> = [
+      [{ name: 'ab\u0000cd' }, 'name'],
+      [{ name: 'ab\ud800cd' }, 'name'],
+      [{ imageUrl: '/media/cargo/x\u0000.webp' }, 'imageUrl'],
+      [{ imageUrl: '/media/cargo/x\udc00.webp' }, 'imageUrl'],
+    ];
+    for (const [over, path] of cases) {
+      const body = cargoBody(over);
+      await bad(await admin.post<Err>(`${A}/games/cs2/cargo`, body), path);
+      const [t] = await db(app)
+        .select({ id: cargoTemplates.id })
+        .from(cargoTemplates)
+        .where(eq(cargoTemplates.slug, body.slug));
+      expect(t).toBeUndefined();
+    }
+    // Эмодзи (целая суррогатная пара) — обычный текст.
+    const emoji = await createCargo({ name: 'Груз 🎁' });
+    expect(emoji.name).toBe('Груз 🎁');
+    await bad(
+      await admin.put<Err>(
+        `${A}/games/cs2/cargo/${emoji.id}`,
+        cargoBody({ slug: emoji.slug, name: 'ab\u0000cd' }),
+      ),
+      'name',
+    );
+
+    // Причина отмены: раунд остаётся открытым.
+    const c = await createCargo();
+    for (const reason of ['abcde\u0000f', 'abcde\ud800f']) {
+      await bad(
+        await admin.post<Err>(`${A}/cargo-rounds/${c.round!.id}/cancel`, { reason }),
+        'reason',
+      );
+    }
+    expect(await roundRow(c.round!.id)).toMatchObject({ status: 'open', cancelReason: null });
+
+    // Давняя ручка с той же бедой: бан с NUL в причине — игрок остаётся активным. И строка поиска.
+    const p = await newPlayer(app, 'canul');
+    await bad(
+      await admin.post<Err>(`${A}/users/${p.me.id}/ban`, { reason: 'abc\u0000' }),
+      'reason',
+    );
+    const [u] = await db(app)
+      .select({ status: users.status })
+      .from(users)
+      .where(eq(users.id, p.me.id));
+    expect(u!.status).toBe('active');
+    await bad(
+      await admin.get<Err>(`${A}/games/cs2/items?q=${encodeURIComponent('ak\u0000')}`),
+      'q',
+    );
   });
 
   it('issue LANDING_STUCK with attempts and the cause; RTP now = prize / revenue', async () => {

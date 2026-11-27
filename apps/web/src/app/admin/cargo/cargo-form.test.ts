@@ -5,6 +5,7 @@ import {
   CARGO_ROUND_STATUSES,
   cargoImageUrl,
   type AdminCargoDetailDto,
+  type AdminCargoRoundSummaryDto,
   type ItemDto,
 } from '@gunraid/shared';
 import { createTranslator } from 'next-intl';
@@ -12,8 +13,10 @@ import { describe, expect, it } from 'vitest';
 import ru from '../../../../messages/ru.json';
 import {
   CARGO_CONFLICT_KEYS,
+  CARGO_DRAFT_KEYS,
   CARGO_FIELD_ERROR_KEYS,
   cargoApiFieldErrors,
+  cargoCancelState,
   cargoConflictKey,
   cargoDraftBody,
   cargoDraftErrors,
@@ -24,9 +27,11 @@ import {
   firstErrorField,
   fitSeatPrice,
   formatCargoRanges,
+  mergeCargoDraft,
   newCargoDraft,
   nextSortOrder,
   sameCargoDraft,
+  takeCargoFields,
   type CargoDraft,
 } from './cargo-form';
 
@@ -143,6 +148,16 @@ describe('форма груза: проверка черновика', () => {
     ).toEqual({});
   });
 
+  it('NUL и половина суррогатной пары в названии и пути картинки — ошибка «Недопустимые символы»', () => {
+    expect(cargoDraftErrors(valid({ name: 'ab\u0000cd' }))).toEqual({ name: { key: 'chars' } });
+    expect(cargoDraftErrors(valid({ name: 'ab\ud800cd' }))).toEqual({ name: { key: 'chars' } });
+    expect(cargoDraftErrors(valid({ imageUrl: '/media/x\udc00.webp' }))).toEqual({
+      imageUrl: { key: 'chars' },
+    });
+    // Эмодзи — целая пара, обычный текст.
+    expect(cargoDraftErrors(valid({ name: 'Груз \ud83c\udf81' }))).toEqual({});
+  });
+
   it('несохранённые правки: сравнение по значениям, приз — по id', () => {
     const d = valid();
     expect(sameCargoDraft(d, { ...d })).toBe(true);
@@ -215,6 +230,14 @@ describe('форма груза: ошибки API', () => {
       prize: { key: 'prize' },
       seatsTotal: { key: 'range', values: { min: 2, max: 10_000 } },
     });
+    // Недопустимые символы (ZodPipe) — своим текстом, а не «от 2 до 80 символов».
+    expect(
+      cargoApiFieldErrors(
+        'VALIDATION_ERROR',
+        [{ path: 'name', code: 'invalid_text', message: 'x' }],
+        d,
+      ),
+    ).toEqual({ name: { key: 'chars' } });
   });
 
   it('приз, занятый slug и CONFLICT с причиной', () => {
@@ -230,12 +253,101 @@ describe('форма груза: ошибки API', () => {
     expect(cargoApiFieldErrors('CONFLICT', { field: 'slug' }, d)).toEqual({
       slug: { key: 'slugTaken' },
     });
+    // Адрес после создания не меняется (S1).
+    expect(cargoApiFieldErrors('CONFLICT', { field: 'slug', reason: 'immutable' }, d)).toEqual({
+      slug: { key: 'slugImmutable' },
+    });
     expect(cargoApiFieldErrors('CONFLICT', { reason: 'archived' }, d)).toEqual({});
     expect(cargoConflictKey('CONFLICT', { reason: 'archived' })).toBe('archived');
     expect(cargoConflictKey('CONFLICT', { reason: 'round_open', roundId: 'x' })).toBe('roundOpen');
     expect(cargoConflictKey('CONFLICT', { reason: 'cargo_busy' })).toBe('busy');
     expect(cargoConflictKey('CONFLICT', { field: 'slug' })).toBeNull();
     expect(cargoConflictKey('CARGO_ROUND_NOT_OPEN', undefined)).toBeNull();
+  });
+});
+
+describe('форма груза: чужая правка при несохранённых своих (W1)', () => {
+  const base = valid({ seatPrice: '10', name: 'Груз' });
+
+  it('нетронутые поля — из новой версии, тронутые — из формы, без конфликта', () => {
+    const mine = { ...base, name: 'Моё имя' };
+    const theirs = { ...base, seatPrice: '25' };
+    const m = mergeCargoDraft(base, mine, theirs);
+    expect(m.draft).toEqual({ ...base, name: 'Моё имя', seatPrice: '25' });
+    expect(m.conflicts).toEqual([]);
+  });
+
+  it('правили одно поле оба — конфликт; одинаково — нет; приз сравнивается по id', () => {
+    const mine = { ...base, seatPrice: '30', seatsTotal: '200' };
+    const theirs = { ...base, seatPrice: '25', seatsTotal: '200', prize: { ...prize } };
+    const m = mergeCargoDraft(base, mine, theirs);
+    expect(m.draft).toMatchObject({ seatPrice: '30', seatsTotal: '200' });
+    expect(m.conflicts).toEqual(['seatPrice']);
+  });
+
+  it('прежний конфликт держится, пока значения расходятся; совпали — пропадает', () => {
+    const mine = { ...base, seatPrice: '30' };
+    const v1 = { ...base, seatPrice: '25' };
+    const first = mergeCargoDraft(base, mine, v1);
+    expect(first.conflicts).toEqual(['seatPrice']);
+    // Следующая чужая правка — другого поля: цена остаётся в конфликте.
+    const v2 = { ...v1, durationMinutes: '60' };
+    const second = mergeCargoDraft(v1, first.draft, v2, first.conflicts);
+    expect(second.draft).toMatchObject({ seatPrice: '30', durationMinutes: '60' });
+    expect(second.conflicts).toEqual(['seatPrice']);
+    // На сервере поставили ту же цену, что в форме, — конфликта больше нет.
+    const v3 = { ...v2, seatPrice: '30' };
+    expect(mergeCargoDraft(v2, second.draft, v3, second.conflicts).conflicts).toEqual([]);
+  });
+
+  it('«Взять сохранённые значения» — только указанные поля', () => {
+    const mine = { ...base, seatPrice: '30', name: 'Моё имя' };
+    const theirs = { ...base, seatPrice: '25' };
+    expect(takeCargoFields(mine, theirs, ['seatPrice'])).toEqual({ ...mine, seatPrice: '25' });
+    // Список полей покрывает весь черновик.
+    expect([...CARGO_DRAFT_KEYS].sort()).toEqual(Object.keys(base).sort());
+  });
+});
+
+describe('форма груза: окно отмены раунда (W2)', () => {
+  const summary = (over: Partial<AdminCargoRoundSummaryDto> = {}): AdminCargoRoundSummaryDto => ({
+    id: '01a21963-a263-7634-bb25-ce9c62dee779',
+    number: 3,
+    status: 'open',
+    seatsSold: 2,
+    seatsTotal: 10,
+    seatPrice: 10,
+    revenue: 20,
+    participants: 1,
+    prize,
+    prizeValue: 14_400,
+    rtpNow: 720,
+    minSeatsToLand: null,
+    landAttempts: 0,
+    lastLandError: null,
+    lastLandErrorAt: null,
+    startedAt: '2026-11-26T10:00:00.000Z',
+    endsAt: '2026-11-27T10:00:00.000Z',
+    serverSeedHash: 'hash',
+    ...over,
+  });
+
+  it('текст — по живой сводке того же раунда, а не по снимку на момент открытия', () => {
+    const picked = summary();
+    const live = summary({ seatsSold: 7, revenue: 70, participants: 2 });
+    expect(cargoCancelState(picked, live)).toEqual({ kind: 'paid', round: live });
+    expect(cargoCancelState(picked, summary({ seatsSold: 0, revenue: 0 })).kind).toBe('empty');
+    expect(cargoCancelState(picked, summary({ seatPrice: 0, revenue: 0 })).kind).toBe('free');
+  });
+
+  it('раунд сменился или пропал — отменять нечего', () => {
+    const picked = summary();
+    expect(cargoCancelState(picked, summary({ id: 'next-round', number: 4 }))).toEqual({
+      kind: 'gone',
+      round: picked,
+    });
+    expect(cargoCancelState(picked, null)).toEqual({ kind: 'gone', round: picked });
+    expect(cargoCancelState(null, picked)).toEqual({ kind: 'gone', round: null });
   });
 });
 
@@ -312,6 +424,24 @@ describe('тексты админки грузов', () => {
     );
     expect(t('cancelTextFree', { participants: 1 })).toBe(
       'Груз бесплатный — гемы не списывались. Места 1 участника аннулируются. Отмена попадёт в аудит.',
+    );
+  });
+
+  it('бесплатный груз: без «гемы вернутся/вернули/вернуть» (W3); GGR — и про бесплатные грузы', () => {
+    for (const text of [
+      t('minSeatsHintFree'),
+      t('cancelConfirmNoRefund'),
+      t('cancelledNoRefund'),
+      t('landReasonMinSeatsFree'),
+    ]) {
+      expect(text).not.toMatch(/гем/);
+    }
+    expect(t('cancelGone', { number: 4 })).toBe('Раунд №4 уже завершён — отменять нечего.');
+    expect(ru.admin.dashboard.ggrHint).toContain('бесплатных грузов');
+    expect(ru.admin.dashboard.ggrHint).toContain('бесплатных кейсов');
+    expect(t('conflict', { fields: 'Цена места, гемы' })).toContain('Цена места, гемы');
+    expect(t('slugFixedHint', { game: 'cs2', slug: 'light' })).toBe(
+      'На сайте: /cs2/cargo/light. Адрес после создания не меняется',
     );
   });
 

@@ -909,7 +909,7 @@ describe('cargo (integration)', () => {
       expect(notes).toHaveLength(1);
       expect(notes[0]!.payload).toMatchObject({
         params: { gems: 100, cargo: 'Тестовый груз', why: 'min_seats' },
-        link: `/cs2/cargo/${c.slug}`,
+        link: `/provably-fair?cargo=${c.round.id}`,
       });
     }
     expect(await outbox('wager.placed', 'sourceId', c.round.id)).toHaveLength(0);
@@ -1246,6 +1246,67 @@ describe('cargo (integration)', () => {
       .from(cargoPurchases)
       .where(and(eq(cargoPurchases.roundId, roundId), isNull(cargoPurchases.refundedAt)));
     expect(p).toBeDefined();
+  });
+
+  it('reconcileCargo catches paid ≠ seat price × seats: underpaid seats and free seats in a paid round (check price)', async () => {
+    const c = await createCargo({ seatsTotal: 10 });
+    const a = await playerWith(1_000);
+    expect((await buy(a.client, c, 2)).body).toMatchObject({ paid: 200, seatFrom: 1, seatTo: 2 });
+    expect(await reconcileCargo(db(app))).toEqual([]);
+    const b = await playerWith(1_000);
+    const ledger = app.get(LedgerService);
+    // Порча — в транзакции с откатом: места 3–4 игрока B оплачены `paid` вместо 2 × 100. Ledger только на
+    // добавление, поэтому несогласованность — со стороны покупки; запись ledger (если paid > 0) с ней согласована.
+    const probe = async (paid: number) => {
+      const purchaseId = newId();
+      let found: CargoMismatchDto[] = [];
+      await expect(
+        db(app).transaction(async (tx) => {
+          let ledgerEntryId: number | null = null;
+          if (paid > 0) {
+            const e = await ledger.post(tx, {
+              userId: b.me.id,
+              type: 'cargo_entry',
+              amount: -paid,
+              refType: 'cargo_purchase',
+              refId: purchaseId,
+              idempotencyKey: `cargo:${purchaseId}`,
+              meta: { roundId: c.round.id },
+            });
+            ledgerEntryId = e.entryId;
+          }
+          await tx.insert(cargoPurchases).values({
+            id: purchaseId,
+            roundId: c.round.id,
+            userId: b.me.id,
+            seatFrom: 3,
+            seatTo: 4,
+            count: 2,
+            paid,
+            clientSeed: seed(),
+            ledgerEntryId,
+          });
+          await tx.update(cargoRounds).set({ seatsSold: 4 }).where(eq(cargoRounds.id, c.round.id));
+          found = await reconcileCargo(tx);
+          tx.rollback();
+        }),
+      ).rejects.toThrow();
+      return { found, purchaseId };
+    };
+    // (а) Недоплата: 2 места по 100 оплачены 100 — покупка и её запись ledger на −100 согласованы.
+    const under = await probe(100);
+    expect(under.found).toEqual([
+      { check: 'price', roundId: c.round.id, userId: b.me.id, ref: under.purchaseId },
+    ]);
+    // (б) Бесплатные места в платном раунде: paid 0 без ledger — CHECK (paid = 0) = (ledger IS NULL) это пропускает.
+    const free = await probe(0);
+    expect(free.found).toEqual([
+      { check: 'price', roundId: c.round.id, userId: b.me.id, ref: free.purchaseId },
+    ]);
+    // Откат: всё как было, сверки чистые.
+    expect((await roundRow(c.round.id)).seatsSold).toBe(2);
+    expect(await reconcileCargo(db(app))).toEqual([]);
+    expect(await ledger.reconcile()).toEqual([]);
   });
 
   it('lastResultMySeats: seats of the viewer in the last finished round (guest and others — 0)', async () => {

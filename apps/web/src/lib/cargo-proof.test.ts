@@ -4,10 +4,13 @@ import { createTranslator } from 'next-intl';
 import { describe, expect, it } from 'vitest';
 import ru from '../../messages/ru.json';
 import {
+  CARGO_PROOF_GROUP,
   CARGO_PROOF_HEAD,
   cargoPreimageHead,
+  cargoProofChunks,
   cargoProofOutcome,
   cargoProofRows,
+  cargoReasonOk,
   verifyCargoProof,
   type CargoProofRow,
 } from './cargo-proof';
@@ -37,6 +40,7 @@ function proof(over: Partial<CargoProofDto> = {}): CargoProofDto {
     purchases: PURCHASES,
     seatsSold: 10,
     seatsTotal: 10,
+    seatPrice: 100,
     minSeatsToLand: null,
     landReason: 'sold_out',
     winningSeat: 3,
@@ -44,6 +48,7 @@ function proof(over: Partial<CargoProofDto> = {}): CargoProofDto {
     winner: { shortId: 1001, nickname: 'Winner' },
     prize: { itemId: 'item-1', name: 'M9 Bayonet "Dragon Glass"', price: 13700, imageUrl: null },
     startedAt: '2026-11-26T10:00:00.000Z',
+    endsAt: '2026-11-26T12:00:00.000Z',
     finishedAt: '2026-11-26T12:00:00.000Z',
     ...over,
   };
@@ -100,6 +105,7 @@ describe('проверка груза: галочки', () => {
       { key: 'seats', ok: true },
       { key: 'client', ok: true },
       { key: 'seat', ok: true },
+      { key: 'reason', ok: true },
     ]);
     // Независимо от game-core — по формуле из how5 и docs: SHA-256 строки JSON и HMAC с nonce 0.
     expect(sha256(PREIMAGE)).toBe(CLIENT_SEED);
@@ -120,6 +126,7 @@ describe('проверка груза: галочки', () => {
       'seats:true',
       'client:true',
       'seat:true',
+      'reason:true',
     ]);
   });
 
@@ -141,6 +148,7 @@ describe('проверка груза: галочки', () => {
       'seats:true',
       'client:false',
       'seat:true',
+      'reason:true',
     ]);
   });
 
@@ -158,22 +166,85 @@ describe('проверка груза: галочки', () => {
       'seats:true',
       'client:true',
       'seat:false',
+      'reason:true',
     ]);
   });
 
   it('закрыт по минимуму и отменён: место «выиграло бы» сверяется с voidSeat', () => {
     for (const status of ['expired', 'cancelled'] as const) {
-      expect(keys(voided(status))).toEqual(['hash:true', 'seats:true', 'client:true', 'void:true']);
+      expect(keys(voided(status)).slice(0, 4)).toEqual([
+        'hash:true',
+        'seats:true',
+        'client:true',
+        'void:true',
+      ]);
       expect(verifyCargoProof(voided(status)).seatOwner).toBe(0);
       expect(keys(voided(status, 5))[3]).toBe('void:false');
       expect(keys(voided(status, null))[3]).toBe('void:false');
     }
   });
 
-  it('без продаж и отменённый до первой покупки — только хэш server seed', () => {
-    expect(keys(empty('expired'))).toEqual(['hash:true']);
+  it('без продаж — хэш и срок; отменённый до первой покупки — только хэш server seed', () => {
+    expect(keys(empty('expired'))).toEqual(['hash:true', 'reason:true']);
     expect(keys(empty('cancelled'))).toEqual(['hash:true']);
     expect(verifyCargoProof(empty('expired')).seat).toBeNull();
+  });
+
+  it('условие закрытия сходится с числами раунда; отмена — без этой проверки (W5)', () => {
+    const reason = (p: CargoProofDto) => verifyCargoProof(p).checks.find((c) => c.key === 'reason');
+    // Честные исходы: распродан, по таймеру (с минимумом и без), по минимуму, без продаж.
+    expect(reason(proof())?.ok).toBe(true);
+    const timer = { landReason: 'deadline' as const, seatsTotal: 100 };
+    expect(reason(proof(timer))?.ok).toBe(true);
+    expect(reason(proof({ ...timer, minSeatsToLand: 10 }))?.ok).toBe(true);
+    expect(reason(voided('expired'))?.ok).toBe(true);
+    expect(reason(empty('expired'))?.ok).toBe(true);
+    expect(reason(voided('cancelled'))).toBeUndefined();
+    expect(reason(empty('cancelled'))).toBeUndefined();
+  });
+
+  it('противоречивое доказательство не проходит (подмены из проверки W5)', () => {
+    const bad = (p: CargoProofDto) => {
+      const checks = verifyCargoProof(p).checks;
+      expect(checks.find((c) => c.key === 'reason')?.ok, JSON.stringify(p.landReason)).toBe(false);
+      // Остальные галочки по-прежнему зелёные: ловит именно новая проверка.
+      expect(checks.filter((c) => c.key !== 'reason').every((c) => c.ok)).toBe(true);
+    };
+    // «Закрыт по минимуму» при продажах не ниже минимума и вовсе без минимума.
+    bad({ ...voided('expired'), minSeatsToLand: 10 });
+    bad({ ...voided('expired'), minSeatsToLand: 1 });
+    bad({ ...voided('expired'), minSeatsToLand: null });
+    // «Закрыт по минимуму» раньше срока.
+    bad({ ...voided('expired'), finishedAt: '2026-11-26T11:59:59.999Z' });
+    // «Все места проданы» при 10 из 200.
+    bad(proof({ seatsTotal: 200 }));
+    // «По таймеру» раньше срока и при продажах ниже минимума.
+    bad(proof({ landReason: 'deadline', seatsTotal: 100, finishedAt: '2026-11-26T11:00:00.000Z' }));
+    bad(proof({ landReason: 'deadline', seatsTotal: 100, minSeatsToLand: 50 }));
+    // Причины нет или она не к этому исходу; без срока или без времени закрытия — не зелёное.
+    bad(proof({ landReason: null }));
+    bad(proof({ landReason: 'min_seats' }));
+    bad({ ...voided('expired'), landReason: 'deadline' });
+    bad(proof({ landReason: 'deadline', seatsTotal: 100, endsAt: '' }));
+    bad(proof({ landReason: 'deadline', seatsTotal: 100, finishedAt: null }));
+    // Без продаж, но закрыт раньше срока.
+    expect(keys({ ...empty('expired'), finishedAt: '2026-11-26T11:00:00.000Z' })).toEqual([
+      'hash:true',
+      'reason:false',
+    ]);
+  });
+
+  it('cargoReasonOk: время — по срокам с точностью до миллисекунды', () => {
+    const p = proof({ landReason: 'deadline', seatsTotal: 100 });
+    expect(cargoReasonOk(p, 'landed', 10)).toBe(true);
+    expect(cargoReasonOk({ ...p, finishedAt: '2026-11-26T12:00:00.001Z' }, 'landed', 10)).toBe(
+      true,
+    );
+    expect(cargoReasonOk({ ...p, finishedAt: '2026-11-26T11:59:59.999Z' }, 'landed', 10)).toBe(
+      false,
+    );
+    expect(cargoReasonOk(p, 'cancelled', 10)).toBeNull();
+    expect(cargoReasonOk(p, 'open', 0)).toBeNull();
   });
 
   it('раунд идёт — проверок нет, только покупки и хэш', () => {
@@ -254,6 +325,19 @@ describe('проверка груза: усечение списка покуп�
   });
 });
 
+describe('проверка груза: группы полного списка (W6)', () => {
+  it('по CARGO_PROOF_GROUP строк подряд, последняя — остаток', () => {
+    const all = cargoProofRows(10_000, { mine: [], pinned: [] }, true);
+    const groups = cargoProofChunks(all);
+    expect(CARGO_PROOF_GROUP).toBe(100);
+    expect(groups).toHaveLength(100);
+    expect(groups.every((g) => g.length === 100)).toBe(true);
+    expect(groups.flat()).toEqual(all);
+    expect(cargoProofChunks([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+    expect(cargoProofChunks([], 2)).toEqual([]);
+  });
+});
+
 describe('проверка груза: тексты', () => {
   const t = createTranslator({ locale: 'ru', messages: ru, namespace: 'fair' });
   // Числа — строками formatGems, как «Доступно мест 1450/10 000» на странице груза.
@@ -289,6 +373,27 @@ describe('проверка груза: тексты', () => {
       'Мест купили меньше минимума (4) — розыгрыш не состоялся, гемы вернулись',
     );
     expect(t('cargoRecordedSeat', { seat: 187 })).toBe('на сайте записано №187');
+    // Бесплатный груз: гемы не списывались — и не «вернулись» (W3).
+    expect(t('cargoMinSeatsFree', { min: 4 })).toBe(
+      'Участников меньше минимума (4) — розыгрыш не состоялся',
+    );
+    expect(t('cargoCancelledFree')).not.toMatch(/возвращ|вернул/);
+    expect(t('cargoCancelled')).toBe('Раунд отменён, гемы возвращены участникам');
+    // Условие закрытия словами (W5).
+    expect(t('cargoLandedSoldOut')).toBe('Груз приземлился: все места проданы');
+    expect(t('cargoLandedDeadline')).toBe('Груз приземлился по таймеру');
+    expect(t('cargoReasonSoldOut', { sold: '100', total: '200' })).toBe(
+      'Условие закрытия: проданы все места — 100 из 200',
+    );
+    expect(t('cargoReasonMinSeats', { sold: '2', min: '—' })).toBe(
+      'Условие закрытия: срок раунда вышел, минимум продаж не набран (2 при минимуме —)',
+    );
+    expect(t('cargoReasonDeadlineMin', { sold: '30', min: '20' })).toBe(
+      'Условие закрытия: срок раунда вышел, минимум продаж набран (30 при минимуме 20)',
+    );
+    for (const k of ['cargoReasonDeadline', 'cargoReasonNoSales', 'cargoReasonBad'] as const) {
+      expect(t(k)).toMatch(/^Условие закрытия/);
+    }
     expect(t('cargoSkipped', { count: 0, n: '0' })).toBe('скрыто 0 покупок');
     expect(t('kinds.cargo')).toBe('Груз');
   });

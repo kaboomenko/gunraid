@@ -209,6 +209,11 @@ export class AdminCargoService {
   /**
    * Правка шаблона (D18): снимок идущего раунда не меняется — приз, места, цена и условия действуют со следующего
    * раунда. Включённый шаблон без раунда получает его сразу. Шаблон другой игры → 404, архивный → 409.
+   *
+   * Адрес (slug) после создания не меняется → 409 CONFLICT {field: 'slug', reason: 'immutable'}. Сид узнаёт свои
+   * грузы по (игра, slug): переименованный (и потом убранный в архив) сидовый груз следующая выкладка создала бы
+   * заново, и тикер сразу открыл бы ему платный раунд (D37). На адрес ведут и ссылки: закладки, открытая страница
+   * при покупке. Поэтому и занятого slug при правке не бывает.
    */
   async update(
     actorId: string,
@@ -217,41 +222,39 @@ export class AdminCargoService {
     body: AdminCargoBody,
     ip: string | null,
   ): Promise<{ opened: CargoOpened | null }> {
-    try {
-      return await this.db.transaction(async (tx) => {
-        const [before] = await tx
-          .select()
-          .from(cargoTemplates)
-          .where(eq(cargoTemplates.id, id))
-          .for('update');
-        if (!before || before.gameId !== game.id) throw notFound('CARGO_NOT_FOUND');
-        if (before.archivedAt) throw new AppError('CONFLICT', 409, { reason: 'archived' });
-        const values = await this.values(tx, game, body, before.prizeItemId);
-        const [after] = await tx
-          .update(cargoTemplates)
-          .set({ ...values, name: { ...before.name, ru: body.name }, updatedAt: sql`now()` })
-          .where(eq(cargoTemplates.id, id))
-          .returning();
-        // Шаблон уже заблокирован этой транзакцией; раунд есть — no-op, выключен или приз недоступен — null.
-        const round = await this.cargo.openRound(tx, id);
-        await this.audit.log(
-          {
-            actorId,
-            action: 'cargo.update',
-            entityType: 'cargo',
-            entityId: id,
-            before: auditView(before),
-            after: { ...auditView(after!), roundId: round?.id ?? null },
-            ip,
-          },
-          tx,
-        );
-        return { opened: await this.opened(tx, game.code, after!, round) };
-      });
-    } catch (err) {
-      if (isUniqueViolation(err)) throw new AppError('CONFLICT', 409, { field: 'slug' });
-      throw err;
-    }
+    return this.db.transaction(async (tx) => {
+      const [before] = await tx
+        .select()
+        .from(cargoTemplates)
+        .where(eq(cargoTemplates.id, id))
+        .for('update');
+      if (!before || before.gameId !== game.id) throw notFound('CARGO_NOT_FOUND');
+      if (before.archivedAt) throw new AppError('CONFLICT', 409, { reason: 'archived' });
+      if (body.slug !== before.slug) {
+        throw new AppError('CONFLICT', 409, { field: 'slug', reason: 'immutable' });
+      }
+      const values = await this.values(tx, game, body, before.prizeItemId);
+      const [after] = await tx
+        .update(cargoTemplates)
+        .set({ ...values, name: { ...before.name, ru: body.name }, updatedAt: sql`now()` })
+        .where(eq(cargoTemplates.id, id))
+        .returning();
+      // Шаблон уже заблокирован этой транзакцией; раунд есть — no-op, выключен или приз недоступен — null.
+      const round = await this.cargo.openRound(tx, id);
+      await this.audit.log(
+        {
+          actorId,
+          action: 'cargo.update',
+          entityType: 'cargo',
+          entityId: id,
+          before: auditView(before),
+          after: { ...auditView(after!), roundId: round?.id ?? null },
+          ip,
+        },
+        tx,
+      );
+      return { opened: await this.opened(tx, game.code, after!, round) };
+    });
   }
 
   /**

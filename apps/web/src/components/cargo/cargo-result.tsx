@@ -80,7 +80,8 @@ export function CargoResult({
           ) : (
             <p className="text-muted">
               {r.status === 'cancelled'
-                ? t('cancelledText')
+                ? // Возврата не было — груз бесплатный (окно видит участник: места у него были).
+                  t(r.refunded ? 'cancelledText' : 'cancelledNoRefundText')
                 : r.landReason === 'min_seats'
                   ? r.refunded
                     ? t('expiredMinText', { min: r.minSeatsToLand ?? 0 })

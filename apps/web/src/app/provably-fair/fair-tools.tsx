@@ -44,10 +44,12 @@ import { formatSeatRanges } from '@/lib/cargo-page';
 import {
   CARGO_PROOF_HEAD,
   cargoPreimageHead,
+  cargoProofChunks,
   cargoProofRows,
   verifyCargoProof,
   type CargoProofCheckKey,
   type CargoProofOutcome,
+  type CargoProofRow,
 } from '@/lib/cargo-proof';
 import { cn } from '@/lib/cn';
 import { useErrorMessage } from '@/lib/errors';
@@ -578,6 +580,7 @@ const CARGO_CHECK_TEST_ID: Record<CargoProofCheckKey, string> = {
   client: 'cargo-proof-client',
   seat: 'cargo-proof-seat',
   void: 'cargo-proof-void',
+  reason: 'cargo-proof-reason',
 };
 
 function ProofCheck({
@@ -643,6 +646,8 @@ function CargoProofView({ proof }: { proof: CargoProofDto }) {
   const mine = useMemo(() => purchases.filter((p) => p.mine), [purchases]);
   const mineIndexes = useMemo(() => purchases.flatMap((p, i) => (p.mine ? [i] : [])), [purchases]);
   const [showAll, setShowAll] = useState(false);
+  /** Строка списка, измеренная перед «Показать все»: от неё высота-заглушка ещё не нарисованных групп. */
+  const [rowBox, setRowBox] = useState<{ height: number; step: number } | null>(null);
   const [showingAll, startShowAll] = useTransition();
   const rows = useMemo(
     () =>
@@ -659,26 +664,59 @@ function CargoProofView({ proof }: { proof: CargoProofDto }) {
   const listRef = useRef<HTMLOListElement>(null);
 
   useEffect(() => {
-    // Свои покупки могут быть далеко в списке — он прокручивается к первой (страница остаётся на месте;
-    // список — relative, поэтому offsetTop строки отсчитывается от него).
+    // Свои покупки могут быть далеко в списке — он прокручивается к первой (страница остаётся на месте). Сдвиг —
+    // по прямоугольникам, а не offsetTop: в полном списке строки лежат в группах с content-visibility, и группа
+    // (containment) стала бы точкой отсчёта offsetTop.
     const list = listRef.current;
     const row = list?.querySelector<HTMLElement>('[data-mine]');
     if (!listOpen || !list || !row || list.scrollHeight <= list.clientHeight) return;
-    list.scrollTop = row.offsetTop - 4;
+    list.scrollTop += row.getBoundingClientRect().top - list.getBoundingClientRect().top - 4;
   }, [listOpen]);
 
   const sold = formatGems(v.sold ?? proof.seatsSold);
   const landed = v.outcome === 'landed';
   const ranges = mine.length > 0 ? formatSeatRanges(mine) : null;
+  // Минимум продаж: без минимума закрытие «по минимуму» — противоречие, его покажет красная проверка условия.
+  const min = proof.minSeatsToLand === null ? '—' : formatGems(proof.minSeatsToLand);
+  // У бесплатного груза при отмене и закрытии по минимуму гемы не списывались — и не возвращались.
+  const free = proof.seatPrice === 0;
   const status: Record<CargoProofOutcome, () => string | null> = {
     open: () => t('cargoNotLanded'),
-    landed: () => null,
+    landed: () =>
+      proof.landReason === 'sold_out'
+        ? t('cargoLandedSoldOut')
+        : proof.landReason === 'deadline'
+          ? t('cargoLandedDeadline')
+          : null,
     noSales: () => t('cargoNoSales'),
-    minSeats: () => t('cargoMinSeats', { min: formatGems(proof.minSeatsToLand ?? 0) }),
-    cancelled: () => t('cargoCancelled'),
+    minSeats: () => t(free ? 'cargoMinSeatsFree' : 'cargoMinSeats', { min }),
+    cancelled: () => t(free ? 'cargoCancelledFree' : 'cargoCancelled'),
     cancelledEmpty: () => t('cargoCancelledEmpty'),
   };
   const statusText = status[v.outcome]();
+  /** Текст проверки условия закрытия: что заявлено (зелёным — сходится с числами, красным — нет). */
+  const reasonText = () => {
+    if (v.outcome === 'noSales' && proof.landReason === 'deadline') return t('cargoReasonNoSales');
+    if (v.outcome === 'minSeats' && proof.landReason === 'min_seats') {
+      return t('cargoReasonMinSeats', { sold, min });
+    }
+    if (landed && proof.landReason === 'sold_out') {
+      return t('cargoReasonSoldOut', { sold, total: formatGems(proof.seatsTotal) });
+    }
+    if (landed && proof.landReason === 'deadline') {
+      return proof.minSeatsToLand === null
+        ? t('cargoReasonDeadline')
+        : t('cargoReasonDeadlineMin', { sold, min });
+    }
+    return t('cargoReasonBad');
+  };
+  const checkText = (key: CargoProofCheckKey, ok: boolean) => {
+    if (key === 'hash') return t(ok ? 'hashOk' : 'hashBad');
+    if (key === 'seats') return t('cargoSeats', { sold });
+    if (key === 'client') return t('cargoClientSeed');
+    if (key === 'reason') return reasonText();
+    return t(key === 'seat' ? 'cargoWinningSeat' : 'cargoVoidSeat', { seat: v.seat ?? '—', sold });
+  };
   const seatsText = (p: { seatFrom: number; seatTo: number }) =>
     p.seatFrom === p.seatTo
       ? t('cargoSeat', { seat: p.seatFrom })
@@ -691,6 +729,20 @@ function CargoProofView({ proof }: { proof: CargoProofDto }) {
       : landed
         ? { kind: 'winner' as const, text: t('cargoWinnerMark', { seat: v.seat }) }
         : { kind: 'void' as const, text: t('cargoVoidMark', { seat: v.seat }) };
+  const renderRow = (row: CargoProofRow, i: number) =>
+    row.kind === 'gap' ? (
+      <li key={`gap-${i}`} className="px-3 py-2 text-dim" data-testid="cargo-proof-gap">
+        {t('cargoSkipped', { count: row.count, n: formatGems(row.count) })}
+      </li>
+    ) : (
+      <CargoPurchaseRow
+        key={row.index}
+        purchase={purchases[row.index]!}
+        seats={seatsText(purchases[row.index]!)}
+        mark={row.index === v.seatOwner ? mark : null}
+        mine={mineText}
+      />
+    );
 
   return (
     <div className="space-y-4" data-testid="cargo-proof" data-outcome={v.outcome}>
@@ -727,16 +779,7 @@ function CargoProofView({ proof }: { proof: CargoProofDto }) {
         <div className="space-y-2.5">
           {v.checks.map((c) => (
             <ProofCheck key={c.key} ok={c.ok} testId={CARGO_CHECK_TEST_ID[c.key]}>
-              {c.key === 'hash'
-                ? t(c.ok ? 'hashOk' : 'hashBad')
-                : c.key === 'seats'
-                  ? t('cargoSeats', { sold })
-                  : c.key === 'client'
-                    ? t('cargoClientSeed')
-                    : t(c.key === 'seat' ? 'cargoWinningSeat' : 'cargoVoidSeat', {
-                        seat: v.seat ?? '—',
-                        sold,
-                      })}
+              {checkText(c.key, c.ok)}
               {/* Пересчёт разошёлся с сайтом — видно, какое место записано. */}
               {(c.key === 'seat' || c.key === 'void') && !c.ok && recordedSeat !== null && (
                 <> — {t('cargoRecordedSeat', { seat: recordedSeat })}</>
@@ -819,26 +862,28 @@ function CargoProofView({ proof }: { proof: CargoProofDto }) {
                 aria-label={t('cargoPurchases')}
                 data-testid="cargo-proof-list"
               >
-                {rows.map((row, i) =>
-                  row.kind === 'gap' ? (
-                    <li
-                      key={`gap-${i}`}
-                      className="px-3 py-2 text-dim"
-                      data-testid="cargo-proof-gap"
-                    >
-                      {t('cargoSkipped', { count: row.count, n: formatGems(row.count) })}
-                    </li>
-                  ) : (
-                    <CargoPurchaseRow
-                      key={row.index}
-                      purchase={purchases[row.index]!}
-                      seats={seatsText(purchases[row.index]!)}
-                      mark={row.index === v.seatOwner ? mark : null}
-                      mine={mineText}
-                      lazy={showAll}
-                    />
-                  ),
-                )}
+                {showAll
+                  ? // Полный список — группами по CARGO_PROOF_GROUP строк: content-visibility у группы, не у
+                    // строки. Обёртки — role="none": для скринридера строки остаются одним списком.
+                    cargoProofChunks(rows).map((group, g) => (
+                      <li
+                        key={`group-${g}`}
+                        role="none"
+                        style={
+                          rowBox
+                            ? {
+                                containIntrinsicSize: `auto ${(group.length - 1) * rowBox.step + rowBox.height}px`,
+                              }
+                            : ({ '--rows': group.length } as React.CSSProperties)
+                        }
+                        className="[contain-intrinsic-size:auto_calc(var(--rows)*2.625rem_-_0.125rem)] [content-visibility:auto] sm:[contain-intrinsic-size:auto_calc(var(--rows)*1.625rem_-_0.125rem)]"
+                      >
+                        <ol role="none" className="space-y-0.5">
+                          {group.map(renderRow)}
+                        </ol>
+                      </li>
+                    ))
+                  : rows.map(renderRow)}
               </ol>
               {!showAll && purchases.length > CARGO_PROOF_HEAD && (
                 <Button
@@ -847,6 +892,7 @@ function CargoProofView({ proof }: { proof: CargoProofDto }) {
                   loading={showingAll}
                   onClick={() => {
                     // До 10 000 строк (D38) — переходом: React строит список частями, страница не замирает.
+                    setRowBox(rowBoxOf(listRef.current));
                     startShowAll(() => setShowAll(true));
                     // Кнопка исчезнет — фокус переходит в список, его можно листать с клавиатуры.
                     listRef.current?.focus({ preventScroll: true });
@@ -865,30 +911,44 @@ function CargoProofView({ proof }: { proof: CargoProofDto }) {
 }
 
 /**
- * Строка покупки: места, client seed покупателя; свои, место победителя и «выиграло бы» — с метками.
- * `lazy` — весь список (до 10 000 строк, D38): строки вне окна списка браузер не раскладывает и не рисует,
- * высота-заглушка — как у строки (24 px, на телефоне seed идёт второй строкой — 40 px).
+ * Высота строки списка покупок и шаг строк (с зазором) — по первым показанным строкам (свои и победителя с метками
+ * выше — берётся меньшее). Высота зависит от шрифта и ширины (на телефоне seed идёт второй строкой), поэтому
+ * меряется, а не задаётся числом; null — мерить нечего.
+ */
+function rowBoxOf(list: HTMLElement | null): { height: number; step: number } | null {
+  const rows = list
+    ? [...list.querySelectorAll<HTMLElement>('[data-testid="cargo-proof-row"]')].slice(0, 8)
+    : [];
+  const rects = rows.map((r) => r.getBoundingClientRect());
+  let height = Infinity;
+  let step = Infinity;
+  rects.forEach((r, i) => {
+    height = Math.min(height, r.height);
+    if (i > 0) step = Math.min(step, r.top - rects[i - 1]!.top);
+  });
+  return Number.isFinite(step) && step >= height && height > 0 ? { height, step } : null;
+}
+
+/**
+ * Строка покупки: места, client seed покупателя; свои, место победителя и «выиграло бы» — с метками. Высота — около
+ * 24 px, на телефоне seed идёт второй строкой — около 40 px (запасная высота-заглушка групп, если строку не измерить).
  */
 function CargoPurchaseRow({
   purchase: p,
   seats,
   mark,
   mine,
-  lazy,
 }: {
   purchase: CargoProofDto['purchases'][number];
   /** Тексты — готовыми строками от родителя: без хука перевода в каждой из 10 000 строк. */
   seats: string;
   mark: { kind: 'winner' | 'void'; text: string } | null;
   mine: string;
-  lazy: boolean;
 }) {
   return (
     <li
       className={cn(
         'flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2',
-        lazy &&
-          '[contain-intrinsic-size:auto_2.5rem] [content-visibility:auto] sm:[contain-intrinsic-size:auto_1.5rem]',
         p.mine ? 'bg-accent-soft text-text' : mark && 'bg-surface-3',
       )}
       data-testid="cargo-proof-row"

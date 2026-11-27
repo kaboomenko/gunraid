@@ -4,8 +4,10 @@ import {
   CARGO_MAX_SEATS,
   CARGO_SLUG_RE,
   cargoImageUrl,
+  hasUnsafeText,
   type AdminCargoBody,
   type AdminCargoDetailDto,
+  type AdminCargoRoundSummaryDto,
   type AdminCargoRowDto,
   type CargoImageKind,
   type ItemDto,
@@ -57,8 +59,10 @@ export type CargoField = (typeof CARGO_FIELDS)[number];
 export const CARGO_FIELD_ERROR_KEYS = [
   'required',
   'name',
+  'chars',
   'slug',
   'slugTaken',
+  'slugImmutable',
   'image',
   'prize',
   'prizeMissing',
@@ -141,11 +145,75 @@ export function newCargoDraft(sortOrder = 0): CargoDraft {
 
 const str = (v: number | null) => (v === null ? '' : String(v));
 
+/** Поля черновика в порядке формы: сравнение версий шаблона и список полей в предупреждении о чужой правке. */
+export const CARGO_DRAFT_KEYS = [
+  'name',
+  'slug',
+  'imageUrl',
+  'sortOrder',
+  'isActive',
+  'prize',
+  'free',
+  'seatsTotal',
+  'seatPrice',
+  'perUserLimit',
+  'durationMinutes',
+  'minSeatsToLand',
+  'minLevel',
+  'depositWithinDays',
+] as const satisfies ReadonlyArray<keyof CargoDraft>;
+export type CargoDraftKey = (typeof CARGO_DRAFT_KEYS)[number];
+
+/** Поле в двух черновиках совпадает (приз — по id). */
+export function sameCargoField(k: CargoDraftKey, a: CargoDraft, b: CargoDraft): boolean {
+  return k === 'prize' ? (a.prize?.id ?? null) === (b.prize?.id ?? null) : a[k] === b[k];
+}
+
 /** Черновики с одинаковыми значениями полей (приз — по id): есть ли в форме несохранённые правки. */
 export function sameCargoDraft(a: CargoDraft, b: CargoDraft): boolean {
-  return (Object.keys(a) as Array<keyof CargoDraft>).every((k) =>
-    k === 'prize' ? (a.prize?.id ?? null) === (b.prize?.id ?? null) : a[k] === b[k],
+  return CARGO_DRAFT_KEYS.every((k) => sameCargoField(k, a, b));
+}
+
+/**
+ * Чужая правка при несохранённых своих (другой админ, другая вкладка) — трёхсторонний мердж: `base` — версия
+ * шаблона, от которой начаты правки, `mine` — форма, `theirs` — новая версия с сервера. Поля, которых в форме не
+ * трогали, берутся из `theirs` (иначе «Сохранить» молча откатило бы чужую правку); тронутые остаются. `conflicts` —
+ * тронутые поля, которые изменились и на сервере (по-другому), вместе с прежними `known`, если они ещё расходятся
+ * с сервером: при сохранении значения формы в них заменят чужие — форма об этом предупреждает.
+ */
+export function mergeCargoDraft(
+  base: CargoDraft,
+  mine: CargoDraft,
+  theirs: CargoDraft,
+  known: readonly CargoDraftKey[] = [],
+): { draft: CargoDraft; conflicts: CargoDraftKey[] } {
+  const draft = { ...mine };
+  const take = <K extends CargoDraftKey>(k: K) => {
+    draft[k] = theirs[k];
+  };
+  const touched = new Set<CargoDraftKey>(known);
+  for (const k of CARGO_DRAFT_KEYS) {
+    if (sameCargoField(k, mine, base)) take(k);
+    else if (!sameCargoField(k, theirs, base)) touched.add(k);
+  }
+  const conflicts = CARGO_DRAFT_KEYS.filter(
+    (k) => touched.has(k) && !sameCargoField(k, draft, theirs),
   );
+  return { draft, conflicts };
+}
+
+/** Взять из сохранённой версии значения указанных полей (кнопка в предупреждении о чужой правке). */
+export function takeCargoFields(
+  mine: CargoDraft,
+  theirs: CargoDraft,
+  keys: readonly CargoDraftKey[],
+): CargoDraft {
+  const draft = { ...mine };
+  const take = <K extends CargoDraftKey>(k: K) => {
+    draft[k] = theirs[k];
+  };
+  for (const k of keys) take(k);
+  return draft;
 }
 
 export function cargoDraftFrom(c: AdminCargoDetailDto): CargoDraft {
@@ -193,9 +261,12 @@ export function cargoDraftErrors(d: CargoDraft): CargoFieldErrors {
   const errors: CargoFieldErrors = {};
   const name = d.name.trim();
   if (name.length < 2 || name.length > 80) errors.name = { key: name ? 'name' : 'required' };
+  // NUL и половина суррогатной пары: сервер их не примет (400), PostgreSQL не сохранит.
+  else if (hasUnsafeText(name)) errors.name = { key: 'chars' };
   if (!CARGO_SLUG_RE.test(d.slug)) errors.slug = { key: d.slug ? 'slug' : 'required' };
   const image = d.imageUrl.trim();
   if (!image || image.length > 500) errors.imageUrl = { key: 'image' };
+  else if (hasUnsafeText(image)) errors.imageUrl = { key: 'chars' };
   if (!d.prize) errors.prize = { key: 'prize' };
   for (const [field, required] of intFields(d)) {
     const v = parseInt10(d[field]);
@@ -278,7 +349,9 @@ export function cargoApiFieldErrors(
         const field =
           isRecord(issue) && typeof issue.path === 'string' ? fieldOfPath(issue.path) : null;
         if (!field || errors[field]) continue;
-        if (field === 'name') errors.name = { key: 'name' };
+        // Недопустимые символы в тексте (ZodPipe: NUL, половина суррогатной пары).
+        if (issue.code === 'invalid_text') errors[field] = { key: 'chars' };
+        else if (field === 'name') errors.name = { key: 'name' };
         else if (field === 'slug') errors.slug = { key: 'slug' };
         else if (field === 'imageUrl') errors.imageUrl = { key: 'image' };
         else if (field === 'prize') errors.prize = { key: 'prize' };
@@ -292,7 +365,8 @@ export function cargoApiFieldErrors(
         reason === 'game' ? 'prizeGame' : reason === 'inactive' ? 'prizeInactive' : 'prizeMissing',
     };
   } else if (code === 'CONFLICT' && isRecord(details) && details.field === 'slug') {
-    errors.slug = { key: 'slugTaken' };
+    // Адрес занят (создание) или его пытаются сменить (правка: slug после создания не меняется).
+    errors.slug = { key: details.reason === 'immutable' ? 'slugImmutable' : 'slugTaken' };
   }
   return errors;
 }
@@ -304,6 +378,21 @@ export function cargoConflictKey(code: string, details: unknown): CargoConflictK
   if (details.reason === 'round_open') return 'roundOpen';
   if (details.reason === 'cargo_busy') return 'busy';
   return null;
+}
+
+/**
+ * Окно отмены раунда (W2): текст и кнопка — по живой сводке раунда из опроса детальной, пока это тот же раунд, что
+ * выбрали кнопкой (сумма возврата и число участников меняются, пока админ пишет причину). Раунд сменился
+ * (приземлился, отменён в другом окне) — `gone`: отменять нечего, подтверждение выключено.
+ */
+export function cargoCancelState(
+  picked: AdminCargoRoundSummaryDto | null,
+  live: AdminCargoRoundSummaryDto | null,
+): { kind: 'gone' | 'empty' | 'free' | 'paid'; round: AdminCargoRoundSummaryDto | null } {
+  if (!picked) return { kind: 'gone', round: null };
+  if (!live || live.id !== picked.id) return { kind: 'gone', round: picked };
+  if (live.seatsSold === 0) return { kind: 'empty', round: live };
+  return { kind: live.revenue === 0 ? 'free' : 'paid', round: live };
 }
 
 /** Первое поле с ошибкой в порядке формы. */

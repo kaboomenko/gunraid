@@ -4,6 +4,7 @@ export * from './errors.js';
 export * from './games.js';
 export * from './gems.js';
 export * from './http.js';
+export * from './text.js';
 export * from './me.js';
 export * from './settings.js';
 export * from './ws.js';

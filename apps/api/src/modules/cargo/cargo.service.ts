@@ -787,7 +787,9 @@ export class CargoService {
                 cargo: name,
                 why: mode.status === 'cancelled' ? 'cancelled' : 'min_seats',
               },
-              link: `/${row.game}/cargo/${row.t.slug}`,
+              // Проверка раунда открывается всегда и показывает отмену с возвратом. Страница груза — нет: у
+              // выключенного (так его убирают в архив) следующий раунд не начнётся, и она ответила бы 404.
+              link: `/provably-fair?cargo=${id}`,
             });
           }
           await tx
@@ -1049,6 +1051,7 @@ export class CargoService {
       })),
       seatsSold: r.seatsSold,
       seatsTotal: r.seatsTotal,
+      seatPrice: r.seatPrice,
       minSeatsToLand: r.minSeatsToLand,
       landReason: (r.landReason as CargoLandReason | null) ?? null,
       winningSeat: r.winningSeat,
@@ -1061,6 +1064,7 @@ export class CargoService {
         imageUrl: prize?.imageUrl ?? null,
       },
       startedAt: r.startedAt.toISOString(),
+      endsAt: r.endsAt.toISOString(),
       finishedAt: r.finishedAt?.toISOString() ?? null,
     };
   }
